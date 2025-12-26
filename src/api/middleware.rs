@@ -1,6 +1,5 @@
-use crate::domain::user::UserRole;
 use crate::usecase::auth::error::AuthError;
-use crate::usecase::auth::service::AuthService;
+use crate::{domain::user::UserRole, usecase::auth::token_service::TokenService};
 use actix_web::{FromRequest, HttpRequest, dev::Payload, web};
 use futures_util::future::{Ready, ready};
 
@@ -13,7 +12,7 @@ impl FromRequest for AdminContext {
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
-        let auth_service = req.app_data::<web::Data<AuthService>>().cloned();
+        let token_service = req.app_data::<web::Data<TokenService>>().cloned();
 
         let auth_header = req
             .headers()
@@ -26,7 +25,7 @@ impl FromRequest for AdminContext {
             None => return ready(Err(AuthError::InvalidCredentials)),
         };
 
-        if let Some(service) = auth_service {
+        if let Some(service) = token_service {
             match service.verify_token(token) {
                 // ロールが Admin であることを確認
                 Ok(claims) if claims.role == UserRole::Admin => {

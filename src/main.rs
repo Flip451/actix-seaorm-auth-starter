@@ -9,7 +9,7 @@ use dotenvy::dotenv;
 use sea_orm::Database;
 use tracing_actix_web::TracingLogger;
 
-use crate::infrastructure::{AppRegistry, RepoRegistry};
+use crate::infrastructure::{AppRegistry, RepoRegistry, persistence::seaorm::transaction::SeaOrmTransactionManager};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -36,6 +36,7 @@ async fn main() -> std::io::Result<()> {
     // Actix-web 内で共有するために web::Data にラップ
     let auth_service = web::Data::from(registry.auth_service.clone());
     let user_service = web::Data::from(registry.user_service.clone());
+    let token_service = web::Data::from(registry.token_service.clone());
 
     println!("Starting server at http://0.0.0.0:8080");
 
@@ -45,7 +46,8 @@ async fn main() -> std::io::Result<()> {
             .wrap(TracingLogger::default()) // ログ・追跡用ミドルウェア
             .app_data(auth_service.clone())
             .app_data(user_service.clone())
-            .configure(api::auth::handler::auth_config)
+            .app_data(token_service.clone())
+            .configure(api::auth::handler::auth_config::<SeaOrmTransactionManager>)
             .configure(api::user::handler::user_config)
     })
     .bind(("0.0.0.0", 8080))?

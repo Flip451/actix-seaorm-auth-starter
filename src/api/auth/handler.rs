@@ -1,4 +1,5 @@
 use crate::api::error::AppError;
+use crate::domain::transaction::TransactionManager;
 use crate::usecase::auth::error::AuthError;
 use crate::usecase::auth::dto::{LoginInput, SignupInput};
 use crate::usecase::auth::service::AuthService;
@@ -23,9 +24,8 @@ pub struct LoginRequest {
 }
 
 #[tracing::instrument(skip(service, body))]
-#[post("/signup")]
-pub async fn signup_handler(
-    service: web::Data<AuthService>,
+pub async fn signup_handler<TM: TransactionManager>(
+    service: web::Data<AuthService<TM>>,
     body: web::Json<SignupRequest>,
 ) -> Result<impl Responder, AppError> {
     body.validate()
@@ -43,9 +43,8 @@ pub async fn signup_handler(
 }
 
 #[tracing::instrument(skip(service, body))]
-#[post("/login")]
-pub async fn login_handler(
-    service: web::Data<AuthService>,
+pub async fn login_handler<TM: TransactionManager>(
+    service: web::Data<AuthService<TM>>,
     body: web::Json<LoginRequest>,
 ) -> Result<impl Responder, AppError> {
     let input = LoginInput {
@@ -58,10 +57,10 @@ pub async fn login_handler(
     Ok(HttpResponse::Ok().json(serde_json::json!({ "token": token })))
 }
 
-pub fn auth_config(cfg: &mut web::ServiceConfig) {
+pub fn auth_config<TM: TransactionManager + 'static>(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/auth")
-            .service(signup_handler)
-            .service(login_handler),
+        .route("/signup", web::post().to(signup_handler::<TM>))
+        .route("/login", web::post().to(login_handler::<TM>)),
     );
 }

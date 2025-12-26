@@ -1,4 +1,4 @@
-use crate::domain::user::DomainError;
+use crate::domain::{transaction::MapPersistenceError, user::DomainError};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -23,4 +23,10 @@ pub enum AuthError {
 
     #[error("内部処理エラー")]
     InternalError,
+}
+
+impl MapPersistenceError for AuthError {
+    fn from_persistence_error(msg: String) -> Self {
+        AuthError::RepositoryError(msg)
+    }
 }

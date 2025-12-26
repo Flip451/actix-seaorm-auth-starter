@@ -1,18 +1,29 @@
-use std::str::FromStr;
 use async_trait::async_trait;
-use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
+use std::str::FromStr;
 use uuid::Uuid;
 
-use crate::domain::user::{DomainError, Email, HashedPassword, User, UserRepository, UserRole};
 use super::super::entities::user as user_entity;
+use crate::{
+    domain::user::{DomainError, Email, HashedPassword, User, UserRepository, UserRole},
+    infrastructure::persistence::seaorm::connect::Connectable,
+};
 
-pub struct SeaOrmUserRepository {
-    db: DatabaseConnection,
+pub struct SeaOrmUserRepository<C, T>
+where
+    C: Connectable<T>,
+    T: sea_orm::ConnectionTrait,
+{
+    conn: C,
+    _marker: std::marker::PhantomData<T>,
 }
 
-impl SeaOrmUserRepository {
-    pub fn new(db: DatabaseConnection) -> Self {
-        Self { db }
+impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmUserRepository<C, T> {
+    pub fn new(conn: C) -> Self {
+        Self {
+            conn,
+            _marker: std::marker::PhantomData,
+        }
     }
 
     /// DBモデルからドメインモデルへの変換
@@ -31,10 +42,14 @@ impl SeaOrmUserRepository {
 }
 
 #[async_trait]
-impl UserRepository for SeaOrmUserRepository {
+impl<C, T> UserRepository for SeaOrmUserRepository<C, T>
+where
+    C: Connectable<T> + Send + Sync,
+    T: sea_orm::ConnectionTrait + Send + Sync,
+{
     async fn find_by_id(&self, id: Uuid) -> Result<Option<User>, DomainError> {
         let model = user_entity::Entity::find_by_id(id)
-            .one(&self.db)
+            .one(self.conn.connect())
             .await
             .map_err(|e| DomainError::Persistence(e.to_string()))?;
 
@@ -47,7 +62,7 @@ impl UserRepository for SeaOrmUserRepository {
     async fn find_by_email(&self, email: &str) -> Result<Option<User>, DomainError> {
         let model = user_entity::Entity::find()
             .filter(user_entity::Column::Email.eq(email))
-            .one(&self.db)
+            .one(self.conn.connect())
             .await
             .map_err(|e| DomainError::Persistence(e.to_string()))?;
 
@@ -61,7 +76,7 @@ impl UserRepository for SeaOrmUserRepository {
     async fn save(&self, user: User) -> Result<User, DomainError> {
         // 1. 既存レコードの確認
         let existing_model = user_entity::Entity::find_by_id(user.id)
-            .one(&self.db)
+            .one(self.conn.connect())
             .await
             .map_err(|e| DomainError::Persistence(e.to_string()))?;
 
@@ -78,10 +93,10 @@ impl UserRepository for SeaOrmUserRepository {
                 active_model.updated_at = Set(chrono::Utc::now().fixed_offset());
 
                 let updated_model = active_model
-                    .update(&self.db)
+                    .update(self.conn.connect())
                     .await
                     .map_err(|e| DomainError::Persistence(e.to_string()))?;
-                
+
                 self.map_to_domain(updated_model)
             }
             // B. 新規作成 (INSERT)
@@ -98,10 +113,10 @@ impl UserRepository for SeaOrmUserRepository {
                 };
 
                 let saved_model = active_model
-                    .insert(&self.db)
+                    .insert(self.conn.connect())
                     .await
                     .map_err(|e| DomainError::Persistence(e.to_string()))?;
-                
+
                 self.map_to_domain(saved_model)
             }
         }
@@ -109,12 +124,10 @@ impl UserRepository for SeaOrmUserRepository {
 
     async fn find_all(&self) -> Result<Vec<User>, DomainError> {
         let models = user_entity::Entity::find()
-            .all(&self.db)
+            .all(self.conn.connect())
             .await
             .map_err(|e| DomainError::Persistence(e.to_string()))?;
 
-        models.into_iter()
-            .map(|m| self.map_to_domain(m))
-            .collect()
+        models.into_iter().map(|m| self.map_to_domain(m)).collect()
     }
 }
