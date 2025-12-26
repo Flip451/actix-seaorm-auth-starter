@@ -40,5 +40,5 @@ pub fn init_telemetry() {
 }
 
 pub fn shutdown() {
-  opentelemetry::global::shutdown_tracer_provider();
+    opentelemetry::global::shutdown_tracer_provider();
 }

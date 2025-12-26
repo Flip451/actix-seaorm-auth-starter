@@ -34,8 +34,8 @@ async fn main() -> std::io::Result<()> {
     let registry = AppRegistry::new(repos, jwt_secret);
 
     // Actix-web 内で共有するために web::Data にラップ
-    let auth_service = web::Data::new(registry.auth_service.clone());
-    let user_service = web::Data::new(registry.user_service.clone());
+    let auth_service = web::Data::from(registry.auth_service.clone());
+    let user_service = web::Data::from(registry.user_service.clone());
 
     println!("Starting server at http://0.0.0.0:8080");
 
@@ -43,8 +43,8 @@ async fn main() -> std::io::Result<()> {
     let server = HttpServer::new(move || {
         App::new()
             .wrap(TracingLogger::default()) // ログ・追跡用ミドルウェア
-            .app_data(web::Data::from(auth_service.clone()))
-            .app_data(web::Data::from(user_service.clone()))
+            .app_data(auth_service.clone())
+            .app_data(user_service.clone())
             .configure(api::auth::handler::auth_config)
             .configure(api::user::handler::user_config)
     })

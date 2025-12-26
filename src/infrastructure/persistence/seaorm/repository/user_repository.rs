@@ -15,6 +15,7 @@ impl SeaOrmUserRepository {
         Self { db }
     }
 
+    /// DBモデルからドメインモデルへの変換
     fn map_to_domain(&self, model: user_entity::Model) -> Result<User, DomainError> {
         Ok(User {
             id: model.id,
@@ -56,23 +57,54 @@ impl UserRepository for SeaOrmUserRepository {
         }
     }
 
+    /// 保存（新規作成 or 更新）を行うメソッド
     async fn save(&self, user: User) -> Result<User, DomainError> {
-        let active_model = user_entity::ActiveModel {
-            id: Set(user.id),
-            username: Set(user.username),
-            email: Set(user.email.as_str().to_string()),
-            password_hash: Set(user.password.as_str().to_string()),
-            is_active: Set(user.is_active),
-            role: Set(user.role.to_string()), // role の保存を追加
-            ..Default::default()
-        };
-
-        let saved_model = active_model
-            .insert(&self.db)
+        // 1. 既存レコードの確認
+        let existing_model = user_entity::Entity::find_by_id(user.id)
+            .one(&self.db)
             .await
             .map_err(|e| DomainError::Persistence(e.to_string()))?;
-            
-        self.map_to_domain(saved_model)
+
+        match existing_model {
+            // A. 更新 (UPDATE)
+            Some(model) => {
+                let mut active_model: user_entity::ActiveModel = model.into();
+                active_model.username = Set(user.username);
+                active_model.email = Set(user.email.as_str().to_string());
+                active_model.password_hash = Set(user.password.as_str().to_string());
+                active_model.role = Set(user.role.to_string());
+                active_model.is_active = Set(user.is_active);
+                // 更新時は updated_at を現在時刻に更新
+                active_model.updated_at = Set(chrono::Utc::now().fixed_offset());
+
+                let updated_model = active_model
+                    .update(&self.db)
+                    .await
+                    .map_err(|e| DomainError::Persistence(e.to_string()))?;
+                
+                self.map_to_domain(updated_model)
+            }
+            // B. 新規作成 (INSERT)
+            None => {
+                let active_model = user_entity::ActiveModel {
+                    id: Set(user.id),
+                    username: Set(user.username),
+                    email: Set(user.email.as_str().to_string()),
+                    password_hash: Set(user.password.as_str().to_string()),
+                    is_active: Set(user.is_active),
+                    role: Set(user.role.to_string()),
+                    created_at: Set(user.created_at),
+                    updated_at: Set(user.updated_at),
+                };
+
+                let saved_model = active_model
+                    .insert(&self.db)
+                    .await
+                    .map_err(|e| DomainError::Persistence(e.to_string()))?;
+                
+                self.map_to_domain(saved_model)
+            }
+        }
     }
 
     async fn find_all(&self) -> Result<Vec<User>, DomainError> {
