@@ -1,0 +1,81 @@
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: myapp
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d myapp"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  app:
+    build:
+      context: .
+      target: builder
+    volumes:
+      - .:/app
+      - cargo_cache:/usr/local/cargo/registry
+      - app_target_cache:/app/target
+    environment:
+      DATABASE_URL: postgres://user:password@db:5432/myapp
+      RUST_LOG: info
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      jaeger:
+        condition: service_healthy
+    command: cargo watch -x run
+    networks:
+      - app-network
+
+  sea-orm-cli:
+    build:
+      context: .
+      target: tools
+    environment:
+      DATABASE_URL: postgres://user:password@db:5432/myapp
+    volumes:
+      - .:/app
+      - cargo_cache:/usr/local/cargo/registry
+      - cli_target_cache:/app/target
+    profiles: ["tools"]
+    entrypoint: ["sea-orm-cli"]
+    networks:
+      - app-network
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 16686 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  db_data:
+  cargo_cache:        # 全サービスで共有（ダウンロード短縮）
+  app_target_cache:   # app専用（インクリメンタルビルド用）
+  cli_target_cache:   # CLI専用（マイグレーションビルド用）
