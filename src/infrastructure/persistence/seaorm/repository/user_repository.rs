@@ -1,5 +1,7 @@
 use async_trait::async_trait;
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter, RuntimeErr, Set};
+use sea_orm::{
+    ColumnTrait, DbErr, EntityTrait, QueryFilter, RuntimeErr, Set, sea_query::OnConflict,
+};
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -90,88 +92,72 @@ where
 
     /// 保存（新規作成 or 更新）を行うメソッド
     async fn save(&self, user: User) -> Result<User, UserRepositoryError> {
-        // 1. 既存レコードの確認
-        let existing_model = user_entity::Entity::find_by_id(user.id)
-            .one(self.conn.connect())
+        let username = user.username.clone();
+        let email = user.email.clone();
+
+        let active_model = user_entity::ActiveModel {
+            id: Set(user.id),
+            username: Set(user.username),
+            email: Set(user.email.as_str().to_string()),
+            password_hash: Set(user.password.as_str().to_string()),
+            is_active: Set(user.is_active),
+            role: Set(user.role.to_string()),
+            created_at: Set(user.created_at), // 新規作成時は引数の値、更新時は無視される
+            updated_at: Set(chrono::Utc::now().fixed_offset()),
+        };
+
+        // ON CONFLICT (id) DO UPDATE ...
+        let saved_model = user_entity::Entity::insert(active_model)
+            .on_conflict(
+                OnConflict::column(user_entity::Column::Id)
+                    .update_columns([
+                        user_entity::Column::Username,
+                        user_entity::Column::Email,
+                        user_entity::Column::PasswordHash,
+                        user_entity::Column::Role,
+                        user_entity::Column::IsActive,
+                        user_entity::Column::UpdatedAt, // 更新時は日時を更新
+                    ])
+                    .to_owned(),
+            )
+            .exec_with_returning(self.conn.connect())
             .await
-            .map_err(|e| UserRepositoryError::Persistence(e.into()))?;
+            .map_err(|e| {
+                // エラーハンドリングの詳細化
+                match &e {
+                    DbErr::Query(RuntimeErr::SqlxError(sqlx_err)) => {
+                        // Postgresのエラーコード "23505" (unique_violation) をチェック
+                        if let Some(db_err) = sqlx_err.as_database_error() {
+                            if let Some(code) = db_err.code() {
+                                if code == "23505" {
+                                    let constraint = db_err.constraint().unwrap_or("");
 
-        match existing_model {
-            // A. 更新 (UPDATE)
-            Some(model) => {
-                let mut active_model: user_entity::ActiveModel = model.into();
-                active_model.username = Set(user.username);
-                active_model.email = Set(user.email.as_str().to_string());
-                active_model.password_hash = Set(user.password.as_str().to_string());
-                active_model.role = Set(user.role.to_string());
-                active_model.is_active = Set(user.is_active);
-                // 更新時は updated_at を現在時刻に更新
-                active_model.updated_at = Set(chrono::Utc::now().fixed_offset());
-
-                let updated_model = active_model
-                    .update(self.conn.connect())
-                    .await
-                    .map_err(|e| UserRepositoryError::Persistence(e.into()))?;
-
-                self.map_to_domain(updated_model)
-            }
-            // B. 新規作成 (INSERT)
-            None => {
-                let username = user.username.clone();
-                let email = user.email.clone();
-
-                let active_model = user_entity::ActiveModel {
-                    id: Set(user.id),
-                    username: Set(user.username),
-                    email: Set(user.email.as_str().to_string()),
-                    password_hash: Set(user.password.as_str().to_string()),
-                    is_active: Set(user.is_active),
-                    role: Set(user.role.to_string()),
-                    created_at: Set(user.created_at),
-                    updated_at: Set(user.updated_at),
-                };
-
-                let saved_model = active_model
-                    .insert(self.conn.connect())
-                    .await
-                    .map_err(|e| {
-                        // エラーハンドリングの詳細化
-                        match &e {
-                            DbErr::Query(RuntimeErr::SqlxError(sqlx_err)) => {
-                                // Postgresのエラーコード "23505" (unique_violation) をチェック
-                                if let Some(db_err) = sqlx_err.as_database_error() {
-                                    if let Some(code) = db_err.code() {
-                                        if code == "23505" {
-                                            let constraint = db_err.constraint().unwrap_or("");
-
-                                            if constraint.contains("email") {
-                                                return UserDomainError::AlreadyExists(
-                                                    UserUniqueConstraint::Email(
-                                                        email.clone().as_str().to_string(),
-                                                    ),
-                                                )
-                                                .into();
-                                            } else if constraint.contains("username") {
-                                                return UserDomainError::AlreadyExists(
-                                                    UserUniqueConstraint::Username(
-                                                        username.clone().as_str().to_string(),
-                                                    ),
-                                                )
-                                                .into();
-                                            }
-                                        }
+                                    if constraint.contains("email") {
+                                        return UserDomainError::AlreadyExists(
+                                            UserUniqueConstraint::Email(
+                                                email.clone().as_str().to_string(),
+                                            ),
+                                        )
+                                        .into();
+                                    } else if constraint.contains("username") {
+                                        return UserDomainError::AlreadyExists(
+                                            UserUniqueConstraint::Username(
+                                                username.clone().as_str().to_string(),
+                                            ),
+                                        )
+                                        .into();
                                     }
                                 }
                             }
-                            _ => {}
                         }
-                        // その他のエラーはPersistenceとして扱う
-                        UserRepositoryError::Persistence(e.into())
-                    })?;
+                    }
+                    _ => {}
+                }
+                // その他のエラーはPersistenceとして扱う
+                UserRepositoryError::Persistence(e.into())
+            })?;
 
-                self.map_to_domain(saved_model)
-            }
-        }
+        self.map_to_domain(saved_model)
     }
 
     async fn find_all(&self) -> Result<Vec<User>, UserRepositoryError> {
