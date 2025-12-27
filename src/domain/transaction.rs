@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use crate::domain::repository::{RepositoryFactory};
 use async_trait::async_trait;
 use futures_util::future::BoxFuture;
@@ -13,6 +14,6 @@ pub trait TransactionManager: Send + Sync {
     async fn execute<T, E, F>(&self, f: F) -> Result<T, E>
     where
         T: Send + 'static,
-        E: IntoTxError + Send + Sync + 'static,
+        E: IntoTxError + Debug + Send + Sync + 'static,
         F: for<'a> FnOnce(&'a dyn RepositoryFactory) -> BoxFuture<'a, Result<T, E>> + Send;
 }
