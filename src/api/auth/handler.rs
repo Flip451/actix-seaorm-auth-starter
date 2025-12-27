@@ -3,7 +3,7 @@ use crate::domain::transaction::TransactionManager;
 use crate::usecase::auth::error::AuthError;
 use crate::usecase::auth::dto::{LoginInput, SignupInput};
 use crate::usecase::auth::service::AuthService;
-use actix_web::{HttpResponse, Responder, post, web};
+use actix_web::{HttpResponse, Responder, web};
 use serde::Deserialize;
 use validator::Validate;
 

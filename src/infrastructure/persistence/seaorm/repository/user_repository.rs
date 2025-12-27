@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, QueryFilter, RuntimeErr, Set};
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -115,7 +115,26 @@ where
                 let saved_model = active_model
                     .insert(self.conn.connect())
                     .await
-                    .map_err(|e| DomainError::Persistence(e.to_string()))?;
+                    .map_err(|e| {
+                        // エラーハンドリングの詳細化
+                        match &e {
+                            DbErr::Query(RuntimeErr::SqlxError(sqlx_err)) => {
+                                // Postgresのエラーコード "23505" (unique_violation) をチェック
+                                if let Some(db_err) = sqlx_err.as_database_error() {
+                                    if let Some(code) = db_err.code() {
+                                        if code == "23505" {
+                                            return DomainError::AlreadyExists(
+                                                "Email or Username already exists".to_string(),
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                            _ => {}
+                        }
+                        // その他のエラーはPersistenceとして扱う
+                        DomainError::Persistence(e.to_string())
+                    })?;
 
                 self.map_to_domain(saved_model)
             }

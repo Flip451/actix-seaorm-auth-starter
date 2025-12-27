@@ -3,7 +3,7 @@ use crate::{
         repository::TxRepositories,
         transaction::TransactionManager,
         user::{
-            Email, HashedPassword, PasswordHasher, RawPassword, User, UserRepository, UserRole,
+            DomainError, Email, HashedPassword, PasswordHasher, RawPassword, User, UserRepository, UserRole
         },
     },
     usecase::auth::{
@@ -87,7 +87,12 @@ impl<TM: TransactionManager> AuthService<TM> {
                         updated_at: now,
                     };
 
-                    repos.user.save(user).await.map_err(AuthError::Domain)
+                    repos.user.save(user).await.map_err(|e| {
+                        match e {
+                            DomainError::AlreadyExists(_) => AuthError::EmailAlreadyExists,
+                            e => AuthError::Domain(e),
+                        }
+                    })
                 })
             })
             .await
