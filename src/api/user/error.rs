@@ -20,9 +20,9 @@ impl ResponseError for ApiUserError {
             ApiUserError::UserError(user_error) => {
                 match user_error {
                     UserError::InvalidInput(_) => StatusCode::BAD_REQUEST,
-                    UserError::RepositoryError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                     UserError::TxError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                     UserError::PersistenceError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                    UserError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 }
             },
         }

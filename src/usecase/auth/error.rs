@@ -49,21 +49,7 @@ impl IntoTxError for AuthError {
 impl From<UserRepositoryError> for AuthError {
     fn from(error: UserRepositoryError) -> Self {
         match error {
-            UserRepositoryError::DomainError(UserDomainError::EmailAlreadyExists(_)) => {
-                AuthError::EmailAlreadyExists
-            }
-            UserRepositoryError::DomainError(UserDomainError::AlreadyExists(
-                UserUniqueConstraint::Email(_),
-            )) => AuthError::EmailAlreadyExists,
-            UserRepositoryError::DomainError(UserDomainError::AlreadyExists(
-                UserUniqueConstraint::Username(_),
-            )) => AuthError::UsernameAlreadyExists,
-            UserRepositoryError::DomainError(UserDomainError::InvalidEmail(invalid_email)) => {
-                AuthError::InvalidEmail(invalid_email)
-            }
-            UserRepositoryError::DomainError(UserDomainError::PasswordTooShort) => {
-                AuthError::PasswordTooShort
-            }
+            UserRepositoryError::DomainError(source) => AuthError::from(source),
             UserRepositoryError::Persistence(source) => AuthError::PersistenceError(source),
         }
     }
@@ -72,5 +58,20 @@ impl From<UserRepositoryError> for AuthError {
 impl From<PasswordHashingError> for AuthError {
     fn from(error: PasswordHashingError) -> Self {
         AuthError::PasswordHashingFailed(anyhow::Error::new(error))
+    }
+}
+
+impl From<UserDomainError> for AuthError {
+    fn from(error: UserDomainError) -> Self {
+        match error {
+            UserDomainError::AlreadyExists(constraint) => match constraint {
+                UserUniqueConstraint::Email(_) => AuthError::EmailAlreadyExists,
+                UserUniqueConstraint::Username(_) => AuthError::UsernameAlreadyExists,
+            },
+            UserDomainError::InvalidEmail(invalid_email) => {
+                AuthError::InvalidEmail(invalid_email)
+            }
+            UserDomainError::PasswordTooShort => AuthError::PasswordTooShort,
+        }
     }
 }

@@ -11,9 +11,6 @@ pub enum UserDomainError {
 
     #[error("既存のユーザーと重複しています: {0}")]
     AlreadyExists(UserUniqueConstraint),
-
-    #[error("既に存在するメールアドレスです: {0}")]
-    EmailAlreadyExists(String),
 }
 
 #[derive(Debug, Display)]

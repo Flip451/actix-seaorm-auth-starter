@@ -54,7 +54,7 @@ where
         let model = user_entity::Entity::find_by_id(id)
             .one(self.conn.connect())
             .await
-            .map_err(|e| UserRepositoryError::Persistence(anyhow::Error::new(e)))?;
+            .map_err(|e| UserRepositoryError::Persistence(e.into()))?;
 
         match model {
             Some(m) => Ok(Some(self.map_to_domain(m)?)),
@@ -67,7 +67,7 @@ where
             .filter(user_entity::Column::Email.eq(email))
             .one(self.conn.connect())
             .await
-            .map_err(|e| UserRepositoryError::Persistence(anyhow::Error::new(e)))?;
+            .map_err(|e| UserRepositoryError::Persistence(e.into()))?;
 
         match model {
             Some(m) => Ok(Some(self.map_to_domain(m)?)),
@@ -80,7 +80,7 @@ where
             .filter(user_entity::Column::Username.eq(username))
             .one(self.conn.connect())
             .await
-            .map_err(|e| UserRepositoryError::Persistence(anyhow::Error::new(e)))?;
+            .map_err(|e| UserRepositoryError::Persistence(e.into()))?;
 
         match model {
             Some(m) => Ok(Some(self.map_to_domain(m)?)),
@@ -94,7 +94,7 @@ where
         let existing_model = user_entity::Entity::find_by_id(user.id)
             .one(self.conn.connect())
             .await
-            .map_err(|e| UserRepositoryError::Persistence(anyhow::Error::new(e)))?;
+            .map_err(|e| UserRepositoryError::Persistence(e.into()))?;
 
         match existing_model {
             // A. 更新 (UPDATE)
@@ -111,7 +111,7 @@ where
                 let updated_model = active_model
                     .update(self.conn.connect())
                     .await
-                    .map_err(|e| UserRepositoryError::Persistence(anyhow::Error::new(e)))?;
+                    .map_err(|e| UserRepositoryError::Persistence(e.into()))?;
 
                 self.map_to_domain(updated_model)
             }
@@ -166,7 +166,7 @@ where
                             _ => {}
                         }
                         // その他のエラーはPersistenceとして扱う
-                        UserRepositoryError::Persistence(anyhow::Error::new(e))
+                        UserRepositoryError::Persistence(e.into())
                     })?;
 
                 self.map_to_domain(saved_model)
@@ -178,7 +178,7 @@ where
         let models = user_entity::Entity::find()
             .all(self.conn.connect())
             .await
-            .map_err(|e| UserRepositoryError::Persistence(anyhow::Error::new(e)))?;
+            .map_err(|e| UserRepositoryError::Persistence(e.into()))?;
 
         models.into_iter().map(|m| self.map_to_domain(m)).collect()
     }

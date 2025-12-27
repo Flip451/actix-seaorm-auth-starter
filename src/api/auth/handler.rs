@@ -17,9 +17,11 @@ pub struct SignupRequest {
     pub password: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 pub struct LoginRequest {
+    #[validate(email(message = "メールアドレスの形式が正しくありません"))]
     pub email: String,
+    #[validate(length(min = 8, message = "パスワードは8文字以上必要です"))]
     pub password: String,
 }
 
@@ -28,7 +30,7 @@ pub async fn signup_handler<TM: TransactionManager>(
     service: web::Data<AuthService<TM>>,
     body: web::Json<SignupRequest>,
 ) -> Result<impl Responder, AppError> {
-    body.validate().map_err(|e| ApiAuthError::InvalidInput(e))?;
+    body.validate().map_err(ApiAuthError::InvalidInput)?;
 
     let input = SignupInput {
         username: body.username.clone(),
@@ -46,6 +48,8 @@ pub async fn login_handler<TM: TransactionManager>(
     service: web::Data<AuthService<TM>>,
     body: web::Json<LoginRequest>,
 ) -> Result<impl Responder, AppError> {
+    body.validate().map_err(ApiAuthError::InvalidInput)?;
+
     let input = LoginInput {
         email: body.email.clone(),
         password: body.password.clone(),

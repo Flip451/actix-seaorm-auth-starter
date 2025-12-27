@@ -3,7 +3,8 @@ use crate::{
         repository::TxRepositories,
         transaction::TransactionManager,
         user::{
-            Email, HashedPassword, PasswordHasher, PasswordHashingError, RawPassword, User, UserRepository, UserRepositoryError, UserRole
+            Email, HashedPassword, PasswordHasher, RawPassword, User,
+            UserRepository, UserRole,
         },
     },
     usecase::auth::{
@@ -54,8 +55,8 @@ impl<TM: TransactionManager> AuthService<TM> {
     pub async fn signup(&self, input: SignupInput) -> Result<User, AuthError> {
         // ここでDTOからValueObjectへの変換を行う
         let username = input.username;
-        let email = Email::new(&input.email).map_err(UserRepositoryError::from)?;  // Question: なぜ .map_err(UserRepositoryError::from) が必要なのか?
-        let password = RawPassword::new(&input.password).map_err(UserRepositoryError::from)?;    // Question: なぜ .map_err(UserRepositoryError::from) が必要なのか?
+        let email = Email::new(&input.email)?;
+        let password = RawPassword::new(&input.password)?;
 
         // パスワードのハッシュ化
         let hashed_password = self.password_hasher.hash(&password)?;
@@ -64,12 +65,7 @@ impl<TM: TransactionManager> AuthService<TM> {
             .execute::<User, AuthError, _>(move |repos: TxRepositories<'_>| {
                 Box::pin(async move {
                     // 1. 重複チェック
-                    if repos
-                        .user
-                        .find_by_email(email.as_str())
-                        .await?
-                        .is_some()
-                    {
+                    if repos.user.find_by_email(email.as_str()).await?.is_some() {
                         return Err(AuthError::EmailAlreadyExists);
                     }
 
@@ -86,7 +82,7 @@ impl<TM: TransactionManager> AuthService<TM> {
                         updated_at: now,
                     };
 
-                    repos.user.save(user).await.map_err(AuthError::from)
+                    Ok(repos.user.save(user).await?)
                 })
             })
             .await
@@ -99,8 +95,8 @@ impl<TM: TransactionManager> AuthService<TM> {
     )]
     pub async fn login(&self, input: LoginInput) -> Result<String, AuthError> {
         // ここでDTOからValueObjectへの変換を行う
-        let email = Email::new(&input.email).map_err(UserRepositoryError::from)?;
-        let password = RawPassword::new(&input.password).map_err(UserRepositoryError::from)?;
+        let email = Email::new(&input.email)?;
+        let password = RawPassword::new(&input.password)?;
         // 1. ユーザーを検索
         let user_opt = self.user_repo.find_by_email(email.as_str()).await?;
 

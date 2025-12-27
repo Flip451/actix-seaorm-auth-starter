@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use super::value_object::{RawPassword, HashedPassword};
+use super::value_object::{HashedPassword, RawPassword};
 
 #[derive(Debug, Error)]
 pub enum PasswordHashingError {
