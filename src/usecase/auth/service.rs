@@ -39,7 +39,8 @@ impl<TM: TransactionManager> AuthService<TM> {
         let email = Email::new(&input.email)?;
         let password = RawPassword::new(&input.password)?;
 
-        let password_hasher = self.password_hasher.clone();
+        // パスワードのハッシュ化
+        let hashed_password = self.password_hasher.hash(&password)?;
 
         self.transaction_manager.execute::<User, AuthError, _>(move |repos:TxRepositories<'_> | Box::pin(async move {
              // 1. 重複チェック
@@ -52,10 +53,7 @@ impl<TM: TransactionManager> AuthService<TM> {
                 return Err(AuthError::EmailAlreadyExists);
             }
 
-            // 2. ハッシュ化 (ValueError から自動変換される)
-            let hashed_password = password_hasher.hash(&password)?;
-
-            // 3. ドメインモデル作成と保存
+            // 2. ドメインモデル作成と保存
             let now = Utc::now().fixed_offset();
             let user = User {
                 id: Uuid::new_v4(),
