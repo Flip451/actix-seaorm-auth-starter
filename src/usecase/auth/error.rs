@@ -33,9 +33,6 @@ pub enum AuthError {
     #[error("永続化エラー: {0}")]
     PersistenceError(#[source] anyhow::Error),
 
-    #[error("トークンが検出されませんでした")]
-    TokenNotDetected,
-
     #[error("トークンの発行に失敗しました: {0}")]
     TokenIssuanceFailed(#[source] anyhow::Error),
 }

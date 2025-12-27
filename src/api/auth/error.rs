@@ -27,7 +27,6 @@ impl ResponseError for ApiAuthError {
                 AuthError::Forbidden => StatusCode::FORBIDDEN,
                 AuthError::TxError(_error) => StatusCode::INTERNAL_SERVER_ERROR,
                 AuthError::PersistenceError(_error) => StatusCode::INTERNAL_SERVER_ERROR,
-                AuthError::TokenNotDetected => StatusCode::UNAUTHORIZED,
                 AuthError::TokenIssuanceFailed(_error) => StatusCode::INTERNAL_SERVER_ERROR,
             },
         }

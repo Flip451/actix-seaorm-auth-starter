@@ -13,7 +13,9 @@ impl FromRequest for AdminContext {
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
-        let token_service = req.app_data::<web::Data<TokenService>>().cloned();
+        let token_service = req.app_data::<web::Data<TokenService>>().expect(
+            "TokenService がアプリデータに登録されていません。 main.rs を確認してください。",
+        );
 
         let auth_header = req
             .headers()
@@ -26,20 +28,16 @@ impl FromRequest for AdminContext {
             None => return ready(Err(ApiAuthError::AuthError(AuthError::InvalidCredentials))),
         };
 
-        if let Some(service) = token_service {
-            match service.verify_token(token) {
-                // ロールが Admin であることを確認
-                Ok(claims) if claims.role == UserRole::Admin => {
-                    return ready(Ok(AdminContext {
-                        user_id: claims.sub,
-                    }));
-                }
-                // Admin でない場合は Forbidden を返す
-                Ok(_) => return ready(Err(ApiAuthError::AuthError(AuthError::Forbidden))),
-                Err(e) => return ready(Err(ApiAuthError::AuthError(e))),
+        match token_service.verify_token(token) {
+            // ロールが Admin であることを確認
+            Ok(claims) if claims.role == UserRole::Admin => {
+                return ready(Ok(AdminContext {
+                    user_id: claims.sub,
+                }));
             }
+            // Admin でない場合は Forbidden を返す
+            Ok(_) => return ready(Err(ApiAuthError::AuthError(AuthError::Forbidden))),
+            Err(e) => return ready(Err(ApiAuthError::AuthError(e))),
         }
-
-        ready(Err(ApiAuthError::AuthError(AuthError::TokenNotDetected))) // TODO: これでよい？
     }
 }
