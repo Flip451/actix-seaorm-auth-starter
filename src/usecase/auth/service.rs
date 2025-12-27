@@ -1,10 +1,9 @@
 use crate::{
     domain::{
-        repository::TxRepositories,
+        repository::RepositoryFactory,
         transaction::TransactionManager,
         user::{
-            Email, HashedPassword, PasswordHasher, RawPassword, User,
-            UserRepository, UserRole,
+            Email, HashedPassword, PasswordHasher, RawPassword, User, UserRepository, UserRole,
         },
     },
     usecase::auth::{
@@ -62,14 +61,16 @@ impl<TM: TransactionManager> AuthService<TM> {
         let hashed_password = self.password_hasher.hash(&password)?;
 
         self.transaction_manager
-            .execute::<User, AuthError, _>(move |repos: TxRepositories<'_>| {
+            .execute::<User, AuthError, _>(move |repos: &dyn RepositoryFactory| {
                 Box::pin(async move {
+                    let user_repo = repos.user_repository();
+
                     // 1. 重複チェック
-                    if repos.user.find_by_email(email.as_str()).await?.is_some() {
+                    if user_repo.find_by_email(email.as_str()).await?.is_some() {
                         return Err(AuthError::EmailAlreadyExists(email.as_str().to_string()));
                     }
 
-                    if repos.user.find_by_username(&username).await?.is_some() {
+                    if user_repo.find_by_username(&username).await?.is_some() {
                         return Err(AuthError::UsernameAlreadyExists(username.to_string()));
                     }
 
@@ -86,7 +87,7 @@ impl<TM: TransactionManager> AuthService<TM> {
                         updated_at: now,
                     };
 
-                    Ok(repos.user.save(user).await?)
+                    Ok(user_repo.save(user).await?)
                 })
             })
             .await

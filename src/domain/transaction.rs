@@ -1,4 +1,4 @@
-use crate::domain::repository::TxRepositories;
+use crate::domain::repository::{RepositoryFactory};
 use async_trait::async_trait;
 use futures_util::future::BoxFuture;
 
@@ -14,5 +14,5 @@ pub trait TransactionManager: Send + Sync {
     where
         T: Send + 'static,
         E: IntoTxError + Send + Sync + 'static,
-        F: for<'a> FnOnce(TxRepositories<'a>) -> BoxFuture<'a, Result<T, E>> + Send;
+        F: for<'a> FnOnce(&'a dyn RepositoryFactory) -> BoxFuture<'a, Result<T, E>> + Send;
 }

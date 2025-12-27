@@ -1,8 +1,10 @@
-use crate::domain::user::UserRepository;
-// use crate::domain::post::PostRepository; // 仮定: 追加されたリポジトリ
+use super::user::UserRepository;
+// use super::post::PostRepository; // 仮定: 追加されたリポジトリ
 
-// トランザクション内で利用可能なリポジトリ一覧を保持する構造体
-pub struct TxRepositories<'a> {
-    pub user: &'a dyn UserRepository,
-    // pub post: Arc<dyn PostRepository>, // 追加されたらここに増やす
+pub trait RepositoryFactory: Send + Sync {
+    // 戻り値を Box にすることで、実体を持たずにトレイトオブジェクトとして扱います
+    fn user_repository(&self) -> Box<dyn UserRepository + '_>;
+
+    // 将来的な拡張:
+    // fn post_repository(&self) -> Box<dyn PostRepository + '_>;
 }

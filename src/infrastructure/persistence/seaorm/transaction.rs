@@ -1,11 +1,24 @@
 use std::sync::Arc;
 
 use super::repository::user_repository::SeaOrmUserRepository;
-use crate::domain::repository::TxRepositories;
+use crate::domain::repository::RepositoryFactory;
 use crate::domain::transaction::{IntoTxError, TransactionManager};
+use crate::domain::user::UserRepository;
 use async_trait::async_trait;
 use futures_util::future::BoxFuture;
-use sea_orm::{DatabaseConnection, TransactionTrait};
+use sea_orm::{DatabaseConnection, DatabaseTransaction, TransactionTrait};
+
+pub struct SeaOrmRepositoryFactory<'a> {
+    txn: &'a DatabaseTransaction,
+}
+
+impl<'a> RepositoryFactory for SeaOrmRepositoryFactory<'a> {
+    fn user_repository(&self) -> Box<dyn UserRepository + '_> {
+        // ここで初めてインスタンス化される（遅延初期化）
+        // SeaOrmUserRepositoryは軽量（接続参照を持つだけ）なので作成コストは低い
+        Box::new(SeaOrmUserRepository::new(self.txn))
+    }
+}
 
 pub struct SeaOrmTransactionManager {
     db: Arc<DatabaseConnection>,
@@ -23,7 +36,7 @@ impl TransactionManager for SeaOrmTransactionManager {
     where
         T: Send + 'static,
         E: IntoTxError + Send + Sync + 'static,
-        F: for<'a> FnOnce(TxRepositories<'a>) -> BoxFuture<'a, Result<T, E>> + Send,
+        F: for<'a> FnOnce(&'a dyn RepositoryFactory) -> BoxFuture<'a, Result<T, E>> + Send,
     {
         // 1. 手動でトランザクションを開始 (戻り値は Result<DatabaseTransaction, DbErr>)
         let txn = self
@@ -32,20 +45,14 @@ impl TransactionManager for SeaOrmTransactionManager {
             .await
             .map_err(|e| E::into_tx_error(e))?;
 
-        // 2. トランザクション接続を持つリポジトリを作成
-        let user_repo = SeaOrmUserRepository::new(&txn);
-        // let post_repo = SeaOrmPostRepository::new(&txn);
+        // 2. ファクトリを作成（ここではまだ各リポジトリはnewされない）
+        let factory = SeaOrmRepositoryFactory { txn: &txn };
 
-        // 3. コンテナ構造体にまとめる
-        let repos = TxRepositories {
-            user: &user_repo,
-            // post: &post_repo,
-        };
+        // 3. ユースケースにファクトリを渡す
+        // factoryは &dyn RepositoryFactory として渡される
+        let result = f(&factory).await;
 
-        // 4. ユースケースを実行
-        let result = f(repos).await;
-
-        // 5. 結果に応じたコミット/ロールバック制御
+        // 4. 結果に応じたコミット/ロールバック制御
         match result {
             Ok(value) => {
                 // 成功時はコミット
