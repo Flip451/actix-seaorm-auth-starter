@@ -18,11 +18,11 @@ pub enum AuthError {
     #[error("メールアドレスまたはパスワードが正しくありません")]
     InvalidCredentials,
 
-    #[error("このメールアドレスは既に登録されています")]
-    EmailAlreadyExists,
+    #[error("このメールアドレスは既に登録されています: {0}")]
+    EmailAlreadyExists(String),
 
-    #[error("このユーザ名は既に登録されています")]
-    UsernameAlreadyExists,
+    #[error("このユーザ名は既に登録されています: {0}")]
+    UsernameAlreadyExists(String),
 
     #[error("アクセス権限がありません")]
     Forbidden,
@@ -62,8 +62,8 @@ impl From<UserDomainError> for AuthError {
     fn from(error: UserDomainError) -> Self {
         match error {
             UserDomainError::AlreadyExists(constraint) => match constraint {
-                UserUniqueConstraint::Email(_) => AuthError::EmailAlreadyExists,
-                UserUniqueConstraint::Username(_) => AuthError::UsernameAlreadyExists,
+                UserUniqueConstraint::Email(email) => AuthError::EmailAlreadyExists(email),
+                UserUniqueConstraint::Username(username) => AuthError::UsernameAlreadyExists(username),
             },
             UserDomainError::InvalidEmail(invalid_email) => {
                 AuthError::InvalidEmail(invalid_email)

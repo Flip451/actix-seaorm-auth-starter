@@ -66,7 +66,11 @@ impl<TM: TransactionManager> AuthService<TM> {
                 Box::pin(async move {
                     // 1. 重複チェック
                     if repos.user.find_by_email(email.as_str()).await?.is_some() {
-                        return Err(AuthError::EmailAlreadyExists);
+                        return Err(AuthError::EmailAlreadyExists(email.as_str().to_string()));
+                    }
+
+                    if repos.user.find_by_username(&username).await?.is_some() {
+                        return Err(AuthError::UsernameAlreadyExists(username.to_string()));
                     }
 
                     // 2. ドメインモデル作成と保存
