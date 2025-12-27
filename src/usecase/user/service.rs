@@ -2,19 +2,30 @@ use std::sync::Arc;
 
 use super::dto::UserResponse;
 use super::error::UserError;
-use crate::domain::user::UserRepository;
+use crate::domain::transaction::TransactionManager;
+use crate::domain::user::User;
 
-pub struct UserService {
-    user_repo: Arc<dyn UserRepository>,
+pub struct UserService<TM: TransactionManager> {
+    transaction_manager: Arc<TM>,
 }
 
-impl UserService {
-    pub fn new(user_repo: Arc<dyn UserRepository>) -> Self {
-        Self { user_repo }
+impl<TM: TransactionManager> UserService<TM> {
+    pub fn new(transaction_manager: Arc<TM>) -> Self {
+        Self {
+            transaction_manager,
+        }
     }
 
     pub async fn list_users(&self) -> Result<Vec<UserResponse>, UserError> {
-        let users = self.user_repo.find_all().await?;
+        let users = self
+            .transaction_manager
+            .execute::<Vec<User>, UserError, _>(move |factory| {
+                Box::pin(async move {
+                    let user_repo = factory.user_repository();
+                    Ok(user_repo.find_all().await?)
+                })
+            })
+            .await?;
 
         Ok(users
             .into_iter()

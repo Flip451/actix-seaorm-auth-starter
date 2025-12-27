@@ -1,10 +1,7 @@
 use crate::{
     domain::{
-        repository::RepositoryFactory,
         transaction::TransactionManager,
-        user::{
-            Email, HashedPassword, PasswordHasher, RawPassword, User, UserRepository, UserRole,
-        },
+        user::{Email, HashedPassword, PasswordHasher, RawPassword, User, UserRole},
     },
     usecase::auth::{
         dto::{LoginInput, SignupInput},
@@ -17,8 +14,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct AuthService<TM> {
-    user_repo: Arc<dyn UserRepository>,
-    transaction_manager: TM,
+    transaction_manager: Arc<TM>,
     password_hasher: Arc<dyn PasswordHasher>,
     token_service: Arc<TokenService>,
     dummy_hash: HashedPassword,
@@ -26,8 +22,7 @@ pub struct AuthService<TM> {
 
 impl<TM: TransactionManager> AuthService<TM> {
     pub fn new(
-        user_repo: Arc<dyn UserRepository>,
-        transaction_manager: TM,
+        transaction_manager: Arc<TM>,
         password_hasher: Arc<dyn PasswordHasher>,
         token_service: Arc<TokenService>,
     ) -> Self {
@@ -35,7 +30,6 @@ impl<TM: TransactionManager> AuthService<TM> {
         let dummy_hash = password_hasher.hash(&dummy_password).unwrap();
 
         Self {
-            user_repo,
             transaction_manager,
             password_hasher,
             token_service,
@@ -61,9 +55,9 @@ impl<TM: TransactionManager> AuthService<TM> {
         let hashed_password = self.password_hasher.hash(&password)?;
 
         self.transaction_manager
-            .execute::<User, AuthError, _>(move |repos: &dyn RepositoryFactory| {
+            .execute::<User, AuthError, _>(move |factory| {
                 Box::pin(async move {
-                    let user_repo = repos.user_repository();
+                    let user_repo = factory.user_repository();
 
                     // 1. 重複チェック
                     if user_repo.find_by_email(email.as_str()).await?.is_some() {
@@ -103,7 +97,15 @@ impl<TM: TransactionManager> AuthService<TM> {
         let email = Email::new(&input.email)?;
         let password = RawPassword::new(&input.password)?;
         // 1. ユーザーを検索
-        let user_opt = self.user_repo.find_by_email(email.as_str()).await?;
+        let user_opt = self
+            .transaction_manager
+            .execute::<Option<User>, AuthError, _>(move |factory| {
+                Box::pin(async move {
+                    let user_repo = factory.user_repository();
+                    Ok(user_repo.find_by_email(email.as_str()).await?)
+                })
+            })
+            .await?;
 
         // 2. 検証 (HashedPassword に委譲)
         // ※タイミング攻撃に対する脆弱性を回避するため、ユーザーの有無に関わらず検証処理を行う

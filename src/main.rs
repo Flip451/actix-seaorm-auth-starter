@@ -48,7 +48,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(user_service.clone())
             .app_data(token_service.clone())
             .configure(api::auth::handler::auth_config::<SeaOrmTransactionManager>)
-            .configure(api::user::handler::user_config)
+            .configure(api::user::handler::user_config::<SeaOrmTransactionManager>)
     })
     .bind(("0.0.0.0", 8080))?
     .run();
