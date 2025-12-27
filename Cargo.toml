@@ -34,3 +34,4 @@ tracing-opentelemetry = "0.28"
 
 # Actix Web 専用の統合
 tracing-actix-web = "0.7"
+anyhow = "1.0.100"

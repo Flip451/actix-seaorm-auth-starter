@@ -42,7 +42,7 @@ impl TokenService {
             &claims,
             &EncodingKey::from_secret(self.jwt_secret.as_ref()),
         )
-        .map_err(|_| AuthError::InternalError)
+        .map_err(|e| AuthError::TokenIssuanceFailed(e.into()))
     }
 
     /// トークンの検証 (Middlewareで使用)

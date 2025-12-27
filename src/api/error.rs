@@ -1,15 +1,15 @@
 use actix_web::{HttpResponse, ResponseError, http::StatusCode};
-use crate::usecase::auth::error::AuthError;
-use crate::usecase::user::error::UserError;
+use crate::api::auth::error::ApiAuthError;
+use crate::api::user::error::ApiUserError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum AppError {
     #[error(transparent)]
-    Auth(#[from] AuthError),
+    Auth(#[from] ApiAuthError),
 
     #[error(transparent)]
-    User(#[from] UserError),
+    User(#[from] ApiUserError),
 }
 
 // AppError 自体の実装は「中身に任せる」という一貫したルールにする

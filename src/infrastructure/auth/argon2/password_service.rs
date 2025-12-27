@@ -1,4 +1,4 @@
-use crate::domain::user::DomainError;
+use crate::domain::user::PasswordHashingError;
 use crate::domain::user::PasswordHasher;
 use crate::domain::user::{HashedPassword, RawPassword};
 use argon2::{
@@ -11,12 +11,12 @@ use argon2::{
 pub struct Argon2PasswordHasher;
 
 impl PasswordHasher for Argon2PasswordHasher {
-    fn hash(&self, raw: &RawPassword) -> Result<HashedPassword, DomainError> {
+    fn hash(&self, raw: &RawPassword) -> Result<HashedPassword, PasswordHashingError> {
         let salt = SaltString::generate(&mut OsRng);
         let argon2 = Argon2::default();
         let hash = argon2
             .hash_password(raw.as_bytes(), &salt)
-            .map_err(|e| DomainError::PasswordProcessError(e.to_string()))?
+            .map_err(|_| PasswordHashingError::HashingFailed)?
             .to_string();
         Ok(HashedPassword::from_str(&hash))
     }

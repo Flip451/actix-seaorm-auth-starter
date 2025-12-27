@@ -1,12 +1,30 @@
 use actix_web::{HttpResponse, ResponseError, http::StatusCode};
+use thiserror::Error;
+use validator::ValidationErrors;
 
 use crate::usecase::user::error::UserError;
 
-impl ResponseError for UserError {
+#[derive(Debug, Error)]
+pub enum ApiUserError {
+    #[error("入力の形式が不正です: {0}")]
+    InvalidInput(ValidationErrors),
+
+    #[error(transparent)]
+    UserError(#[from] UserError),
+}
+
+impl ResponseError for ApiUserError {
     fn status_code(&self) -> StatusCode {
         match self {
-            UserError::InvalidInput(_) => StatusCode::BAD_REQUEST,
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
+            ApiUserError::InvalidInput(_) => StatusCode::BAD_REQUEST,
+            ApiUserError::UserError(user_error) => {
+                match user_error {
+                    UserError::InvalidInput(_) => StatusCode::BAD_REQUEST,
+                    UserError::RepositoryError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                    UserError::TxError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                    UserError::PersistenceError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                }
+            },
         }
     }
 

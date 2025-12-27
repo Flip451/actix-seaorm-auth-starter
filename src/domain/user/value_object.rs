@@ -1,4 +1,4 @@
-use super::error::DomainError;
+use super::error::UserDomainError;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 use validator::Validate;
@@ -7,7 +7,7 @@ use validator::Validate;
 pub struct Email(String);
 
 impl Email {
-    pub fn new(value: &str) -> Result<Self, DomainError> {
+    pub fn new(value: &str) -> Result<Self, UserDomainError> {
         #[derive(Validate)]
         struct EmailCheck<'a> {
             #[validate(email)]
@@ -17,7 +17,7 @@ impl Email {
         if check.validate().is_ok() {
             Ok(Self(value.to_string()))
         } else {
-            Err(DomainError::InvalidEmail(value.to_string()))
+            Err(UserDomainError::InvalidEmail(value.to_string()))
         }
     }
     pub fn as_str(&self) -> &str {
@@ -30,11 +30,11 @@ impl Email {
 pub struct RawPassword(String);
 
 impl RawPassword {
-    pub fn new(value: &str) -> Result<Self, DomainError> {
+    pub fn new(value: &str) -> Result<Self, UserDomainError> {
         if value.len() >= 8 {
             Ok(Self(value.to_string()))
         } else {
-            Err(DomainError::PasswordTooShort)
+            Err(UserDomainError::PasswordTooShort)
         }
     }
 

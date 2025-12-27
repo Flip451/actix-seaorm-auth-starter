@@ -5,7 +5,10 @@ use uuid::Uuid;
 
 use super::super::entities::user as user_entity;
 use crate::{
-    domain::user::{DomainError, Email, HashedPassword, User, UserRepository, UserRole},
+    domain::user::{
+        Email, HashedPassword, User, UserDomainError, UserRepository, UserRepositoryError,
+        UserRole, UserUniqueConstraint,
+    },
     infrastructure::persistence::seaorm::connect::Connectable,
 };
 
@@ -27,7 +30,7 @@ impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmUserRepository<C, T> 
     }
 
     /// DBモデルからドメインモデルへの変換
-    fn map_to_domain(&self, model: user_entity::Model) -> Result<User, DomainError> {
+    fn map_to_domain(&self, model: user_entity::Model) -> Result<User, UserRepositoryError> {
         Ok(User {
             id: model.id,
             username: model.username,
@@ -47,11 +50,11 @@ where
     C: Connectable<T> + Send + Sync,
     T: sea_orm::ConnectionTrait + Send + Sync,
 {
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<User>, DomainError> {
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<User>, UserRepositoryError> {
         let model = user_entity::Entity::find_by_id(id)
             .one(self.conn.connect())
             .await
-            .map_err(|e| DomainError::Persistence(e.to_string()))?;
+            .map_err(|e| UserRepositoryError::Persistence(anyhow::Error::new(e)))?;
 
         match model {
             Some(m) => Ok(Some(self.map_to_domain(m)?)),
@@ -59,12 +62,25 @@ where
         }
     }
 
-    async fn find_by_email(&self, email: &str) -> Result<Option<User>, DomainError> {
+    async fn find_by_email(&self, email: &str) -> Result<Option<User>, UserRepositoryError> {
         let model = user_entity::Entity::find()
             .filter(user_entity::Column::Email.eq(email))
             .one(self.conn.connect())
             .await
-            .map_err(|e| DomainError::Persistence(e.to_string()))?;
+            .map_err(|e| UserRepositoryError::Persistence(anyhow::Error::new(e)))?;
+
+        match model {
+            Some(m) => Ok(Some(self.map_to_domain(m)?)),
+            None => Ok(None),
+        }
+    }
+
+    async fn find_by_username(&self, username: &str) -> Result<Option<User>, UserRepositoryError> {
+        let model = user_entity::Entity::find()
+            .filter(user_entity::Column::Username.eq(username))
+            .one(self.conn.connect())
+            .await
+            .map_err(|e| UserRepositoryError::Persistence(anyhow::Error::new(e)))?;
 
         match model {
             Some(m) => Ok(Some(self.map_to_domain(m)?)),
@@ -73,12 +89,12 @@ where
     }
 
     /// 保存（新規作成 or 更新）を行うメソッド
-    async fn save(&self, user: User) -> Result<User, DomainError> {
+    async fn save(&self, user: User) -> Result<User, UserRepositoryError> {
         // 1. 既存レコードの確認
         let existing_model = user_entity::Entity::find_by_id(user.id)
             .one(self.conn.connect())
             .await
-            .map_err(|e| DomainError::Persistence(e.to_string()))?;
+            .map_err(|e| UserRepositoryError::Persistence(anyhow::Error::new(e)))?;
 
         match existing_model {
             // A. 更新 (UPDATE)
@@ -95,12 +111,15 @@ where
                 let updated_model = active_model
                     .update(self.conn.connect())
                     .await
-                    .map_err(|e| DomainError::Persistence(e.to_string()))?;
+                    .map_err(|e| UserRepositoryError::Persistence(anyhow::Error::new(e)))?;
 
                 self.map_to_domain(updated_model)
             }
             // B. 新規作成 (INSERT)
             None => {
+                let username = user.username.clone();
+                let email = user.email.clone();
+
                 let active_model = user_entity::ActiveModel {
                     id: Set(user.id),
                     username: Set(user.username),
@@ -123,9 +142,23 @@ where
                                 if let Some(db_err) = sqlx_err.as_database_error() {
                                     if let Some(code) = db_err.code() {
                                         if code == "23505" {
-                                            return DomainError::AlreadyExists(
-                                                "Email or Username already exists".to_string(),
-                                            );
+                                            let constraint = db_err.constraint().unwrap_or("");
+
+                                            if constraint.contains("email") {
+                                                return UserDomainError::AlreadyExists(
+                                                    UserUniqueConstraint::Email(
+                                                        email.clone().as_str().to_string(),
+                                                    ),
+                                                )
+                                                .into();
+                                            } else if constraint.contains("username") {
+                                                return UserDomainError::AlreadyExists(
+                                                    UserUniqueConstraint::Username(
+                                                        username.clone().as_str().to_string(),
+                                                    ),
+                                                )
+                                                .into();
+                                            }
                                         }
                                     }
                                 }
@@ -133,7 +166,7 @@ where
                             _ => {}
                         }
                         // その他のエラーはPersistenceとして扱う
-                        DomainError::Persistence(e.to_string())
+                        UserRepositoryError::Persistence(anyhow::Error::new(e))
                     })?;
 
                 self.map_to_domain(saved_model)
@@ -141,11 +174,11 @@ where
         }
     }
 
-    async fn find_all(&self) -> Result<Vec<User>, DomainError> {
+    async fn find_all(&self) -> Result<Vec<User>, UserRepositoryError> {
         let models = user_entity::Entity::find()
             .all(self.conn.connect())
             .await
-            .map_err(|e| DomainError::Persistence(e.to_string()))?;
+            .map_err(|e| UserRepositoryError::Persistence(anyhow::Error::new(e)))?;
 
         models.into_iter().map(|m| self.map_to_domain(m)).collect()
     }

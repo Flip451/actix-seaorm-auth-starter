@@ -1,13 +1,19 @@
-use crate::domain::{transaction::MapPersistenceError, user::DomainError};
+use crate::domain::{
+    transaction::{IntoTxError},
+    user::{PasswordHashingError, UserDomainError, UserRepositoryError, UserUniqueConstraint},
+};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum AuthError {
-    #[error(transparent)]
-    Domain(#[from] DomainError),
+    #[error("メールアドレスの形式が不正です: {0}")]
+    InvalidEmail(String),
 
-    #[error("バリデーション失敗: {0}")]
-    InvalidInput(String),
+    #[error("パスワードが短すぎます")]
+    PasswordTooShort,
+
+    #[error("パスワードのハッシュ化に失敗しました: {0}")]
+    PasswordHashingFailed(#[source] anyhow::Error),
 
     #[error("メールアドレスまたはパスワードが正しくありません")]
     InvalidCredentials,
@@ -15,18 +21,56 @@ pub enum AuthError {
     #[error("このメールアドレスは既に登録されています")]
     EmailAlreadyExists,
 
+    #[error("このユーザ名は既に登録されています")]
+    UsernameAlreadyExists,
+
     #[error("アクセス権限がありません")]
     Forbidden,
 
-    #[error("データアクセスエラー: {0}")]
-    RepositoryError(String),
+    #[error("トランザクションエラー: {0}")]
+    TxError(#[source] anyhow::Error),
 
-    #[error("内部処理エラー")]
-    InternalError,
+    #[error("永続化エラー: {0}")]
+    PersistenceError(#[source] anyhow::Error),
+
+    #[error("トークンが検出されませんでした")]
+    TokenNotDetected,
+
+    #[error("トークンの発行に失敗しました: {0}")]
+    TokenIssuanceFailed(#[source] anyhow::Error),
 }
 
-impl MapPersistenceError for AuthError {
-    fn from_persistence_error(msg: String) -> Self {
-        AuthError::RepositoryError(msg)
+impl IntoTxError for AuthError {
+    fn into_tx_error(error: impl Into<anyhow::Error>) -> Self {
+        AuthError::TxError(error.into())
+    }
+}
+
+impl From<UserRepositoryError> for AuthError {
+    fn from(error: UserRepositoryError) -> Self {
+        match error {
+            UserRepositoryError::DomainError(UserDomainError::EmailAlreadyExists(_)) => {
+                AuthError::EmailAlreadyExists
+            }
+            UserRepositoryError::DomainError(UserDomainError::AlreadyExists(
+                UserUniqueConstraint::Email(_),
+            )) => AuthError::EmailAlreadyExists,
+            UserRepositoryError::DomainError(UserDomainError::AlreadyExists(
+                UserUniqueConstraint::Username(_),
+            )) => AuthError::UsernameAlreadyExists,
+            UserRepositoryError::DomainError(UserDomainError::InvalidEmail(invalid_email)) => {
+                AuthError::InvalidEmail(invalid_email)
+            }
+            UserRepositoryError::DomainError(UserDomainError::PasswordTooShort) => {
+                AuthError::PasswordTooShort
+            }
+            UserRepositoryError::Persistence(source) => AuthError::PersistenceError(source),
+        }
+    }
+}
+
+impl From<PasswordHashingError> for AuthError {
+    fn from(error: PasswordHashingError) -> Self {
+        AuthError::PasswordHashingFailed(anyhow::Error::new(error))
     }
 }

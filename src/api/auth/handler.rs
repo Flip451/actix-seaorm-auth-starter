@@ -1,6 +1,6 @@
+use crate::api::auth::error::ApiAuthError;
 use crate::api::error::AppError;
 use crate::domain::transaction::TransactionManager;
-use crate::usecase::auth::error::AuthError;
 use crate::usecase::auth::dto::{LoginInput, SignupInput};
 use crate::usecase::auth::service::AuthService;
 use actix_web::{HttpResponse, Responder, web};
@@ -28,8 +28,7 @@ pub async fn signup_handler<TM: TransactionManager>(
     service: web::Data<AuthService<TM>>,
     body: web::Json<SignupRequest>,
 ) -> Result<impl Responder, AppError> {
-    body.validate()
-        .map_err(|e| AuthError::InvalidInput(e.to_string()))?;
+    body.validate().map_err(|e| ApiAuthError::InvalidInput(e))?;
 
     let input = SignupInput {
         username: body.username.clone(),
@@ -37,7 +36,7 @@ pub async fn signup_handler<TM: TransactionManager>(
         password: body.password.clone(),
     };
 
-    service.signup(input).await?;
+    service.signup(input).await.map_err(ApiAuthError::from)?;
 
     Ok(HttpResponse::Created().finish())
 }
@@ -52,7 +51,7 @@ pub async fn login_handler<TM: TransactionManager>(
         password: body.password.clone(),
     };
 
-    let token = service.login(input).await?;
+    let token = service.login(input).await.map_err(ApiAuthError::from)?;
 
     Ok(HttpResponse::Ok().json(serde_json::json!({ "token": token })))
 }
@@ -60,7 +59,7 @@ pub async fn login_handler<TM: TransactionManager>(
 pub fn auth_config<TM: TransactionManager + 'static>(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/auth")
-        .route("/signup", web::post().to(signup_handler::<TM>))
-        .route("/login", web::post().to(login_handler::<TM>)),
+            .route("/signup", web::post().to(signup_handler::<TM>))
+            .route("/login", web::post().to(login_handler::<TM>)),
     );
 }

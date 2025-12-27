@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::repository::user_repository::SeaOrmUserRepository;
 use crate::domain::repository::TxRepositories;
-use crate::domain::transaction::{MapPersistenceError, TransactionManager};
+use crate::domain::transaction::{IntoTxError, TransactionManager};
 use async_trait::async_trait;
 use futures_util::future::BoxFuture;
 use sea_orm::{DatabaseConnection, TransactionTrait};
@@ -22,7 +22,7 @@ impl TransactionManager for SeaOrmTransactionManager {
     async fn execute<T, E, F>(&self, f: F) -> Result<T, E>
     where
         T: Send + 'static,
-        E: MapPersistenceError + Send + Sync + 'static,
+        E: IntoTxError + Send + Sync + 'static,
         F: for<'a> FnOnce(TxRepositories<'a>) -> BoxFuture<'a, Result<T, E>> + Send,
     {
         // 1. 手動でトランザクションを開始 (戻り値は Result<DatabaseTransaction, DbErr>)
@@ -30,7 +30,7 @@ impl TransactionManager for SeaOrmTransactionManager {
             .db
             .begin()
             .await
-            .map_err(|e| E::from_persistence_error(e.to_string()))?;
+            .map_err(|e| E::into_tx_error(e))?;
 
         // 2. トランザクション接続を持つリポジトリを作成
         let user_repo = SeaOrmUserRepository::new(&txn);
@@ -51,7 +51,7 @@ impl TransactionManager for SeaOrmTransactionManager {
                 // 成功時はコミット
                 txn.commit()
                     .await
-                    .map_err(|e| E::from_persistence_error(e.to_string()))?;
+                    .map_err(|e| E::into_tx_error(e))?;
                 Ok(value)
             }
             Err(e) => {

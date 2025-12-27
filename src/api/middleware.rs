@@ -1,3 +1,4 @@
+use crate::api::auth::error::ApiAuthError;
 use crate::usecase::auth::error::AuthError;
 use crate::{domain::user::UserRole, usecase::auth::token_service::TokenService};
 use actix_web::{FromRequest, HttpRequest, dev::Payload, web};
@@ -8,7 +9,7 @@ pub struct AdminContext {
 }
 
 impl FromRequest for AdminContext {
-    type Error = AuthError;
+    type Error = ApiAuthError;
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
@@ -22,7 +23,7 @@ impl FromRequest for AdminContext {
 
         let token = match auth_header {
             Some(t) => t,
-            None => return ready(Err(AuthError::InvalidCredentials)),
+            None => return ready(Err(ApiAuthError::AuthError(AuthError::InvalidCredentials))),
         };
 
         if let Some(service) = token_service {
@@ -34,11 +35,11 @@ impl FromRequest for AdminContext {
                     }));
                 }
                 // Admin でない場合は Forbidden を返す
-                Ok(_) => return ready(Err(AuthError::Forbidden)),
-                Err(e) => return ready(Err(e)),
+                Ok(_) => return ready(Err(ApiAuthError::AuthError(AuthError::Forbidden))),
+                Err(e) => return ready(Err(ApiAuthError::AuthError(e))),
             }
         }
 
-        ready(Err(AuthError::InternalError))
+        ready(Err(ApiAuthError::AuthError(AuthError::TokenNotDetected))) // TODO: これでよい？
     }
 }

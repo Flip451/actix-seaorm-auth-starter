@@ -1,5 +1,5 @@
-use crate::api::error::AppError;
 use crate::api::middleware::AdminContext;
+use crate::api::{error::AppError, user::error::ApiUserError};
 use crate::usecase::user::service::UserService;
 use actix_web::{HttpResponse, Responder, get, web};
 
@@ -8,7 +8,7 @@ pub async fn list_users_handler(
     _admin: AdminContext,
     service: web::Data<UserService>,
 ) -> Result<impl Responder, AppError> {
-    let users = service.list_users().await?;
+    let users = service.list_users().await.map_err(ApiUserError::from)?;
     Ok(HttpResponse::Ok().json(users))
 }
 
