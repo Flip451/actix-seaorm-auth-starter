@@ -3,7 +3,7 @@ use std::sync::Arc;
 use super::dto::UserResponse;
 use super::error::UserError;
 use crate::domain::transaction::TransactionManager;
-use crate::domain::user::User;
+use crate::tx;
 
 pub struct UserService<TM: TransactionManager> {
     transaction_manager: Arc<TM>,
@@ -17,15 +17,11 @@ impl<TM: TransactionManager> UserService<TM> {
     }
 
     pub async fn list_users(&self) -> Result<Vec<UserResponse>, UserError> {
-        let users = self
-            .transaction_manager
-            .execute::<Vec<User>, UserError, _>(move |factory| {
-                Box::pin(async move {
-                    let user_repo = factory.user_repository();
-                    Ok(user_repo.find_all().await?)
-                })
-            })
-            .await?;
+        let users = tx!(self.transaction_manager, |factory| {
+            let user_repo = factory.user_repository();
+            Ok::<_, UserError>(user_repo.find_all().await?)
+        })
+        .await?;
 
         Ok(users
             .into_iter()

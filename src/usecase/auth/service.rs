@@ -3,6 +3,7 @@ use crate::{
         transaction::TransactionManager,
         user::{Email, HashedPassword, PasswordHasher, RawPassword, User, UserRole},
     },
+    tx,
     usecase::auth::{
         dto::{LoginInput, SignupInput},
         error::AuthError,
@@ -54,37 +55,34 @@ impl<TM: TransactionManager> AuthService<TM> {
         // パスワードのハッシュ化
         let hashed_password = self.password_hasher.hash(&password)?;
 
-        self.transaction_manager
-            .execute::<User, AuthError, _>(move |factory| {
-                Box::pin(async move {
-                    let user_repo = factory.user_repository();
+        tx!(self.transaction_manager, |factory| {
+            let user_repo = factory.user_repository();
 
-                    // 1. 重複チェック
-                    if user_repo.find_by_email(email.as_str()).await?.is_some() {
-                        return Err(AuthError::EmailAlreadyExists(email.as_str().to_string()));
-                    }
+            // 1. 重複チェック
+            if user_repo.find_by_email(email.as_str()).await?.is_some() {
+                return Err(AuthError::EmailAlreadyExists(email.as_str().to_string()));
+            }
 
-                    if user_repo.find_by_username(&username).await?.is_some() {
-                        return Err(AuthError::UsernameAlreadyExists(username.to_string()));
-                    }
+            if user_repo.find_by_username(&username).await?.is_some() {
+                return Err(AuthError::UsernameAlreadyExists(username.to_string()));
+            }
 
-                    // 2. ドメインモデル作成と保存
-                    let now = Utc::now().fixed_offset();
-                    let user = User {
-                        id: Uuid::new_v4(),
-                        username: username.to_string(),
-                        email: email,
-                        password: hashed_password,
-                        role: UserRole::User,
-                        is_active: true,
-                        created_at: now,
-                        updated_at: now,
-                    };
+            // 2. ドメインモデル作成と保存
+            let now = Utc::now().fixed_offset();
+            let user = User {
+                id: Uuid::new_v4(),
+                username: username.to_string(),
+                email: email,
+                password: hashed_password,
+                role: UserRole::User,
+                is_active: true,
+                created_at: now,
+                updated_at: now,
+            };
 
-                    Ok(user_repo.save(user).await?)
-                })
-            })
-            .await
+            Ok(user_repo.save(user).await?)
+        })
+        .await
     }
 
     /// ログイン
@@ -97,15 +95,11 @@ impl<TM: TransactionManager> AuthService<TM> {
         let email = Email::new(&input.email)?;
         let password = RawPassword::new(&input.password)?;
         // 1. ユーザーを検索
-        let user_opt = self
-            .transaction_manager
-            .execute::<Option<User>, AuthError, _>(move |factory| {
-                Box::pin(async move {
-                    let user_repo = factory.user_repository();
-                    Ok(user_repo.find_by_email(email.as_str()).await?)
-                })
-            })
-            .await?;
+        let user_opt = tx!(self.transaction_manager, |factory| {
+            let user_repo = factory.user_repository();
+            Ok::<_, AuthError>(user_repo.find_by_email(email.as_str()).await?)
+        })
+        .await?;
 
         // 2. 検証 (HashedPassword に委譲)
         // ※タイミング攻撃に対する脆弱性を回避するため、ユーザーの有無に関わらず検証処理を行う

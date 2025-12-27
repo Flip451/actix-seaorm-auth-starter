@@ -17,3 +17,14 @@ pub trait TransactionManager: Send + Sync {
         E: IntoTxError + Debug + Send + Sync + 'static,
         F: for<'a> FnOnce(&'a dyn RepositoryFactory) -> BoxFuture<'a, Result<T, E>> + Send;
 }
+
+#[macro_export]
+macro_rules! tx {
+    ($tm:expr, |$factory:ident| $body:expr) => {
+        $tm.execute::<_, _, _>(move |$factory| {
+            std::boxed::Box::pin(async move {
+                $body
+            })
+        })
+    };
+}
