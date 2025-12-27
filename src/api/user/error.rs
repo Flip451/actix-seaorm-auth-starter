@@ -23,6 +23,7 @@ impl ResponseError for ApiUserError {
                     UserError::TxError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                     UserError::PersistenceError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                     UserError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                    UserError::NotFound => StatusCode::NOT_FOUND,
                 }
             },
         }

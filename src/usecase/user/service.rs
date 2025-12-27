@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use uuid::Uuid;
+
 use super::dto::UserResponse;
 use super::error::UserError;
 use crate::domain::transaction::TransactionManager;
@@ -32,5 +34,22 @@ impl<TM: TransactionManager> UserService<TM> {
                 role: u.role,
             })
             .collect())
+    }
+
+    pub async fn get_user_by_id(&self, user_id: Uuid) -> Result<UserResponse, UserError> {
+        let user = tx!(self.transaction_manager, |factory| {
+            let user_repo = factory.user_repository();
+            let user = user_repo.find_by_id(user_id).await?;
+            Ok::<_, UserError>(user)
+        })
+        .await?
+        .ok_or(UserError::NotFound)?;
+
+        Ok(UserResponse {
+            id: user.id,
+            username: user.username,
+            email: user.email.as_str().to_string(),
+            role: user.role,
+        })
     }
 }

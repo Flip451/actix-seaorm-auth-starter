@@ -25,7 +25,6 @@ impl Email {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub struct RawPassword(String);
 
@@ -59,8 +58,8 @@ impl HashedPassword {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Display, EnumString)]
 #[strum(serialize_all = "lowercase")]
 pub enum UserRole {
-  Admin,
-  User,
+    Admin,
+    User,
 }
 
 impl Default for UserRole {

@@ -15,7 +15,7 @@ pub enum AuthError {
     #[error("パスワードのハッシュ化に失敗しました: {0}")]
     PasswordHashingFailed(#[source] anyhow::Error),
 
-    #[error("メールアドレスまたはパスワードが正しくありません")]
+    #[error("認証情報が無効です")]
     InvalidCredentials,
 
     #[error("このメールアドレスは既に登録されています: {0}")]

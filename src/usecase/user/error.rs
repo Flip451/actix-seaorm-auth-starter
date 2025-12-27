@@ -9,6 +9,9 @@ pub enum UserError {
     #[error("バリデーション失敗: {0}")]
     InvalidInput(String),
 
+    #[error("ユーザーが見つかりません")]
+    NotFound,
+
     #[error("トランザクションエラー: {0}")]
     TxError(#[source] anyhow::Error),
 
