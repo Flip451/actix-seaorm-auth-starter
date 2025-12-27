@@ -12,6 +12,12 @@ pub enum UserError {
     #[error("ユーザーが見つかりません")]
     NotFound,
 
+    #[error("ユーザー名 '{0}' は既に存在します")]
+    UsernameAlreadyExists(String),
+
+    #[error("メールアドレス '{0}' は既に存在します")]
+    EmailAlreadyExists(String),
+
     #[error("トランザクションエラー: {0}")]
     TxError(#[source] anyhow::Error),
 
@@ -41,7 +47,17 @@ impl From<UserDomainError> for UserError {
     fn from(error: UserDomainError) -> Self {
         match error {
             UserDomainError::InvalidEmail(invalid_email) => UserError::InvalidInput(invalid_email),
-            UserDomainError::AlreadyExists(_) | UserDomainError::PasswordTooShort => UserError::UnexpectedError(error.into())
+            UserDomainError::PasswordTooShort => UserError::UnexpectedError(error.into()),
+            UserDomainError::AlreadyExists(user_unique_constraint) => {
+                match user_unique_constraint {
+                    crate::domain::user::UserUniqueConstraint::Username(username) => {
+                        UserError::UsernameAlreadyExists(username)
+                    }
+                    crate::domain::user::UserUniqueConstraint::Email(email) => {
+                        UserError::EmailAlreadyExists(email)
+                    }
+                }
+            },
         }
     }
 }

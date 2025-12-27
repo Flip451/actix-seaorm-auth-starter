@@ -11,7 +11,7 @@ use validator::Validate;
 #[derive(Deserialize, Validate)]
 pub struct SignupRequest {
     pub username: String,
-    #[validate(email(message = "メールアドレスの形式が正しくありません"))]
+    #[validate(email(message = "無効なメールアドレス形式です"))]
     pub email: String,
     #[validate(length(min = 8, message = "パスワードは8文字以上必要です"))]
     pub password: String,
@@ -19,7 +19,7 @@ pub struct SignupRequest {
 
 #[derive(Deserialize, Validate)]
 pub struct LoginRequest {
-    #[validate(email(message = "メールアドレスの形式が正しくありません"))]
+    #[validate(email(message = "無効なメールアドレス形式です"))]
     pub email: String,
     #[validate(length(min = 8, message = "パスワードは8文字以上必要です"))]
     pub password: String,

@@ -6,7 +6,7 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum AuthError {
-    #[error("メールアドレスの形式が不正です: {0}")]
+    #[error("無効なメールアドレス形式です: {0}")]
     InvalidEmail(String),
 
     #[error("パスワードが短すぎます")]
@@ -18,10 +18,10 @@ pub enum AuthError {
     #[error("認証情報が無効です")]
     InvalidCredentials,
 
-    #[error("このメールアドレスは既に登録されています: {0}")]
+    #[error("メールアドレス '{0}' は既に存在します")]
     EmailAlreadyExists(String),
 
-    #[error("このユーザ名は既に登録されています: {0}")]
+    #[error("ユーザー名 '{0}' は既に存在します")]
     UsernameAlreadyExists(String),
 
     #[error("アクセス権限がありません")]

@@ -24,6 +24,8 @@ impl ResponseError for ApiUserError {
                     UserError::PersistenceError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                     UserError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                     UserError::NotFound => StatusCode::NOT_FOUND,
+                    UserError::UsernameAlreadyExists(_) => StatusCode::CONFLICT,
+                    UserError::EmailAlreadyExists(_) => StatusCode::CONFLICT,
                 }
             },
         }

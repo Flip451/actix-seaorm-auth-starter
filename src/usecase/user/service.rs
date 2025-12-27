@@ -5,6 +5,7 @@ use uuid::Uuid;
 use super::dto::UserResponse;
 use super::error::UserError;
 use crate::domain::transaction::TransactionManager;
+use crate::domain::user::Email;
 use crate::tx;
 
 pub struct UserService<TM: TransactionManager> {
@@ -50,6 +51,44 @@ impl<TM: TransactionManager> UserService<TM> {
             username: user.username,
             email: user.email.as_str().to_string(),
             role: user.role,
+        })
+    }
+
+    pub async fn update_user(
+        &self,
+        user_id: Uuid,
+        input: super::dto::UpdateUserInput,
+    ) -> Result<UserResponse, UserError> {
+        let updated_user = tx!(self.transaction_manager, |factory| {
+            let user_repo = factory.user_repository();
+            let mut user = user_repo
+                .find_by_id(user_id)
+                .await?
+                .ok_or(UserError::NotFound)?;
+
+            if let Some(username) = input.username {
+                user.username = username.clone();
+                if let Some(_) = user_repo.find_by_username(&username).await? {
+                    return Err(UserError::UsernameAlreadyExists(username));
+                }
+            }
+            if let Some(email) = input.email {
+                user.email = Email::new(&email)?;
+                if let Some(_) = user_repo.find_by_email(&email).await? {
+                    return Err(UserError::EmailAlreadyExists(email));
+                }
+            }
+
+            let updated_user = user_repo.save(user).await?;
+            Ok::<_, UserError>(updated_user)
+        })
+        .await?;
+
+        Ok(UserResponse {
+            id: updated_user.id,
+            username: updated_user.username,
+            email: updated_user.email.as_str().to_string(),
+            role: updated_user.role,
         })
     }
 }
