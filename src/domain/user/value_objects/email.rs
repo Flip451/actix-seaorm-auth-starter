@@ -2,9 +2,19 @@ use super::super::error::UserDomainError;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Email {
     Verified(VerifiedEmail),
     Unverified(UnverifiedEmail),
+}
+
+impl Email {
+    pub fn as_str(&self) -> &str {
+        match self {
+            Email::Verified(email) => email.as_str(),
+            Email::Unverified(email) => email.as_str(),
+        }
+    }
 }
 
 // メールアドレス（検証済み）

@@ -1,7 +1,7 @@
 use chrono::{DateTime, FixedOffset};
 use uuid::Uuid;
 
-use crate::domain::user::{Email, value_objects::email::EmailTrait};
+use crate::domain::user::{Email, UserStateTransitionError};
 
 use super::{
     EmailVerifier, HashedPassword, UnverifiedEmail, UserDomainError, UserRole, VerifiedEmail,
@@ -18,22 +18,41 @@ pub struct User {
 }
 
 impl User {
+    // 新規ユーザー作成のためのコンストラクタ
     pub fn new(
+        username: String,
+        email: UnverifiedEmail,
+        password: HashedPassword,
+    ) -> Result<Self, UserDomainError> {
+        Ok(Self {
+            id: Uuid::new_v4(),
+            username,
+            password,
+            role: UserRole::User,
+            state: UserState::PendingVerification { email },
+            created_at: DateTime::<FixedOffset>::from(chrono::offset::Utc::now()),
+            updated_at: DateTime::<FixedOffset>::from(chrono::offset::Utc::now()),
+        })
+    }
+
+    // 永続化処理されたユーザーを再構築するためのコンストラクタ
+    pub fn reconstruct(
         id: Uuid,
         username: String,
-        email: String,
         password: HashedPassword,
+        role: UserRole,
+        state: UserState,
+        created_at: DateTime<FixedOffset>,
+        updated_at: DateTime<FixedOffset>,
     ) -> Result<Self, UserDomainError> {
         Ok(Self {
             id,
             username,
             password,
-            role: UserRole::default(),
-            state: UserState::PendingVerification {
-                email: UnverifiedEmail::new(&email)?,
-            },
-            created_at: DateTime::<FixedOffset>::from(chrono::offset::Utc::now()),
-            updated_at: DateTime::<FixedOffset>::from(chrono::offset::Utc::now()),
+            role,
+            state,
+            created_at,
+            updated_at,
         })
     }
 
@@ -43,6 +62,10 @@ impl User {
 
     pub fn username(&self) -> &str {
         &self.username
+    }
+
+    pub fn password(&self) -> &HashedPassword {
+        &self.password
     }
 
     pub fn role(&self) -> &UserRole {
@@ -58,6 +81,24 @@ impl User {
             UserState::ActiveWithUnverifiedEmail { email } => Email::Unverified(email.clone()),
         }
     }
+
+    pub fn state_str(&self) -> &str {
+        match &self.state {
+            UserState::Active { .. } => "active",
+            UserState::SuspendedByAdmin { .. } => "suspended_by_admin",
+            UserState::DeactivatedByUser { .. } => "deactivated_by_user",
+            UserState::PendingVerification { .. } => "pending_verification",
+            UserState::ActiveWithUnverifiedEmail { .. } => "active_with_unverified_email",
+        }
+    }
+
+    pub fn created_at(&self) -> DateTime<FixedOffset> {
+        self.created_at
+    }
+
+    pub fn updated_at(&self) -> DateTime<FixedOffset> {
+        self.updated_at
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -69,17 +110,24 @@ pub enum UserState {
     ActiveWithUnverifiedEmail { email: UnverifiedEmail }, // メール更新後の認証待ち
 }
 
-// TODO: 状態遷移のルールを実装する
+impl User {
+    pub fn change_username(&mut self, new_username: String) -> Result<(), UserDomainError> {
+        self.username = new_username;
+        Ok(())
+    }
+}
+
+// ユーザーの状態遷移に関するメソッド群
 impl User {
     pub fn verify_email<V: EmailVerifier>(&mut self, verifier: &V) -> Result<(), UserDomainError> {
         match self.state {
             UserState::Active { .. } => Ok(()),
-            UserState::SuspendedByAdmin { .. } => Err(UserDomainError::AlreadySuspended {
+            UserState::SuspendedByAdmin { .. } => Err(UserStateTransitionError::AlreadySuspended {
                 from: self.state.clone(),
-            }),
-            UserState::DeactivatedByUser { .. } => Err(UserDomainError::AlreadyDeactivated {
+            })?,
+            UserState::DeactivatedByUser { .. } => Err(UserStateTransitionError::AlreadyDeactivated {
                 from: self.state.clone(),
-            }),
+            })?,
             UserState::PendingVerification { ref email } => {
                 self.state = UserState::Active {
                     email: verifier.verify(email)?,
@@ -101,12 +149,12 @@ impl User {
                 self.state = UserState::ActiveWithUnverifiedEmail { email: new_email };
                 Ok(())
             }
-            UserState::SuspendedByAdmin { .. } => Err(UserDomainError::AlreadySuspended {
+            UserState::SuspendedByAdmin { .. } => Err(UserStateTransitionError::AlreadySuspended {
                 from: self.state.clone(),
-            }),
-            UserState::DeactivatedByUser { .. } => Err(UserDomainError::AlreadyDeactivated {
+            })?,
+            UserState::DeactivatedByUser { .. } => Err(UserStateTransitionError::AlreadyDeactivated {
                 from: self.state.clone(),
-            }),
+            })?,
             UserState::PendingVerification { .. } => {
                 self.state = UserState::PendingVerification { email: new_email };
                 Ok(())
@@ -156,37 +204,37 @@ impl User {
                 };
                 Ok(())
             }
-            UserState::SuspendedByAdmin { .. } => Err(UserDomainError::AlreadySuspended {
+            UserState::SuspendedByAdmin { .. } => Err(UserStateTransitionError::AlreadySuspended {
                 from: self.state.clone(),
-            }),
+            })?,
             UserState::DeactivatedByUser { .. } => Ok(()), // すでに退会済みなので何もしない
-            UserState::PendingVerification { .. } => Err(UserDomainError::NotVerified {
+            UserState::PendingVerification { .. } => Err(UserStateTransitionError::NotVerified {
                 from: self.state.clone(),
-            }),
-            UserState::ActiveWithUnverifiedEmail { .. } => Err(UserDomainError::NotVerified {
+            })?,
+            UserState::ActiveWithUnverifiedEmail { .. } => Err(UserStateTransitionError::NotVerified {
                 from: self.state.clone(),
-            }),
+            })?,
         }
     }
 
     pub fn activate<V: EmailVerifier>(&mut self) -> Result<(), UserDomainError> {
         match self.state {
             UserState::Active { .. } => Ok(()), // すでにアクティブなので何もしない
-            UserState::SuspendedByAdmin { .. } => Err(UserDomainError::AlreadySuspended {
+            UserState::SuspendedByAdmin { .. } => Err(UserStateTransitionError::AlreadySuspended {
                 from: self.state.clone(),
-            }),
+            })?,
             UserState::DeactivatedByUser { ref email } => {
                 self.state = UserState::ActiveWithUnverifiedEmail {
                     email: email.clone(),
                 };
                 Ok(())
             }
-            UserState::PendingVerification { .. } => Err(UserDomainError::NotVerified {
+            UserState::PendingVerification { .. } => Err(UserStateTransitionError::NotVerified {
                 from: self.state.clone(),
-            }),
-            UserState::ActiveWithUnverifiedEmail { .. } => Err(UserDomainError::NotVerified {
+            })?,
+            UserState::ActiveWithUnverifiedEmail { .. } => Err(UserStateTransitionError::NotVerified {
                 from: self.state.clone(),
-            }),
+            })?,
         }
     }
 
@@ -195,9 +243,9 @@ impl User {
             UserState::Active { .. }
             | UserState::DeactivatedByUser { .. }
             | UserState::PendingVerification { .. }
-            | UserState::ActiveWithUnverifiedEmail { .. } => Err(UserDomainError::NotSuspended {
+            | UserState::ActiveWithUnverifiedEmail { .. } => Err(UserStateTransitionError::NotSuspended {
                 from: self.state.clone(),
-            }),
+            })?,
             UserState::SuspendedByAdmin { ref email } => {
                 self.state = UserState::ActiveWithUnverifiedEmail {
                     email: email.clone(),

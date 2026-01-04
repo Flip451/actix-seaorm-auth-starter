@@ -1,5 +1,5 @@
 use crate::domain::{
-    transaction::{IntoTxError},
+    transaction::IntoTxError,
     user::{PasswordHashingError, UserDomainError, UserRepositoryError, UserUniqueConstraint},
 };
 use thiserror::Error;
@@ -35,6 +35,9 @@ pub enum AuthError {
 
     #[error("トークンの発行に失敗しました: {0}")]
     TokenIssuanceFailed(#[source] anyhow::Error),
+
+    #[error("想定外のエラーが発生しました: {0}")]
+    UnexpectedError(#[source] anyhow::Error),
 }
 
 impl IntoTxError for AuthError {
@@ -63,12 +66,18 @@ impl From<UserDomainError> for AuthError {
         match error {
             UserDomainError::AlreadyExists(constraint) => match constraint {
                 UserUniqueConstraint::Email(email) => AuthError::EmailAlreadyExists(email),
-                UserUniqueConstraint::Username(username) => AuthError::UsernameAlreadyExists(username),
+                UserUniqueConstraint::Username(username) => {
+                    AuthError::UsernameAlreadyExists(username)
+                }
             },
-            UserDomainError::InvalidEmail(invalid_email) => {
-                AuthError::InvalidEmail(invalid_email)
-            }
+            UserDomainError::InvalidEmail(invalid_email) => AuthError::InvalidEmail(invalid_email),
             UserDomainError::PasswordTooShort => AuthError::PasswordTooShort,
+            UserDomainError::EmailVerificationError(email_verification_error) => {
+                AuthError::UnexpectedError(email_verification_error.into())
+            }
+            UserDomainError::StateTransitionError(state_transition_error) => {
+                AuthError::UnexpectedError(state_transition_error.into())
+            }
         }
     }
 }

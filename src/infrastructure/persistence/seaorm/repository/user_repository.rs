@@ -1,15 +1,16 @@
+use std::str::FromStr;
+
 use async_trait::async_trait;
 use sea_orm::{
     ColumnTrait, DbErr, EntityTrait, QueryFilter, RuntimeErr, Set, sea_query::OnConflict,
 };
-use std::str::FromStr;
 use uuid::Uuid;
 
 use super::super::entities::user as user_entity;
 use crate::{
     domain::user::{
-        Email, HashedPassword, User, UserDomainError, UserRepository, UserRepositoryError,
-        UserRole, UserUniqueConstraint,
+        EmailTrait, HashedPassword, UnverifiedEmail, User, UserDomainError, UserRepository,
+        UserRepositoryError, UserRole, UserState, UserUniqueConstraint, VerifiedEmail,
     },
     infrastructure::persistence::seaorm::connect::Connectable,
 };
@@ -33,16 +34,39 @@ impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmUserRepository<C, T> 
 
     /// DBモデルからドメインモデルへの変換
     fn map_to_domain(&self, model: user_entity::Model) -> Result<User, UserRepositoryError> {
-        Ok(User {
-            id: model.id,
-            username: model.username,
-            email: Email::new(&model.email)?,
-            password: HashedPassword::from_str(&model.password_hash),
-            role: UserRole::from_str(&model.role).unwrap_or(UserRole::User),
-            is_active: model.is_active,
-            created_at: model.created_at,
-            updated_at: model.updated_at,
-        })
+        let state = match model.status.as_str() {
+            "active" => UserState::Active {
+                email: VerifiedEmail::new(&model.email)?,
+            },
+            "suspended_by_admin" => UserState::SuspendedByAdmin {
+                email: UnverifiedEmail::new(&model.email)?,
+            },
+            "deactivated_by_user" => UserState::DeactivatedByUser {
+                email: UnverifiedEmail::new(&model.email)?,
+            },
+            "pending_verification" => UserState::PendingVerification {
+                email: UnverifiedEmail::new(&model.email)?,
+            },
+            "active_with_unverified_email" => UserState::ActiveWithUnverifiedEmail {
+                email: UnverifiedEmail::new(&model.email)?,
+            },
+            other => {
+                return Err(UserRepositoryError::Persistence(
+                    anyhow::anyhow!("不明なユーザーステータス: {}", other).into(),
+                ));
+            }
+        };
+
+        let user = User::reconstruct(
+            model.id,
+            model.username,
+            HashedPassword::from_str(&model.password_hash),
+            UserRole::from_str(&model.role).unwrap_or(UserRole::User),
+            state,
+            model.created_at,
+            model.updated_at,
+        )?;
+        Ok(user)
     }
 }
 
@@ -92,17 +116,17 @@ where
 
     /// 保存（新規作成 or 更新）を行うメソッド
     async fn save(&self, user: User) -> Result<User, UserRepositoryError> {
-        let username = user.username.clone();
-        let email = user.email.clone();
+        let username = user.username();
+        let email = user.email();
 
         let active_model = user_entity::ActiveModel {
-            id: Set(user.id),
-            username: Set(user.username),
-            email: Set(user.email.as_str().to_string()),
-            password_hash: Set(user.password.as_str().to_string()),
-            is_active: Set(user.is_active),
-            role: Set(user.role.to_string()),
-            created_at: Set(user.created_at), // 新規作成時は引数の値、更新時は無視される
+            id: Set(user.id()),
+            username: Set(user.username().to_string()),
+            email: Set(user.email().as_str().to_string()),
+            password_hash: Set(user.password().to_string()),
+            status: Set(user.state_str().to_string()),
+            role: Set(user.role().to_string()),
+            created_at: Set(user.created_at()), // 新規作成時は引数の値、更新時は無視される
             updated_at: Set(chrono::Utc::now().fixed_offset()),
         };
 
@@ -115,7 +139,7 @@ where
                         user_entity::Column::Email,
                         user_entity::Column::PasswordHash,
                         user_entity::Column::Role,
-                        user_entity::Column::IsActive,
+                        user_entity::Column::Status,
                         user_entity::Column::UpdatedAt, // 更新時は日時を更新
                     ])
                     .to_owned(),
@@ -134,16 +158,12 @@ where
 
                                     if constraint.contains("email") {
                                         return UserDomainError::AlreadyExists(
-                                            UserUniqueConstraint::Email(
-                                                email.clone().as_str().to_string(),
-                                            ),
+                                            UserUniqueConstraint::Email(email.as_str().to_string()),
                                         )
                                         .into();
                                     } else if constraint.contains("username") {
                                         return UserDomainError::AlreadyExists(
-                                            UserUniqueConstraint::Username(
-                                                username.clone().as_str().to_string(),
-                                            ),
+                                            UserUniqueConstraint::Username(username.to_string()),
                                         )
                                         .into();
                                     }

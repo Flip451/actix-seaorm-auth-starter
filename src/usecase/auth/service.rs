@@ -1,7 +1,7 @@
 use crate::{
     domain::{
         transaction::TransactionManager,
-        user::{Email, HashedPassword, PasswordHasher, RawPassword, User, UserRole},
+        user::{EmailTrait, HashedPassword, PasswordHasher, RawPassword, UnverifiedEmail, User},
     },
     tx,
     usecase::auth::{
@@ -10,9 +10,7 @@ use crate::{
         token_service::TokenService,
     },
 };
-use chrono::Utc;
 use std::sync::Arc;
-use uuid::Uuid;
 
 pub struct AuthService<TM> {
     transaction_manager: Arc<TM>,
@@ -49,7 +47,7 @@ impl<TM: TransactionManager> AuthService<TM> {
     pub async fn signup(&self, input: SignupInput) -> Result<User, AuthError> {
         // ここでDTOからValueObjectへの変換を行う
         let username = input.username;
-        let email = Email::new(&input.email)?;
+        let email = UnverifiedEmail::new(&input.email)?;
         let password = RawPassword::new(&input.password)?;
 
         // パスワードのハッシュ化
@@ -68,18 +66,7 @@ impl<TM: TransactionManager> AuthService<TM> {
             }
 
             // 2. ドメインモデル作成と保存
-            let now = Utc::now().fixed_offset();
-            let user = User {
-                id: Uuid::new_v4(),
-                username: username.to_string(),
-                email: email,
-                password: hashed_password,
-                role: UserRole::User,
-                is_active: true,
-                created_at: now,
-                updated_at: now,
-            };
-
+            let user = User::new(username.to_string(), email, hashed_password)?;
             Ok(user_repo.save(user).await?)
         })
         .await
@@ -92,7 +79,7 @@ impl<TM: TransactionManager> AuthService<TM> {
     )]
     pub async fn login(&self, input: LoginInput) -> Result<String, AuthError> {
         // ここでDTOからValueObjectへの変換を行う
-        let email = Email::new(&input.email)?;
+        let email = UnverifiedEmail::new(&input.email)?;
         let password = RawPassword::new(&input.password)?;
         // 1. ユーザーを検索
         let user_opt = tx!(self.transaction_manager, |factory| {
@@ -105,7 +92,7 @@ impl<TM: TransactionManager> AuthService<TM> {
         // ※タイミング攻撃に対する脆弱性を回避するため、ユーザーの有無に関わらず検証処理を行う
         let (is_valid, user) = match user_opt {
             Some(user) => {
-                let is_valid = self.password_hasher.verify(&password, &user.password);
+                let is_valid = self.password_hasher.verify(&password, &user.password());
                 (is_valid, Some(user))
             }
             None => {
@@ -123,7 +110,7 @@ impl<TM: TransactionManager> AuthService<TM> {
         let user = user.unwrap();
 
         // 3. JWT トークンの生成
-        let token = self.token_service.issue_token(user.id, user.role)?;
+        let token = self.token_service.issue_token(user.id(), user.role())?;
 
         Ok(token)
     }

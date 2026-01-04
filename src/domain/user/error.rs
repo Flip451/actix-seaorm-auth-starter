@@ -17,6 +17,18 @@ pub enum UserDomainError {
     #[error("メールアドレスの検証に失敗しました: {0}")]
     EmailVerificationError(#[from] EmailVerificationError),
 
+    #[error(transparent)]
+    StateTransitionError(#[from] UserStateTransitionError),
+}
+
+#[derive(Debug, Display)]
+pub enum UserUniqueConstraint {
+    Username(String),
+    Email(String),
+}
+
+#[derive(Debug, Error)]
+pub enum UserStateTransitionError {
     #[error("ユーザーは既に退会しています: {from:?} からの遷移は許可されていません")]
     AlreadyDeactivated { from: super::UserState },
 
@@ -28,10 +40,4 @@ pub enum UserDomainError {
 
     #[error("指定のユーザーは停止されていません： {from:?} からの遷移は許可されていません")]
     NotSuspended { from: super::UserState },
-}
-
-#[derive(Debug, Display)]
-pub enum UserUniqueConstraint {
-    Username(String),
-    Email(String),
 }

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use serde::{Deserialize, Serialize};
 
 use crate::domain::user::UserDomainError;
@@ -30,5 +32,11 @@ impl HashedPassword {
 
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+}
+
+impl Display for HashedPassword {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
