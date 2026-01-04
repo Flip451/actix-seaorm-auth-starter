@@ -1,6 +1,8 @@
 use crate::domain::{
     transaction::IntoTxError,
-    user::{UserDomainError, UserRepositoryError},
+    user::{
+        EmailVerificationError, UserDomainError, UserRepositoryError, UserStateTransitionError,
+    },
 };
 use thiserror::Error;
 
@@ -17,6 +19,12 @@ pub enum UserError {
 
     #[error("メールアドレス '{0}' は既に存在します")]
     EmailAlreadyExists(String),
+
+    #[error(transparent)]
+    EmailVerificationError(#[from] EmailVerificationError),
+
+    #[error(transparent)]
+    StateTransitionError(#[from] UserStateTransitionError),
 
     #[error("トランザクションエラー: {0}")]
     TxError(#[source] anyhow::Error),
@@ -57,7 +65,13 @@ impl From<UserDomainError> for UserError {
                         UserError::EmailAlreadyExists(email)
                     }
                 }
-            },
+            }
+            UserDomainError::EmailVerificationError(email_verification_error) => {
+                UserError::EmailVerificationError(email_verification_error)
+            }
+            UserDomainError::StateTransitionError(user_state_transition_error) => {
+                UserError::StateTransitionError(user_state_transition_error)
+            }
         }
     }
 }

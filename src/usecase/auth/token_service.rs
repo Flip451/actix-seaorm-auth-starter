@@ -24,7 +24,7 @@ impl TokenService {
     }
 
     /// トークンの発行 (Login時に使用)
-    pub fn issue_token(&self, user_id: Uuid, role: UserRole) -> Result<String, AuthError> {
+    pub fn issue_token(&self, user_id: Uuid, role: &UserRole) -> Result<String, AuthError> {
         let expiration = Utc::now()
             .checked_add_signed(Duration::hours(24))
             .expect("valid timestamp")
@@ -32,7 +32,7 @@ impl TokenService {
 
         let claims = Claims {
             sub: user_id,
-            role,
+            role: role.clone(),
             iat: Utc::now().timestamp() as usize,
             exp: expiration,
         };

@@ -5,7 +5,7 @@ use uuid::Uuid;
 use super::dto::UserResponse;
 use super::error::UserError;
 use crate::domain::transaction::TransactionManager;
-use crate::domain::user::Email;
+use crate::domain::user::{EmailTrait, UnverifiedEmail};
 use crate::tx;
 
 pub struct UserService<TM: TransactionManager> {
@@ -29,10 +29,10 @@ impl<TM: TransactionManager> UserService<TM> {
         Ok(users
             .into_iter()
             .map(|u| UserResponse {
-                id: u.id,
-                username: u.username,
-                email: u.email.as_str().to_string(),
-                role: u.role,
+                id: u.id(),
+                username: u.username().to_string(),
+                email: u.email().as_str().to_string(),
+                role: u.role().clone(),
             })
             .collect())
     }
@@ -47,10 +47,10 @@ impl<TM: TransactionManager> UserService<TM> {
         .ok_or(UserError::NotFound)?;
 
         Ok(UserResponse {
-            id: user.id,
-            username: user.username,
-            email: user.email.as_str().to_string(),
-            role: user.role,
+            id: user.id(),
+            username: user.username().to_string(),
+            email: user.email().as_str().to_string(),
+            role: user.role().clone(),
         })
     }
 
@@ -67,13 +67,13 @@ impl<TM: TransactionManager> UserService<TM> {
                 .ok_or(UserError::NotFound)?;
 
             if let Some(username) = input.username {
-                user.username = username.clone();
+                user.change_username(username.clone())?;
                 if let Some(_) = user_repo.find_by_username(&username).await? {
                     return Err(UserError::UsernameAlreadyExists(username));
                 }
             }
             if let Some(email) = input.email {
-                user.email = Email::new(&email)?;
+                user.change_email(UnverifiedEmail::new(&email)?)?;
                 if let Some(_) = user_repo.find_by_email(&email).await? {
                     return Err(UserError::EmailAlreadyExists(email));
                 }
@@ -85,10 +85,10 @@ impl<TM: TransactionManager> UserService<TM> {
         .await?;
 
         Ok(UserResponse {
-            id: updated_user.id,
-            username: updated_user.username,
-            email: updated_user.email.as_str().to_string(),
-            role: updated_user.role,
+            id: updated_user.id(),
+            username: updated_user.username().to_string(),
+            email: updated_user.email().as_str().to_string(),
+            role: updated_user.role().clone(),
         })
     }
 }

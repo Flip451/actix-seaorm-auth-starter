@@ -26,6 +26,8 @@ impl ResponseError for ApiUserError {
                     UserError::NotFound => StatusCode::NOT_FOUND,
                     UserError::UsernameAlreadyExists(_) => StatusCode::CONFLICT,
                     UserError::EmailAlreadyExists(_) => StatusCode::CONFLICT,
+                    UserError::EmailVerificationError(_) => StatusCode::BAD_REQUEST,  // TODO: メール検証エラーの取り扱いに関しては要検討
+                    UserError::StateTransitionError(_) => StatusCode::CONFLICT,
                 }
             },
         }

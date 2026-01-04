@@ -28,6 +28,7 @@ impl ResponseError for ApiAuthError {
                 AuthError::TxError(_error) => StatusCode::INTERNAL_SERVER_ERROR,
                 AuthError::PersistenceError(_error) => StatusCode::INTERNAL_SERVER_ERROR,
                 AuthError::TokenIssuanceFailed(_error) => StatusCode::INTERNAL_SERVER_ERROR,
+                AuthError::UnexpectedError(_error) => StatusCode::INTERNAL_SERVER_ERROR,
             },
         }
     }
