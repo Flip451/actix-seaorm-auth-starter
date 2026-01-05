@@ -18,7 +18,6 @@ pub struct UpdateUserRequest {
     pub email: Option<String>,
 }
 
-
 #[tracing::instrument(skip(service, admin))]
 pub async fn suspend_user_handler<TM: TransactionManager>(
     admin: AdminContext,
@@ -35,12 +34,15 @@ pub async fn suspend_user_handler<TM: TransactionManager>(
     Ok(HttpResponse::Ok().finish())
 }
 
-#[tracing::instrument(skip(_admin, service))]
+#[tracing::instrument(skip(admin, service))]
 pub async fn list_users_handler<TM: TransactionManager>(
-    _admin: AdminContext,
+    admin: AdminContext,
     service: web::Data<UserService<TM>>,
 ) -> Result<impl Responder, AppError> {
-    let users = service.list_users().await.map_err(ApiUserError::from)?;
+    let users = service
+        .list_users(admin.user_id, UserRole::Admin)
+        .await
+        .map_err(ApiUserError::from)?;
     Ok(HttpResponse::Ok().json(users))
 }
 
@@ -50,7 +52,7 @@ pub async fn get_user_handler<TM: TransactionManager>(
     service: web::Data<UserService<TM>>,
 ) -> Result<impl Responder, AppError> {
     let user = service
-        .get_user_by_id(user.user_id)
+        .get_user_by_id(user.user_id, UserRole::User, user.user_id)
         .await
         .map_err(ApiUserError::from)?;
     Ok(HttpResponse::Ok().json(user))
@@ -84,7 +86,10 @@ pub fn user_config<TM: TransactionManager + 'static>(cfg: &mut web::ServiceConfi
     );
     cfg.service(
         web::scope("/admin") // /admin/users というパスになる
-            .route("/users/{user_id}/suspend", web::post().to(suspend_user_handler::<TM>))
+            .route(
+                "/users/{user_id}/suspend",
+                web::post().to(suspend_user_handler::<TM>),
+            )
             .route("/users", web::get().to(list_users_handler::<TM>)),
     );
 }

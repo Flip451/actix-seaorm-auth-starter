@@ -20,8 +20,15 @@ impl<TM: TransactionManager> UserService<TM> {
         }
     }
 
-    pub async fn list_users(&self) -> Result<Vec<UserResponse>, UserError> {
+    pub async fn list_users(
+        &self,
+        actor_id: Uuid,
+        actor_role: UserRole,
+    ) -> Result<Vec<UserResponse>, UserError> {
         let users = tx!(self.transaction_manager, |factory| {
+            // ポリシーチェック
+            AuthorizationService::can(actor_id, &actor_role, UserAction::ListUsers)?;
+
             let user_repo = factory.user_repository();
             Ok::<_, UserError>(user_repo.find_all().await?)
         })
@@ -35,17 +42,33 @@ impl<TM: TransactionManager> UserService<TM> {
                 email: u.email().as_str().to_string(),
                 role: u.role().clone(),
             })
-            .collect())
+            .collect::<Vec<UserResponse>>())
     }
 
-    pub async fn get_user_by_id(&self, user_id: Uuid) -> Result<UserResponse, UserError> {
+    pub async fn get_user_by_id(
+        &self,
+        actor_id: Uuid,
+        actor_role: UserRole,
+        user_id: Uuid,
+    ) -> Result<UserResponse, UserError> {
         let user = tx!(self.transaction_manager, |factory| {
+            // プロフィールの取得
             let user_repo = factory.user_repository();
-            let user = user_repo.find_by_id(user_id).await?;
+            let user = user_repo
+                .find_by_id(user_id)
+                .await?
+                .ok_or(UserError::NotFound)?;
+
+            // ポリシーチェック
+            AuthorizationService::can(
+                actor_id,
+                &actor_role,
+                UserAction::ViewProfile { target: &user },
+            )?;
+
             Ok::<_, UserError>(user)
         })
-        .await?
-        .ok_or(UserError::NotFound)?;
+        .await?;
 
         Ok(UserResponse {
             id: user.id(),
@@ -68,13 +91,33 @@ impl<TM: TransactionManager> UserService<TM> {
                 .ok_or(UserError::NotFound)?;
 
             if let Some(username) = input.username {
+                // ポリシーチェック
+                AuthorizationService::can(
+                    user_id,
+                    &user.role(),
+                    UserAction::UpdateProfile { target: &user },
+                )?;
+
+                // ドメインロジックの実行
                 user.change_username(username.clone())?;
+
+                // ユーザー名の重複チェック
                 if let Some(_) = user_repo.find_by_username(&username).await? {
                     return Err(UserError::UsernameAlreadyExists(username));
                 }
             }
             if let Some(email) = input.email {
+                // ポリシーチェック
+                AuthorizationService::can(
+                    user_id,
+                    &user.role(),
+                    UserAction::ChangeEmail { target: &user },
+                )?;
+
+                // ドメインロジックの実行
                 user.change_email(UnverifiedEmail::new(&email)?)?;
+
+                // メールアドレスの重複チェック
                 if let Some(_) = user_repo.find_by_email(&email).await? {
                     return Err(UserError::EmailAlreadyExists(email));
                 }
@@ -93,7 +136,12 @@ impl<TM: TransactionManager> UserService<TM> {
         })
     }
 
-    pub async fn suspend_user(&self, actor_id: Uuid, actor_role: UserRole, target_id: Uuid) -> Result<(), UserError> {
+    pub async fn suspend_user(
+        &self,
+        actor_id: Uuid,
+        actor_role: UserRole,
+        target_id: Uuid,
+    ) -> Result<(), UserError> {
         tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
             let mut target_user = user_repo
@@ -105,8 +153,9 @@ impl<TM: TransactionManager> UserService<TM> {
             AuthorizationService::can(
                 actor_id,
                 &actor_role,
-                UserAction::SuspendUser,
-                &target_user,
+                UserAction::SuspendUser {
+                    target: &target_user,
+                },
             )?;
 
             // ユーザーの状態を停止に変更
