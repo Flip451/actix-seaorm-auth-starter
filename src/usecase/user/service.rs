@@ -4,8 +4,9 @@ use uuid::Uuid;
 
 use super::dto::UserResponse;
 use super::error::UserError;
+use crate::domain::auth::policy::{AuthorizationService, UserAction};
 use crate::domain::transaction::TransactionManager;
-use crate::domain::user::{EmailTrait, UnverifiedEmail};
+use crate::domain::user::{EmailTrait, UnverifiedEmail, UserRole};
 use crate::tx;
 
 pub struct UserService<TM: TransactionManager> {
@@ -90,5 +91,32 @@ impl<TM: TransactionManager> UserService<TM> {
             email: updated_user.email().as_str().to_string(),
             role: updated_user.role().clone(),
         })
+    }
+
+    pub async fn suspend_user(&self, actor_id: Uuid, actor_role: UserRole, target_id: Uuid) -> Result<(), UserError> {
+        tx!(self.transaction_manager, |factory| {
+            let user_repo = factory.user_repository();
+            let mut target_user = user_repo
+                .find_by_id(target_id)
+                .await?
+                .ok_or(UserError::NotFound)?;
+
+            // ポリシーチェック
+            AuthorizationService::can(
+                actor_id,
+                &actor_role,
+                UserAction::SuspendUser,
+                &target_user,
+            )?;
+
+            // ユーザーの状態を停止に変更
+            target_user.suspend()?;
+
+            // 変更を保存
+            user_repo.save(target_user).await?;
+
+            Ok::<_, UserError>(())
+        })
+        .await
     }
 }
