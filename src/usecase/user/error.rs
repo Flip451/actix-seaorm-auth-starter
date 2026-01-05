@@ -1,8 +1,7 @@
 use crate::domain::{
-    transaction::IntoTxError,
-    user::{
+    auth::policy::AuthorizationError, transaction::IntoTxError, user::{
         EmailVerificationError, UserDomainError, UserRepositoryError, UserStateTransitionError,
-    },
+    }
 };
 use thiserror::Error;
 
@@ -25,6 +24,9 @@ pub enum UserError {
 
     #[error(transparent)]
     StateTransitionError(#[from] UserStateTransitionError),
+
+    #[error(transparent)]
+    AuthorizationError(#[from] AuthorizationError),
 
     #[error("トランザクションエラー: {0}")]
     TxError(#[source] anyhow::Error),
