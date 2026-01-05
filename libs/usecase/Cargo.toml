@@ -1,0 +1,15 @@
+[package]
+name = "usecase"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+domain = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+validator = { workspace = true }
+jsonwebtoken = { version = "10.2.0", features = ["rust_crypto"] }

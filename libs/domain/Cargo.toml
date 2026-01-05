@@ -1,0 +1,21 @@
+[package]
+name = "domain"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# 共通ライブラリを Workspace から取得
+serde = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+derive_more = { workspace = true }
+validator = { workspace = true }
+strum = { workspace = true }
+anyhow = { workspace = true }
+futures-util = { workspace = true }
+
+[features]
+# 必要に応じて DTO 用のシリアライズ設定などを切り替え可能にする
+default = []
