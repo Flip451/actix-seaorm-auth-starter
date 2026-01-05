@@ -1,0 +1,21 @@
+[package]
+name = "infrastructure"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+domain = { workspace = true }
+usecase = { workspace = true }
+serde = { workspace = true }
+async-trait = { workspace = true }
+futures-util = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+argon2 = "0.5.3"
+sea-orm = { version = "1.1.19", features = [
+    "runtime-tokio-rustls",
+    "sqlx-postgres",
+    "macros",
+] }
