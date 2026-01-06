@@ -1,10 +1,10 @@
-use app::telemetry;
 use actix_web::{App, HttpServer, web};
+use app::telemetry;
 use dotenvy::dotenv;
 use sea_orm::Database;
 use tracing_actix_web::TracingLogger;
 
-use infrastructure::{AppRegistry, RepoRegistry, persistence::seaorm::transaction::SeaOrmTransactionManager};
+use infrastructure::{AppRegistry, RepoRegistry};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -42,8 +42,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(auth_service.clone())
             .app_data(user_service.clone())
             .app_data(token_service.clone())
-            .configure(api::auth::handler::auth_config::<SeaOrmTransactionManager>)
-            .configure(api::user::handler::user_config::<SeaOrmTransactionManager>)
+            .configure(api::auth::handler::auth_config)
+            .configure(api::user::handler::user_config)
     })
     .bind(("0.0.0.0", 8080))?
     .run();

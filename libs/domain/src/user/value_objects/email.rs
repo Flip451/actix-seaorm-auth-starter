@@ -33,7 +33,14 @@ impl VerifiedEmail {
 }
 
 // メールアドレスの共通トレイト
-pub trait EmailTrait: FromStr + Sized {
+pub trait EmailTrait: Sized {
+    fn new(value: &str) -> Result<Self, UserDomainError>;
+
+    fn as_str(&self) -> &str;
+}
+
+// EmailTraitの実装
+impl EmailTrait for VerifiedEmail {
     fn new(value: &str) -> Result<Self, UserDomainError> {
         #[derive(Validate)]
         struct EmailCheck<'a> {
@@ -42,38 +49,33 @@ pub trait EmailTrait: FromStr + Sized {
         }
         let check = EmailCheck { email: value };
         if check.validate().is_ok() {
-            Ok(Self::from_str(&value))
+            Ok(Self(value.to_string()))
         } else {
             Err(UserDomainError::InvalidEmail(value.to_string()))
         }
     }
 
-    fn as_str(&self) -> &str;
-}
-
-// Email トレイトの実装
-impl FromStr for VerifiedEmail {
-    fn from_str(value: &str) -> Self {
-        Self(value.to_string())
-    }
-}
-impl EmailTrait for VerifiedEmail {
     fn as_str(&self) -> &str {
         &self.0
     }
 }
-impl FromStr for UnverifiedEmail {
-    fn from_str(value: &str) -> Self {
-        Self(value.to_string())
-    }
-}
+
 impl EmailTrait for UnverifiedEmail {
+    fn new(value: &str) -> Result<Self, UserDomainError> {
+        #[derive(Validate)]
+        struct EmailCheck<'a> {
+            #[validate(email)]
+            email: &'a str,
+        }
+        let check = EmailCheck { email: value };
+        if check.validate().is_ok() {
+            Ok(Self(value.to_string()))
+        } else {
+            Err(UserDomainError::InvalidEmail(value.to_string()))
+        }
+    }
+
     fn as_str(&self) -> &str {
         &self.0
     }
-}
-
-// Email トレイト構築のための非公開トレイト
-trait FromStr {
-    fn from_str(value: &str) -> Self;
 }

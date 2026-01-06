@@ -14,7 +14,7 @@ impl FromRequest for AdminContext {
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
-        let token_service = req.app_data::<web::Data<TokenService>>().expect(
+        let token_service = req.app_data::<web::Data<dyn TokenService>>().expect(
             "TokenService がアプリデータに登録されていません。 main.rs を確認してください。",
         );
 
@@ -52,7 +52,7 @@ impl FromRequest for AuthenticatedUserContext {
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
-        let token_service = req.app_data::<web::Data<TokenService>>().expect(
+        let token_service = req.app_data::<web::Data<dyn TokenService>>().expect(
             "TokenService がアプリデータに登録されていません。 main.rs を確認してください。",
         );
 

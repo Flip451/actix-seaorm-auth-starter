@@ -61,7 +61,7 @@ impl AuthorizationService {
             }
 
             // 管理者は任意のユーザーを退会させることができる
-            (UserRole::Admin, UserAction::DeactivateUser { target }) => Ok(()),
+            (UserRole::Admin, UserAction::DeactivateUser { .. }) => Ok(()),
 
             // ユーザーは自分自身を退会させることができる
             (UserRole::User, UserAction::DeactivateUser { target }) => {
@@ -73,7 +73,7 @@ impl AuthorizationService {
             }
 
             // 管理者は任意のユーザーを利用再開できる
-            (UserRole::Admin, UserAction::ActivateUser { target }) => Ok(()),
+            (UserRole::Admin, UserAction::ActivateUser { .. }) => Ok(()),
 
             // ユーザーは自分自身を利用再開できる
             (UserRole::User, UserAction::ActivateUser { target }) => {
@@ -85,13 +85,13 @@ impl AuthorizationService {
             }
 
             // 管理者は任意のユーザーを管理者に昇格できる
-            (UserRole::Admin, UserAction::PromoteToAdmin { target }) => Ok(()),
+            (UserRole::Admin, UserAction::PromoteToAdmin { .. }) => Ok(()),
 
             // 管理者はユーザー一覧を取得できる
             (UserRole::Admin, UserAction::ListUsers) => Ok(()),
 
             // 管理者は任意のユーザーのプロフィールを閲覧できる
-            (UserRole::Admin, UserAction::ViewProfile { target }) => Ok(()),
+            (UserRole::Admin, UserAction::ViewProfile { .. }) => Ok(()),
 
             // ユーザーは自分自身のプロフィールを閲覧できる
             (UserRole::User, UserAction::ViewProfile { target }) => {
