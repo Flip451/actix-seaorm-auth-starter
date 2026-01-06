@@ -1,6 +1,5 @@
 use crate::middleware::{AdminContext, AuthenticatedUserContext};
 use crate::{error::AppError, user::error::ApiUserError};
-use domain::transaction::TransactionManager;
 use domain::user::UserRole;
 use usecase::user::dto::UpdateUserInput;
 use usecase::user::service::UserService;
@@ -19,10 +18,10 @@ pub struct UpdateUserRequest {
 }
 
 #[tracing::instrument(skip(service, admin))]
-pub async fn suspend_user_handler<TM: TransactionManager>(
+pub async fn suspend_user_handler(
     admin: AdminContext,
     path: web::Path<Uuid>,
-    service: web::Data<UserService<TM>>,
+    service: web::Data<dyn UserService>,
 ) -> Result<impl Responder, AppError> {
     let target_id = path.into_inner();
 
@@ -35,9 +34,9 @@ pub async fn suspend_user_handler<TM: TransactionManager>(
 }
 
 #[tracing::instrument(skip(admin, service))]
-pub async fn list_users_handler<TM: TransactionManager>(
+pub async fn list_users_handler(
     admin: AdminContext,
-    service: web::Data<UserService<TM>>,
+    service: web::Data<dyn UserService>,
 ) -> Result<impl Responder, AppError> {
     let users = service
         .list_users(admin.user_id, UserRole::Admin)
@@ -47,9 +46,9 @@ pub async fn list_users_handler<TM: TransactionManager>(
 }
 
 #[tracing::instrument(skip(service, user))]
-pub async fn get_user_handler<TM: TransactionManager>(
+pub async fn get_user_handler(
     user: AuthenticatedUserContext,
-    service: web::Data<UserService<TM>>,
+    service: web::Data<dyn UserService>,
 ) -> Result<impl Responder, AppError> {
     let user = service
         .get_user_by_id(user.user_id, UserRole::User, user.user_id)
@@ -59,9 +58,9 @@ pub async fn get_user_handler<TM: TransactionManager>(
 }
 
 #[tracing::instrument(skip(service, body, user))]
-pub async fn update_user_handler<TM: TransactionManager>(
+pub async fn update_user_handler(
     user: AuthenticatedUserContext,
-    service: web::Data<UserService<TM>>,
+    service: web::Data<dyn UserService>,
     body: web::Json<UpdateUserRequest>,
 ) -> Result<impl Responder, AppError> {
     body.validate().map_err(|e| ApiUserError::InvalidInput(e))?;
@@ -78,18 +77,18 @@ pub async fn update_user_handler<TM: TransactionManager>(
     Ok(HttpResponse::Ok().json(updated_user))
 }
 
-pub fn user_config<TM: TransactionManager + 'static>(cfg: &mut web::ServiceConfig) {
+pub fn user_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/users") // /user/me というパスになる
-            .route("/me", web::get().to(get_user_handler::<TM>))
-            .route("/me", web::patch().to(update_user_handler::<TM>)),
+            .route("/me", web::get().to(get_user_handler))
+            .route("/me", web::patch().to(update_user_handler)),
     );
     cfg.service(
         web::scope("/admin") // /admin/users というパスになる
             .route(
                 "/users/{user_id}/suspend",
-                web::post().to(suspend_user_handler::<TM>),
+                web::post().to(suspend_user_handler),
             )
-            .route("/users", web::get().to(list_users_handler::<TM>)),
+            .route("/users", web::get().to(list_users_handler)),
     );
 }

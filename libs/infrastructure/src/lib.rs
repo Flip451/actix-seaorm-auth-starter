@@ -4,6 +4,9 @@ pub mod persistence;
 use std::sync::Arc;
 
 use domain::transaction::TransactionManager;
+use usecase::auth::interactor::AuthInteractor;
+use usecase::auth::token_interactor::TokenInteractor;
+use usecase::user::interactor::UserInteractor;
 // 各レイヤーのインポート
 use crate::auth::argon2::password_service::Argon2PasswordHasher;
 use crate::persistence::seaorm::transaction::SeaOrmTransactionManager;
@@ -27,25 +30,28 @@ impl RepoRegistry<SeaOrmTransactionManager> {
 }
 
 /// アプリケーション全体の依存関係を保持する構造体
-pub struct AppRegistry<TM: TransactionManager> {
-    pub auth_service: Arc<AuthService<TM>>,
-    pub user_service: Arc<UserService<TM>>,
-    pub token_service: Arc<TokenService>,
+pub struct AppRegistry {
+    pub auth_service: Arc<dyn AuthService>,
+    pub user_service: Arc<dyn UserService>,
+    pub token_service: Arc<dyn TokenService>,
 }
 
-impl<TM: TransactionManager> AppRegistry<TM> {
-    pub fn new(repos: RepoRegistry<TM>, jwt_secret: String) -> Self {
+impl AppRegistry {
+    pub fn new<TM: TransactionManager + 'static>(
+        repos: RepoRegistry<TM>,
+        jwt_secret: String,
+    ) -> Self {
         let password_hasher = Arc::new(Argon2PasswordHasher);
 
-        let token_service = Arc::new(TokenService::new(jwt_secret));
+        let token_service = Arc::new(TokenInteractor::new(jwt_secret));
 
-        let auth_service = Arc::new(AuthService::<TM>::new(
+        let auth_service = Arc::new(AuthInteractor::new(
             repos.transaction_manager.clone(),
             password_hasher,
             token_service.clone(),
         ));
 
-        let user_service = Arc::new(UserService::new(repos.transaction_manager.clone()));
+        let user_service = Arc::new(UserInteractor::new(repos.transaction_manager.clone()));
 
         Self {
             auth_service,
