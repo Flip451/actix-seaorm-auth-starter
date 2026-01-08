@@ -1,11 +1,14 @@
 use std::fmt::Debug;
 use std::sync::Arc;
 
+use crate::persistence::seaorm::repository::outbox_repository::SeaOrmOutboxRepository;
+
 use super::repository::user_repository::SeaOrmUserRepository;
+use async_trait::async_trait;
 use domain::repository::RepositoryFactory;
+use domain::shared::outbox::OutboxRepository;
 use domain::transaction::{IntoTxError, TransactionManager};
 use domain::user::UserRepository;
-use async_trait::async_trait;
 use futures_util::future::BoxFuture;
 use sea_orm::{DatabaseConnection, DatabaseTransaction, TransactionTrait};
 
@@ -18,6 +21,10 @@ impl<'a> RepositoryFactory for SeaOrmRepositoryFactory<'a> {
         // ここで初めてインスタンス化される（遅延初期化）
         // SeaOrmUserRepositoryは軽量（接続参照を持つだけ）なので作成コストは低い
         Box::new(SeaOrmUserRepository::new(self.txn))
+    }
+
+    fn outbox_repository(&self) -> Box<dyn OutboxRepository + '_> {
+        Box::new(SeaOrmOutboxRepository::new(self.txn))
     }
 }
 

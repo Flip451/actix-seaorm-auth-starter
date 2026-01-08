@@ -3,7 +3,7 @@ DOCKER_COMPOSE = docker compose
 APP_SERVICE = app
 DB_SERVICE = db
 CLI_SERVICE = sea-orm-cli
-ENTITY_OUTPUT = src/infrastructure/persistence/seaorm/entities
+ENTITY_OUTPUT = libs/infrastructure/src/persistence/seaorm/entities
 
 .PHONY: help build up down restart logs ps shell db-shell build-tools migrate-generate migrate-up migrate-down migrate-status generate-entity run watch test clean
 

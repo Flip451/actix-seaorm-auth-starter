@@ -1088,9 +1088,13 @@ dependencies = [
  "chrono",
  "derive_more",
  "futures-util",
+ "opentelemetry",
  "serde",
+ "serde_json",
  "strum 0.27.2",
  "thiserror 2.0.17",
+ "tracing",
+ "tracing-opentelemetry",
  "uuid",
  "validator",
 ]
@@ -1889,7 +1893,9 @@ dependencies = [
  "futures-util",
  "sea-orm",
  "serde",
+ "serde_json",
  "tracing",
+ "tracing-opentelemetry",
  "usecase",
  "uuid",
 ]
