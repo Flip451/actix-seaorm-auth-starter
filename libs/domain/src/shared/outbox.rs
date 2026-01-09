@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use chrono::{DateTime, FixedOffset};
+use chrono::{DateTime, Utc};
 use opentelemetry::trace::TraceContextExt;
 use thiserror::Error;
 use tracing::Span;
@@ -12,7 +12,7 @@ pub struct OutboxEvent {
     pub id: Uuid,
     pub event: DomainEvent,
     pub trace_id: Option<String>,
-    pub created_at: DateTime<FixedOffset>,
+    pub created_at: DateTime<Utc>,
 }
 
 impl OutboxEvent {
@@ -21,7 +21,7 @@ impl OutboxEvent {
             id: Uuid::new_v4(),
             event,
             trace_id: Self::get_current_trace_id(),
-            created_at: DateTime::<FixedOffset>::from(chrono::offset::Utc::now()),
+            created_at: Utc::now(),
         }
     }
 
@@ -45,6 +45,12 @@ pub enum DomainEvent {
     // 将来的に他のイベントタイプも追加可能
 }
 
+impl From<UserEvent> for DomainEvent {
+    fn from(event: UserEvent) -> Self {
+        DomainEvent::UserEvent(event)
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum OutboxRepositoryError {
     #[error("イベントの保存に失敗しました: {0}")]
@@ -54,4 +60,5 @@ pub enum OutboxRepositoryError {
 #[async_trait]
 pub trait OutboxRepository: Send + Sync {
     async fn save(&self, event: OutboxEvent) -> Result<(), OutboxRepositoryError>;
+    async fn save_all(&self, events: Vec<OutboxEvent>) -> Result<(), OutboxRepositoryError>;
 }

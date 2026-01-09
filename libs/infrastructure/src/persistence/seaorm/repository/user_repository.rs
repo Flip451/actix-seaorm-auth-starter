@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use async_trait::async_trait;
+use chrono::Utc;
 use sea_orm::{
     ColumnTrait, DbErr, EntityTrait, QueryFilter, RuntimeErr, Set, sea_query::OnConflict,
 };
@@ -61,10 +62,26 @@ impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmUserRepository<C, T> 
             HashedPassword::from_str(&model.password_hash),
             UserRole::from_str(&model.role).unwrap_or(UserRole::User),
             state,
-            model.created_at,
-            model.updated_at,
+            model.created_at.into(),
+            model.updated_at.into(),
         )?;
         Ok(user)
+    }
+}
+
+trait StateStr {
+    fn state_str(&self) -> &str;
+}
+
+impl StateStr for User {
+    fn state_str(&self) -> &str {
+        match &self.state() {
+            UserState::Active { .. } => "active",
+            UserState::SuspendedByAdmin { .. } => "suspended_by_admin",
+            UserState::DeactivatedByUser { .. } => "deactivated_by_user",
+            UserState::PendingVerification { .. } => "pending_verification",
+            UserState::ActiveWithUnverifiedEmail { .. } => "active_with_unverified_email",
+        }
     }
 }
 
@@ -124,8 +141,8 @@ where
             password_hash: Set(user.password().to_string()),
             status: Set(user.state_str().to_string()),
             role: Set(user.role().to_string()),
-            created_at: Set(user.created_at()), // 新規作成時は引数の値、更新時は無視される
-            updated_at: Set(chrono::Utc::now().fixed_offset()),
+            created_at: Set(user.created_at().into()), // 新規作成時は引数の値、更新時は無視される
+            updated_at: Set(Utc::now().into()),
         };
 
         // ON CONFLICT (id) DO UPDATE ...

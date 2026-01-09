@@ -1,6 +1,5 @@
 use domain::{
-    transaction::IntoTxError,
-    user::{PasswordHashingError, UserDomainError, UserRepositoryError, UserUniqueConstraint},
+    shared::outbox::OutboxRepositoryError, transaction::IntoTxError, user::{PasswordHashingError, UserDomainError, UserRepositoryError, UserUniqueConstraint}
 };
 use thiserror::Error;
 
@@ -51,6 +50,14 @@ impl From<UserRepositoryError> for AuthError {
         match error {
             UserRepositoryError::DomainError(source) => AuthError::from(source),
             UserRepositoryError::Persistence(source) => AuthError::PersistenceError(source),
+        }
+    }
+}
+
+impl From<OutboxRepositoryError> for AuthError {
+    fn from(error: OutboxRepositoryError) -> Self {
+        match error {
+            OutboxRepositoryError::Persistence(source) => AuthError::PersistenceError(source),
         }
     }
 }

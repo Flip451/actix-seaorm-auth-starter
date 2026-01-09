@@ -42,4 +42,8 @@ pub enum UserEvent {
         new_email: UnverifiedEmail,
         changed_at: DateTime<Utc>,
     },
+    EmailVerified {
+        user_id: Uuid,
+        verified_at: DateTime<Utc>,
+    },
 }

@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use domain::{
     shared::outbox::{DomainEvent, OutboxEvent, OutboxRepository, OutboxRepositoryError},
-    user::{EmailTrait, UserEvent},
+    user::UserEvent,
 };
 use sea_orm::{ActiveValue::Set, EntityTrait};
 
@@ -30,7 +30,7 @@ macro_rules! match_user_event {
                     })),
                     status: Set("PENDING".to_string()),
                     trace_id: Set($event.trace_id),
-                    created_at: Set($event.created_at),
+                    created_at: Set($event.created_at.into()),
                     processed_at: Set(None),
                 },
             )*
@@ -86,6 +86,10 @@ impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmOutboxRepository<C, T
                     user_id,
                     new_email,
                     changed_at
+                },
+                UserEvent::EmailVerified {
+                    user_id,
+                    verified_at
                 }
             ),
         }
@@ -102,6 +106,23 @@ where
         let active_model = self.get_active_model_from_event(event);
 
         outbox_entity::Entity::insert(active_model)
+            .exec(self.conn.connect())
+            .await
+            .map_err(|e| OutboxRepositoryError::Persistence(e.into()))?;
+
+        Ok(())
+    }
+
+    async fn save_all(
+        &self,
+        events: Vec<OutboxEvent>,
+    ) -> Result<(), OutboxRepositoryError> {
+        let active_models: Vec<outbox_entity::ActiveModel> = events
+            .into_iter()
+            .map(|event| self.get_active_model_from_event(event))
+            .collect();
+
+        outbox_entity::Entity::insert_many(active_models)
             .exec(self.conn.connect())
             .await
             .map_err(|e| OutboxRepositoryError::Persistence(e.into()))?;

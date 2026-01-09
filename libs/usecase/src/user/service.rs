@@ -30,5 +30,6 @@ pub trait UserService: Send + Sync {
         actor_id: Uuid,
         actor_role: UserRole,
         target_id: Uuid,
+        reason: String,
     ) -> Result<(), UserError>;
 }

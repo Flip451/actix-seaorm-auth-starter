@@ -1,10 +1,10 @@
 use crate::middleware::{AdminContext, AuthenticatedUserContext};
 use crate::{error::AppError, user::error::ApiUserError};
+use actix_web::{HttpResponse, Responder, web};
 use domain::user::UserRole;
+use serde::Deserialize;
 use usecase::user::dto::UpdateUserInput;
 use usecase::user::service::UserService;
-use actix_web::{HttpResponse, Responder, web};
-use serde::Deserialize;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -17,16 +17,28 @@ pub struct UpdateUserRequest {
     pub email: Option<String>,
 }
 
-#[tracing::instrument(skip(service, admin))]
+#[derive(Deserialize, Validate)]
+pub struct SuspendUserRequest {
+    #[validate(length(min = 1, message = "理由は空にできません"))]
+    pub reason: String,
+}
+
+#[tracing::instrument(skip(service, admin, body))]
 pub async fn suspend_user_handler(
     admin: AdminContext,
     path: web::Path<Uuid>,
     service: web::Data<dyn UserService>,
+    body: web::Json<SuspendUserRequest>,
 ) -> Result<impl Responder, AppError> {
     let target_id = path.into_inner();
 
     service
-        .suspend_user(admin.user_id, UserRole::Admin, target_id)
+        .suspend_user(
+            admin.user_id,
+            UserRole::Admin,
+            target_id,
+            body.reason.clone(),
+        )
         .await
         .map_err(ApiUserError::from)?;
 
