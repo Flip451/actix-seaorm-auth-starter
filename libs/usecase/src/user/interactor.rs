@@ -26,6 +26,13 @@ impl<TM: TransactionManager> UserInteractor<TM> {
 
 #[async_trait]
 impl<TM: TransactionManager> UserService for UserInteractor<TM> {
+    #[tracing::instrument(
+        skip(self),
+        fields(
+            actor_id = %actor_id,
+            actor_role = %actor_role,
+        )
+    )]
     async fn list_users(
         &self,
         actor_id: Uuid,
@@ -51,6 +58,14 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             .collect::<Vec<UserResponse>>())
     }
 
+    #[tracing::instrument(
+        skip(self),
+        fields(
+            actor_id = %actor_id,
+            actor_role = %actor_role,
+            user_id = %user_id,
+        )
+    )]
     async fn get_user_by_id(
         &self,
         actor_id: Uuid,
@@ -84,6 +99,14 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         })
     }
 
+    #[tracing::instrument(
+        skip(self, input),
+        fields(
+            actor_id = %actor_id,
+            actor_role = %actor_role,
+            target_id = %target_id,
+        )
+    )]
     async fn update_user(
         &self,
         actor_id: Uuid,
@@ -154,6 +177,14 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         })
     }
 
+    #[tracing::instrument(
+        skip(self),
+        fields(
+            actor_id = %actor_id,
+            actor_role = %actor_role,
+            target_id = %target_id,
+        )
+    )]
     async fn suspend_user(
         &self,
         actor_id: Uuid,
