@@ -1,5 +1,5 @@
 use domain::{
-    auth::policy::AuthorizationError, transaction::IntoTxError, user::{
+    auth::policy::AuthorizationError, shared::outbox::OutboxRepositoryError, transaction::IntoTxError, user::{
         EmailVerificationError, UserDomainError, UserRepositoryError, UserStateTransitionError,
     }
 };
@@ -49,6 +49,14 @@ impl From<UserRepositoryError> for UserError {
         match error {
             UserRepositoryError::DomainError(domain_error) => UserError::from(domain_error),
             UserRepositoryError::Persistence(source) => UserError::PersistenceError(source),
+        }
+    }
+}
+
+impl From<OutboxRepositoryError> for UserError {
+    fn from(error: OutboxRepositoryError) -> Self {
+        match error {
+            OutboxRepositoryError::Persistence(source) => UserError::PersistenceError(source),
         }
     }
 }

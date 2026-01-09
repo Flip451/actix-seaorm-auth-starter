@@ -1,11 +1,14 @@
+use crate::auth::{
+    dto::{LoginInput, SignupInput},
+    error::AuthError,
+    service::AuthService,
+    token_service::TokenService,
+};
 use async_trait::async_trait;
 use domain::{
     transaction::TransactionManager,
-    user::{EmailTrait, HashedPassword, PasswordHasher, RawPassword, UnverifiedEmail, User},
     tx,
-};
-use crate::auth::{
-    dto::{LoginInput, SignupInput}, error::AuthError, service::AuthService, token_service::TokenService
+    user::{EmailTrait, HashedPassword, PasswordHasher, RawPassword, UnverifiedEmail, User},
 };
 use std::sync::Arc;
 
@@ -55,6 +58,7 @@ impl<TM: TransactionManager> AuthService for AuthInteractor<TM> {
 
         tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
+            let outbox_repo = factory.outbox_repository();
 
             // 1. 重複チェック
             if user_repo.find_by_email(email.as_str()).await?.is_some() {
@@ -66,8 +70,18 @@ impl<TM: TransactionManager> AuthService for AuthInteractor<TM> {
             }
 
             // 2. ドメインモデル作成と保存
-            let user = User::new(username.to_string(), email, hashed_password)?;
-            Ok(user_repo.save(user).await?)
+            let mut user = User::new(username.to_string(), email, hashed_password)?;
+
+            // 3. Outbox イベントの取り出し
+            let events = user.pull_outbox_events();
+
+            // 4. 永続化
+            let user = user_repo.save(user).await?;
+
+            // 5. Outbox イベントの保存
+            outbox_repo.save_all(events).await?;
+
+            Ok(user)
         })
         .await
     }

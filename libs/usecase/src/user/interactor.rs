@@ -86,21 +86,25 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
 
     async fn update_user(
         &self,
-        user_id: Uuid,
+        actor_id: Uuid,
+        actor_role: UserRole,
+        target_id: Uuid,
         input: super::dto::UpdateUserInput,
     ) -> Result<UserResponse, UserError> {
         let updated_user = tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
+            let outbox_repo = factory.outbox_repository();
+
             let mut user = user_repo
-                .find_by_id(user_id)
+                .find_by_id(target_id)
                 .await?
                 .ok_or(UserError::NotFound)?;
 
             if let Some(username) = input.username {
                 // ポリシーチェック
                 AuthorizationService::can(
-                    user_id,
-                    &user.role(),
+                    actor_id,
+                    &actor_role,
                     UserAction::UpdateProfile { target: &user },
                 )?;
 
@@ -115,8 +119,8 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             if let Some(email) = input.email {
                 // ポリシーチェック
                 AuthorizationService::can(
-                    user_id,
-                    &user.role(),
+                    actor_id,
+                    &actor_role,
                     UserAction::ChangeEmail { target: &user },
                 )?;
 
@@ -129,7 +133,15 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                 }
             }
 
+            // イベントの取り出し
+            let events = user.pull_outbox_events();
+
+            // 変更の保存
             let updated_user = user_repo.save(user).await?;
+
+            // Outbox イベントの保存
+            outbox_repo.save_all(events).await?;
+
             Ok::<_, UserError>(updated_user)
         })
         .await?;
@@ -147,9 +159,12 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         actor_id: Uuid,
         actor_role: UserRole,
         target_id: Uuid,
+        reason: String,
     ) -> Result<(), UserError> {
         tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
+            let outbox_repo = factory.outbox_repository();
+
             let mut target_user = user_repo
                 .find_by_id(target_id)
                 .await?
@@ -165,10 +180,16 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             )?;
 
             // ユーザーの状態を停止に変更
-            target_user.suspend()?;
+            target_user.suspend(reason)?;
+
+            // イベントの取り出し
+            let events = target_user.pull_outbox_events();
 
             // 変更を保存
             user_repo.save(target_user).await?;
+
+            // Outbox イベントの保存
+            outbox_repo.save_all(events).await?;
 
             Ok::<_, UserError>(())
         })

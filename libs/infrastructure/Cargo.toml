@@ -7,10 +7,12 @@ edition = "2024"
 domain = { workspace = true }
 usecase = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 async-trait = { workspace = true }
 futures-util = { workspace = true }
 uuid = { workspace = true }
 tracing = { workspace = true }
+tracing-opentelemetry = { workspace = true }
 anyhow = { workspace = true }
 chrono = { workspace = true }
 argon2 = "0.5.3"

@@ -21,7 +21,9 @@ pub trait UserService: Send + Sync {
 
     async fn update_user(
         &self,
-        user_id: Uuid,
+        actor_id: Uuid,
+        actor_role: UserRole,
+        target_id: Uuid,
         input: super::dto::UpdateUserInput,
     ) -> Result<UserResponse, UserError>;
 
@@ -30,5 +32,6 @@ pub trait UserService: Send + Sync {
         actor_id: Uuid,
         actor_role: UserRole,
         target_id: Uuid,
+        reason: String,
     ) -> Result<(), UserError>;
 }
