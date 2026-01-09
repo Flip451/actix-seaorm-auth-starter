@@ -1,7 +1,10 @@
 use domain::{
-    auth::policy::AuthorizationError, shared::outbox::OutboxRepositoryError, transaction::IntoTxError, user::{
+    auth::policy::AuthorizationError,
+    shared::outbox::OutboxRepositoryError,
+    transaction::IntoTxError,
+    user::{
         EmailVerificationError, UserDomainError, UserRepositoryError, UserStateTransitionError,
-    }
+    },
 };
 use thiserror::Error;
 

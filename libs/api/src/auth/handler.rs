@@ -1,9 +1,9 @@
 use crate::auth::error::ApiAuthError;
 use crate::error::AppError;
-use usecase::auth::dto::{LoginInput, SignupInput};
-use usecase::auth::service::AuthService;
 use actix_web::{HttpResponse, Responder, web};
 use serde::Deserialize;
+use usecase::auth::dto::{LoginInput, SignupInput};
+use usecase::auth::service::AuthService;
 use validator::Validate;
 
 // --- API層専用のリクエスト構造体 ---

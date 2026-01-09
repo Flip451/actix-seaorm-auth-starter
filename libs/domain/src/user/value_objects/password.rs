@@ -26,7 +26,7 @@ impl RawPassword {
 pub struct HashedPassword(String);
 
 impl HashedPassword {
-    pub fn from_str(hash: &str) -> Self {
+    pub fn from_raw_str(hash: &str) -> Self {
         Self(hash.to_string())
     }
 

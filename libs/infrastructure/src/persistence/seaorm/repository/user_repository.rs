@@ -8,11 +8,11 @@ use sea_orm::{
 use uuid::Uuid;
 
 use super::super::entities::user as user_entity;
+use crate::persistence::seaorm::connect::Connectable;
 use domain::user::{
     EmailTrait, HashedPassword, UnverifiedEmail, User, UserDomainError, UserRepository,
     UserRepositoryError, UserRole, UserState, UserUniqueConstraint, VerifiedEmail,
 };
-use crate::persistence::seaorm::connect::Connectable;
 
 pub struct SeaOrmUserRepository<C, T>
 where
@@ -50,16 +50,17 @@ impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmUserRepository<C, T> 
                 email: UnverifiedEmail::new(&model.email)?,
             },
             other => {
-                return Err(UserRepositoryError::Persistence(
-                    anyhow::anyhow!("不明なユーザーステータス: {}", other).into(),
-                ));
+                return Err(UserRepositoryError::Persistence(anyhow::anyhow!(
+                    "不明なユーザーステータス: {}",
+                    other
+                )));
             }
         };
 
         let user = User::reconstruct(
             model.id,
             model.username,
-            HashedPassword::from_str(&model.password_hash),
+            HashedPassword::from_raw_str(&model.password_hash),
             UserRole::from_str(&model.role).unwrap_or(UserRole::User),
             state,
             model.created_at.into(),
@@ -163,30 +164,26 @@ where
             .await
             .map_err(|e| {
                 // エラーハンドリングの詳細化
-                match &e {
-                    DbErr::Query(RuntimeErr::SqlxError(sqlx_err)) => {
-                        // Postgresのエラーコード "23505" (unique_violation) をチェック
-                        if let Some(db_err) = sqlx_err.as_database_error() {
-                            if let Some(code) = db_err.code() {
-                                if code == "23505" {
-                                    let constraint = db_err.constraint().unwrap_or("");
+                if let DbErr::Query(RuntimeErr::SqlxError(sqlx_err)) = &e {
+                    // Postgresのエラーコード "23505" (unique_violation) をチェック
+                    if let Some(db_err) = sqlx_err.as_database_error()
+                        && let Some(code) = db_err.code()
+                        && code == "23505"
+                    {
+                        let constraint = db_err.constraint().unwrap_or("");
 
-                                    if constraint.contains("email") {
-                                        return UserDomainError::AlreadyExists(
-                                            UserUniqueConstraint::Email(email.as_str().to_string()),
-                                        )
-                                        .into();
-                                    } else if constraint.contains("username") {
-                                        return UserDomainError::AlreadyExists(
-                                            UserUniqueConstraint::Username(username.to_string()),
-                                        )
-                                        .into();
-                                    }
-                                }
-                            }
+                        if constraint.contains("email") {
+                            return UserDomainError::AlreadyExists(UserUniqueConstraint::Email(
+                                email.as_str().to_string(),
+                            ))
+                            .into();
+                        } else if constraint.contains("username") {
+                            return UserDomainError::AlreadyExists(UserUniqueConstraint::Username(
+                                username.to_string(),
+                            ))
+                            .into();
                         }
                     }
-                    _ => {}
                 }
                 // その他のエラーはPersistenceとして扱う
                 UserRepositoryError::Persistence(e.into())

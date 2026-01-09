@@ -39,7 +39,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
 
 # 4. ツール専用ステージ
 FROM builder AS tools
-RUN rustup component add rustfmt --toolchain ${RUST_VERSION}-x86_64-unknown-linux-gnu
+RUN rustup component add rustfmt clippy --toolchain ${RUST_VERSION}-x86_64-unknown-linux-gnu
 ENTRYPOINT ["sea-orm-cli"]
 
 # 5. 本番実行用 (runtime)
