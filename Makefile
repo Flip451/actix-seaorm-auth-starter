@@ -5,7 +5,7 @@ DB_SERVICE = db
 CLI_SERVICE = sea-orm-cli
 ENTITY_OUTPUT = libs/infrastructure/src/persistence/seaorm/entities
 
-.PHONY: help build up down restart logs ps shell db-shell build-tools migrate-generate migrate-up migrate-down migrate-status generate-entity run watch test clean
+.PHONY: help build up down restart logs ps shell db-shell build-tools migrate-generate migrate-up migrate-down migrate-status generate-entity run watch fmt lint test clean
 
 help: ## ヘルプを表示
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -69,6 +69,12 @@ run: ## アプリケーションの実行
 
 watch: ## ホットリロード有効で実行 (cargo-watchが必要)
 	$(DOCKER_COMPOSE) exec $(APP_SERVICE) cargo watch -x run
+
+fmt: ## コードのフォーマット
+	$(DOCKER_COMPOSE) --profile tools run --rm --entrypoint cargo $(CLI_SERVICE) fmt --all
+
+lint: ## コードの静的解析
+	$(DOCKER_COMPOSE) --profile tools run --rm --entrypoint cargo $(CLI_SERVICE) clippy --all -- -D warnings
 
 # テスト実行
 test: ## アプリケーションのテスト

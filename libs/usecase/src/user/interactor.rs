@@ -112,7 +112,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                 user.change_username(username.clone())?;
 
                 // ユーザー名の重複チェック
-                if let Some(_) = user_repo.find_by_username(&username).await? {
+                if user_repo.find_by_username(&username).await?.is_some() {
                     return Err(UserError::UsernameAlreadyExists(username));
                 }
             }
@@ -128,7 +128,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                 user.change_email(UnverifiedEmail::new(&email)?)?;
 
                 // メールアドレスの重複チェック
-                if let Some(_) = user_repo.find_by_email(&email).await? {
+                if user_repo.find_by_email(&email).await?.is_some() {
                     return Err(UserError::EmailAlreadyExists(email));
                 }
             }
