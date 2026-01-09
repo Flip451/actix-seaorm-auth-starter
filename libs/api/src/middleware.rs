@@ -1,7 +1,7 @@
-use actix_web::{dev::Payload, web, FromRequest, HttpRequest};
 use crate::auth::error::ApiAuthError;
+use actix_web::{FromRequest, HttpRequest, dev::Payload, web};
 use domain::user::UserRole;
-use futures_util::future::{ready, Ready};
+use futures_util::future::{Ready, ready};
 use usecase::auth::error::AuthError;
 use usecase::auth::token_service::TokenService;
 
@@ -31,14 +31,12 @@ impl FromRequest for AdminContext {
 
         match token_service.verify_token(token) {
             // ロールが Admin であることを確認
-            Ok(claims) if claims.role == UserRole::Admin => {
-                return ready(Ok(AdminContext {
-                    user_id: claims.sub,
-                }));
-            }
+            Ok(claims) if claims.role == UserRole::Admin => ready(Ok(AdminContext {
+                user_id: claims.sub,
+            })),
             // Admin でない場合は Forbidden を返す
-            Ok(_) => return ready(Err(ApiAuthError::AuthError(AuthError::Forbidden))),
-            Err(e) => return ready(Err(ApiAuthError::AuthError(e))),
+            Ok(_) => ready(Err(ApiAuthError::AuthError(AuthError::Forbidden))),
+            Err(e) => ready(Err(ApiAuthError::AuthError(e))),
         }
     }
 }

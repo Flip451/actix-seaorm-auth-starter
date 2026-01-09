@@ -113,10 +113,7 @@ where
         Ok(())
     }
 
-    async fn save_all(
-        &self,
-        events: Vec<OutboxEvent>,
-    ) -> Result<(), OutboxRepositoryError> {
+    async fn save_all(&self, events: Vec<OutboxEvent>) -> Result<(), OutboxRepositoryError> {
         let active_models: Vec<outbox_entity::ActiveModel> = events
             .into_iter()
             .map(|event| self.get_active_model_from_event(event))

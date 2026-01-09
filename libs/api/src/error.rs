@@ -1,6 +1,6 @@
-use actix_web::{HttpResponse, ResponseError, http::StatusCode};
 use crate::auth::error::ApiAuthError;
 use crate::user::error::ApiUserError;
+use actix_web::{HttpResponse, ResponseError, http::StatusCode};
 use thiserror::Error;
 
 #[derive(Debug, Error)]

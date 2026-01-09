@@ -106,7 +106,7 @@ impl<TM: TransactionManager> AuthService for AuthInteractor<TM> {
         // ※タイミング攻撃に対する脆弱性を回避するため、ユーザーの有無に関わらず検証処理を行う
         let (is_valid, user) = match user_opt {
             Some(user) => {
-                let is_valid = self.password_hasher.verify(&password, &user.password());
+                let is_valid = self.password_hasher.verify(&password, user.password());
                 (is_valid, Some(user))
             }
             None => {

@@ -1,7 +1,7 @@
-use std::fmt::Debug;
-use crate::repository::{RepositoryFactory};
+use crate::repository::RepositoryFactory;
 use async_trait::async_trait;
 use futures_util::future::BoxFuture;
+use std::fmt::Debug;
 
 // 1. DB等のシステムエラーを、そのドメインのエラー型に変換するためのトレイト
 pub trait IntoTxError {
@@ -21,10 +21,6 @@ pub trait TransactionManager: Send + Sync {
 #[macro_export]
 macro_rules! tx {
     ($tm:expr, |$factory:ident| $body:expr) => {
-        $tm.execute::<_, _, _>(move |$factory| {
-            std::boxed::Box::pin(async move {
-                $body
-            })
-        })
+        $tm.execute::<_, _, _>(move |$factory| std::boxed::Box::pin(async move { $body }))
     };
 }

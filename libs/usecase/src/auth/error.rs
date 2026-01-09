@@ -1,5 +1,7 @@
 use domain::{
-    shared::outbox::OutboxRepositoryError, transaction::IntoTxError, user::{PasswordHashingError, UserDomainError, UserRepositoryError, UserUniqueConstraint}
+    shared::outbox::OutboxRepositoryError,
+    transaction::IntoTxError,
+    user::{PasswordHashingError, UserDomainError, UserRepositoryError, UserUniqueConstraint},
 };
 use thiserror::Error;
 
