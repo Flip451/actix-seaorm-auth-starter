@@ -83,7 +83,7 @@ pub async fn update_user_handler(
     };
 
     let updated_user = service
-        .update_user(user.user_id, input)
+        .update_user(user.user_id, UserRole::User, user.user_id, input)
         .await
         .map_err(ApiUserError::from)?;
     Ok(HttpResponse::Ok().json(updated_user))
