@@ -14,6 +14,6 @@ pub struct Claims {
 
 #[async_trait]
 pub trait TokenService: Send + Sync {
-    fn issue_token(&self, user_id: Uuid, role: &UserRole) -> Result<String, AuthError>;
+    fn issue_token(&self, user_id: Uuid, role: UserRole) -> Result<String, AuthError>;
     fn verify_token(&self, token: &str) -> Result<Claims, AuthError>;
 }

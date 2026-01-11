@@ -40,7 +40,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     ) -> Result<Vec<UserResponse>, UserError> {
         let users = tx!(self.transaction_manager, |factory| {
             // ポリシーチェック
-            AuthorizationService::can(actor_id, &actor_role, UserAction::ListUsers)?;
+            AuthorizationService::can(actor_id, actor_role, UserAction::ListUsers)?;
 
             let user_repo = factory.user_repository();
             Ok::<_, UserError>(user_repo.find_all().await?)
@@ -53,7 +53,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                 id: u.id(),
                 username: u.username().to_string(),
                 email: u.email().as_str().to_string(),
-                role: u.role().clone(),
+                role: u.role(),
             })
             .collect::<Vec<UserResponse>>())
     }
@@ -83,7 +83,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             // ポリシーチェック
             AuthorizationService::can(
                 actor_id,
-                &actor_role,
+                actor_role,
                 UserAction::ViewProfile { target: &user },
             )?;
 
@@ -95,7 +95,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             id: user.id(),
             username: user.username().to_string(),
             email: user.email().as_str().to_string(),
-            role: user.role().clone(),
+            role: user.role(),
         })
     }
 
@@ -127,7 +127,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                 // ポリシーチェック
                 AuthorizationService::can(
                     actor_id,
-                    &actor_role,
+                    actor_role,
                     UserAction::UpdateProfile { target: &user },
                 )?;
 
@@ -143,7 +143,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                 // ポリシーチェック
                 AuthorizationService::can(
                     actor_id,
-                    &actor_role,
+                    actor_role,
                     UserAction::ChangeEmail { target: &user },
                 )?;
 
@@ -173,7 +173,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             id: updated_user.id(),
             username: updated_user.username().to_string(),
             email: updated_user.email().as_str().to_string(),
-            role: updated_user.role().clone(),
+            role: updated_user.role(),
         })
     }
 
@@ -204,7 +204,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             // ポリシーチェック
             AuthorizationService::can(
                 actor_id,
-                &actor_role,
+                actor_role,
                 UserAction::SuspendUser {
                     target: &target_user,
                 },
