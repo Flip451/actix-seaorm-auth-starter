@@ -2,27 +2,31 @@ use uuid::Uuid;
 
 use crate::{
     auth::policies::{
-        activate_user::ActivateUserPolicy, change_email::ChangeEmailPolicy,
-        deactivate_user::DeactivateUserPolicy, list_users::ListUsersPolicy,
-        promote_to_admin::PromoteToAdminPolicy, suspend_user::SuspendUserPolicy,
-        unlock_user::UnlockUserPolicy, update_profile::UpdateProfilePolicy,
-        view_profile::ViewProfilePolicy,
+        activate_user::{ActivateUserPayload, ActivateUserPolicy},
+        change_email::{ChangeEmailPayload, ChangeEmailPolicy},
+        deactivate_user::{DeactivateUserPayload, DeactivateUserPolicy},
+        list_users::{ListUsersPayload, ListUsersPolicy},
+        promote_to_admin::{PromoteToAdminPayload, PromoteToAdminPolicy},
+        suspend_user::{SuspendUserPayload, SuspendUserPolicy},
+        unlock_user::{UnlockUserPayload, UnlockUserPolicy},
+        update_profile::{UpdateProfilePayload, UpdateProfilePolicy},
+        view_profile::{ViewProfilePayload, ViewProfilePolicy},
     },
-    user::{User, UserRole},
+    user::UserRole,
 };
 
 // 操作（アクション）を定義 [4]
 #[derive(Clone, Copy)]
 pub enum UserAction<'a> {
-    SuspendUser { target: &'a User },    // 利用停止
-    UnlockUser { target: &'a User },     // ロック解除
-    DeactivateUser { target: &'a User }, // 退会
-    ActivateUser { target: &'a User },   // 利用再開
-    PromoteToAdmin { target: &'a User }, // 管理者への昇格
-    ListUsers,                           // ユーザー一覧の取得
-    ViewProfile { target: &'a User },    // プロフィール閲覧
-    UpdateProfile { target: &'a User },  // プロフィール更新
-    ChangeEmail { target: &'a User },    // メールアドレス変更
+    SuspendUser(SuspendUserPayload<'a>),       // 利用停止
+    UnlockUser(UnlockUserPayload<'a>),         // ロック解除
+    DeactivateUser(DeactivateUserPayload<'a>), // 退会
+    ActivateUser(ActivateUserPayload<'a>),     // 利用再開
+    PromoteToAdmin(PromoteToAdminPayload<'a>), // 管理者への昇格
+    ListUsers(ListUsersPayload),               // ユーザー一覧の取得
+    ViewProfile(ViewProfilePayload<'a>),       // プロフィール閲覧
+    UpdateProfile(UpdateProfilePayload<'a>),   // プロフィール更新
+    ChangeEmail(ChangeEmailPayload<'a>),       // メールアドレス変更
 }
 
 pub struct AuthorizationContext<'a> {
@@ -64,15 +68,15 @@ impl AuthorizationService {
         };
 
         let policy: Box<dyn Policy> = match action {
-            UserAction::SuspendUser { target } => Box::new(SuspendUserPolicy { target }),
-            UserAction::UnlockUser { target } => Box::new(UnlockUserPolicy { target }),
-            UserAction::DeactivateUser { target } => Box::new(DeactivateUserPolicy { target }),
-            UserAction::ActivateUser { target } => Box::new(ActivateUserPolicy { target }),
-            UserAction::PromoteToAdmin { target } => Box::new(PromoteToAdminPolicy { target }),
-            UserAction::ListUsers => Box::new(ListUsersPolicy),
-            UserAction::ViewProfile { target } => Box::new(ViewProfilePolicy { target }),
-            UserAction::UpdateProfile { target } => Box::new(UpdateProfilePolicy { target }),
-            UserAction::ChangeEmail { target } => Box::new(ChangeEmailPolicy { target }),
+            UserAction::SuspendUser(payload) => Box::new(SuspendUserPolicy::new(payload)),
+            UserAction::UnlockUser(payload) => Box::new(UnlockUserPolicy::new(payload)),
+            UserAction::DeactivateUser(payload) => Box::new(DeactivateUserPolicy::new(payload)),
+            UserAction::ActivateUser(payload) => Box::new(ActivateUserPolicy::new(payload)),
+            UserAction::PromoteToAdmin(payload) => Box::new(PromoteToAdminPolicy::new(payload)),
+            UserAction::ListUsers(payload) => Box::new(ListUsersPolicy::new(payload)),
+            UserAction::ViewProfile(payload) => Box::new(ViewProfilePolicy::new(payload)),
+            UserAction::UpdateProfile(payload) => Box::new(UpdateProfilePolicy::new(payload)),
+            UserAction::ChangeEmail(payload) => Box::new(ChangeEmailPolicy::new(payload)),
         };
 
         policy.check(&ctx)

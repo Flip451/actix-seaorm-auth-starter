@@ -3,14 +3,23 @@ use crate::{
     user::{User, UserRole},
 };
 
-pub struct UnlockUserPolicy<'a> {
+#[derive(Clone, Copy)]
+pub struct UnlockUserPayload<'a> {
     pub target: &'a User,
+}
+
+pub struct UnlockUserPolicy<'a>(UnlockUserPayload<'a>);
+
+impl<'a> UnlockUserPolicy<'a> {
+    pub fn new(payload: UnlockUserPayload<'a>) -> Self {
+        Self(payload)
+    }
 }
 
 impl<'a> Policy<'a> for UnlockUserPolicy<'a> {
     // 管理者は自分以外のユーザーのロックを解除できる
     fn check(&self, ctx: &AuthorizationContext<'a>) -> Result<(), AuthorizationError> {
-        let target = self.target;
+        let target = self.0.target;
 
         // 自分自身を利用再開にすることはできない
         if ctx.actor_id == target.id() {
