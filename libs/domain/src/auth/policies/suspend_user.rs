@@ -3,14 +3,23 @@ use crate::{
     user::{User, UserRole},
 };
 
-pub struct SuspendUserPolicy<'a> {
+#[derive(Clone, Copy)]
+pub struct SuspendUserPayload<'a> {
     pub target: &'a User,
+}
+
+pub struct SuspendUserPolicy<'a>(SuspendUserPayload<'a>);
+
+impl<'a> SuspendUserPolicy<'a> {
+    pub fn new(payload: SuspendUserPayload<'a>) -> Self {
+        Self(payload)
+    }
 }
 
 impl<'a> Policy<'a> for SuspendUserPolicy<'a> {
     // 管理者は自分以外の非管理者ユーザーを停止できる
     fn check(&self, ctx: &AuthorizationContext<'a>) -> Result<(), AuthorizationError> {
-        let target = self.target;
+        let target = self.0.target;
 
         // 自分自身を利用停止にすることはできない
         if ctx.actor_id == target.id() {

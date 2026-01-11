@@ -1,6 +1,11 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use domain::auth::policies::change_email::ChangeEmailPayload;
+use domain::auth::policies::list_users::ListUsersPayload;
+use domain::auth::policies::suspend_user::SuspendUserPayload;
+use domain::auth::policies::update_profile::UpdateProfilePayload;
+use domain::auth::policies::view_profile::ViewProfilePayload;
 use uuid::Uuid;
 
 use crate::user::service::UserService;
@@ -40,7 +45,11 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     ) -> Result<Vec<UserResponse>, UserError> {
         let users = tx!(self.transaction_manager, |factory| {
             // ポリシーチェック
-            AuthorizationService::can(actor_id, actor_role, UserAction::ListUsers)?;
+            AuthorizationService::can(
+                actor_id,
+                actor_role,
+                UserAction::ListUsers(ListUsersPayload),
+            )?;
 
             let user_repo = factory.user_repository();
             Ok::<_, UserError>(user_repo.find_all().await?)
@@ -84,7 +93,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             AuthorizationService::can(
                 actor_id,
                 actor_role,
-                UserAction::ViewProfile { target: &user },
+                UserAction::ViewProfile(ViewProfilePayload { target: &user }),
             )?;
 
             Ok::<_, UserError>(user)
@@ -128,7 +137,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                 AuthorizationService::can(
                     actor_id,
                     actor_role,
-                    UserAction::UpdateProfile { target: &user },
+                    UserAction::UpdateProfile(UpdateProfilePayload { target: &user }),
                 )?;
 
                 // ドメインロジックの実行
@@ -144,7 +153,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                 AuthorizationService::can(
                     actor_id,
                     actor_role,
-                    UserAction::ChangeEmail { target: &user },
+                    UserAction::ChangeEmail(ChangeEmailPayload { target: &user }),
                 )?;
 
                 // ドメインロジックの実行
@@ -205,9 +214,9 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             AuthorizationService::can(
                 actor_id,
                 actor_role,
-                UserAction::SuspendUser {
+                UserAction::SuspendUser(SuspendUserPayload {
                     target: &target_user,
-                },
+                }),
             )?;
 
             // ユーザーの状態を停止に変更

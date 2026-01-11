@@ -3,15 +3,24 @@ use crate::{
     user::{User, UserRole},
 };
 
-pub struct ViewProfilePolicy<'a> {
+#[derive(Clone, Copy)]
+pub struct ViewProfilePayload<'a> {
     pub target: &'a User,
+}
+
+pub struct ViewProfilePolicy<'a>(ViewProfilePayload<'a>);
+
+impl<'a> ViewProfilePolicy<'a> {
+    pub fn new(payload: ViewProfilePayload<'a>) -> Self {
+        Self(payload)
+    }
 }
 
 impl<'a> Policy<'a> for ViewProfilePolicy<'a> {
     // 管理者は任意のユーザーのプロフィールを閲覧できる
     // ユーザーは自分自身のプロフィールを閲覧できる
     fn check(&self, ctx: &AuthorizationContext<'a>) -> Result<(), AuthorizationError> {
-        let target = self.target;
+        let target = self.0.target;
 
         match ctx.actor_role {
             UserRole::Admin => Ok(()), // 管理者はプロフィール閲覧可能

@@ -3,7 +3,16 @@ use crate::{
     user::UserRole,
 };
 
-pub struct ListUsersPolicy;
+#[derive(Clone, Copy)]
+pub struct ListUsersPayload;
+
+pub struct ListUsersPolicy(ListUsersPayload);
+
+impl ListUsersPolicy {
+    pub fn new(payload: ListUsersPayload) -> Self {
+        Self(payload)
+    }
+}
 
 impl<'a> Policy<'a> for ListUsersPolicy {
     // 管理者のみがユーザー一覧を閲覧できる
