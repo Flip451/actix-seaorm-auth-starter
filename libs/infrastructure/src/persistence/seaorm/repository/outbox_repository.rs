@@ -1,3 +1,5 @@
+use std::fmt;
+
 use async_trait::async_trait;
 use domain::{
     shared::outbox::{DomainEvent, OutboxEvent, OutboxRepository, OutboxRepositoryError},
@@ -18,24 +20,44 @@ where
     _marker: std::marker::PhantomData<T>,
 }
 
-macro_rules! match_user_event {
-    ($event:expr, $user_event:expr, $(UserEvent::$event_name:ident {$($item:ident),*}),*) => {
-        match $user_event {
-            $(
-                UserEvent::$event_name {$($item,)* } => outbox_entity::ActiveModel {
-                    id: Set($event.id),
-                    event_type: Set(stringify!($event_name).to_string()),
-                    payload: Set(serde_json::json!({
-                        $( stringify!($item): $item, )*
-                    })),
-                    status: Set("PENDING".to_string()),
-                    trace_id: Set($event.trace_id),
-                    created_at: Set($event.created_at.into()),
-                    processed_at: Set(None),
-                },
-            )*
-        }
-    };
+struct EventTypeFormatter<'a>(&'a DomainEvent);
+
+impl fmt::Display for EventTypeFormatter<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let event_type = match self.0 {
+            DomainEvent::UserEvent(user_event) => match user_event {
+                UserEvent::Created { .. } => "UserEvent::Created",
+                UserEvent::Suspended { .. } => "UserEvent::Suspended",
+                UserEvent::Unlocked { .. } => "UserEvent::Unlocked",
+                UserEvent::Deactivated { .. } => "UserEvent::Deactivated",
+                UserEvent::Reactivated { .. } => "UserEvent::Reactivated",
+                UserEvent::PromotedToAdmin { .. } => "UserEvent::PromotedToAdmin",
+                UserEvent::UsernameChanged { .. } => "UserEvent::UsernameChanged",
+                UserEvent::EmailChanged { .. } => "UserEvent::EmailChanged",
+                UserEvent::EmailVerified { .. } => "UserEvent::EmailVerified",
+            },
+        };
+        write!(f, "{}", event_type)
+    }
+}
+
+fn get_active_model_from_event(
+    event: OutboxEvent,
+) -> Result<outbox_entity::ActiveModel, OutboxRepositoryError> {
+    let payload = serde_json::to_value(&event.event)
+        .map_err(|e| OutboxRepositoryError::Persistence(e.into()))?;
+
+    let event_type = EventTypeFormatter(&event.event).to_string();
+
+    Ok(outbox_entity::ActiveModel {
+        id: Set(event.id),
+        event_type: Set(event_type),
+        payload: Set(payload),
+        status: Set("PENDING".to_string()),
+        trace_id: Set(event.trace_id),
+        created_at: Set(event.created_at.into()),
+        processed_at: Set(None),
+    })
 }
 
 impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmOutboxRepository<C, T> {
@@ -43,55 +65,6 @@ impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmOutboxRepository<C, T
         Self {
             conn,
             _marker: std::marker::PhantomData,
-        }
-    }
-
-    fn get_active_model_from_event(&self, event: OutboxEvent) -> outbox_entity::ActiveModel {
-        match event.event {
-            DomainEvent::UserEvent(user_event) => match_user_event!(
-                event,
-                user_event,
-                UserEvent::UserCreated {
-                    user_id,
-                    email,
-                    registered_at
-                },
-                UserEvent::UserSuspended {
-                    user_id,
-                    reason,
-                    suspended_at
-                },
-                UserEvent::UserUnlocked {
-                    user_id,
-                    unlocked_at
-                },
-                UserEvent::UserDeactivated {
-                    user_id,
-                    deactivated_at
-                },
-                UserEvent::UserReactivated {
-                    user_id,
-                    reactivated_at
-                },
-                UserEvent::UserPromotedToAdmin {
-                    user_id,
-                    promoted_at
-                },
-                UserEvent::UsernameChanged {
-                    user_id,
-                    new_username,
-                    changed_at
-                },
-                UserEvent::UserEmailChanged {
-                    user_id,
-                    new_email,
-                    changed_at
-                },
-                UserEvent::EmailVerified {
-                    user_id,
-                    verified_at
-                }
-            ),
         }
     }
 }
@@ -103,7 +76,7 @@ where
     T: sea_orm::ConnectionTrait + Send + Sync,
 {
     async fn save(&self, event: OutboxEvent) -> Result<(), OutboxRepositoryError> {
-        let active_model = self.get_active_model_from_event(event);
+        let active_model = get_active_model_from_event(event)?;
 
         outbox_entity::Entity::insert(active_model)
             .exec(self.conn.connect())
@@ -116,8 +89,8 @@ where
     async fn save_all(&self, events: Vec<OutboxEvent>) -> Result<(), OutboxRepositoryError> {
         let active_models: Vec<outbox_entity::ActiveModel> = events
             .into_iter()
-            .map(|event| self.get_active_model_from_event(event))
-            .collect();
+            .map(get_active_model_from_event)
+            .collect::<Result<Vec<_>, _>>()?;
 
         outbox_entity::Entity::insert_many(active_models)
             .exec(self.conn.connect())
