@@ -93,8 +93,8 @@ impl User {
         &self.password
     }
 
-    pub fn role(&self) -> &UserRole {
-        &self.role
+    pub fn role(&self) -> UserRole {
+        self.role
     }
 
     pub fn state(&self) -> &UserState {
