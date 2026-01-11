@@ -6,29 +6,29 @@ use crate::user::UnverifiedEmail;
 
 #[derive(Serialize, Debug, Clone)]
 pub enum UserEvent {
-    UserCreated {
+    Created {
         user_id: Uuid,
         email: UnverifiedEmail,
         registered_at: DateTime<Utc>,
     },
-    UserSuspended {
+    Suspended {
         user_id: Uuid,
         reason: String,
         suspended_at: DateTime<Utc>,
     },
-    UserUnlocked {
+    Unlocked {
         user_id: Uuid,
         unlocked_at: DateTime<Utc>,
     },
-    UserDeactivated {
+    Deactivated {
         user_id: Uuid,
         deactivated_at: DateTime<Utc>,
     },
-    UserReactivated {
+    Reactivated {
         user_id: Uuid,
         reactivated_at: DateTime<Utc>,
     },
-    UserPromotedToAdmin {
+    PromotedToAdmin {
         user_id: Uuid,
         promoted_at: DateTime<Utc>,
     },
@@ -37,7 +37,7 @@ pub enum UserEvent {
         new_username: String,
         changed_at: DateTime<Utc>,
     },
-    UserEmailChanged {
+    EmailChanged {
         user_id: Uuid,
         new_email: UnverifiedEmail,
         changed_at: DateTime<Utc>,

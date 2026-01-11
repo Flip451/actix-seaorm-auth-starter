@@ -21,7 +21,7 @@ impl TokenInteractor {
 #[async_trait]
 impl TokenService for TokenInteractor {
     /// トークンの発行 (Login時に使用)
-    fn issue_token(&self, user_id: Uuid, role: &UserRole) -> Result<String, AuthError> {
+    fn issue_token(&self, user_id: Uuid, role: UserRole) -> Result<String, AuthError> {
         let expiration = Utc::now()
             .checked_add_signed(Duration::hours(24))
             .expect("valid timestamp")
@@ -29,7 +29,7 @@ impl TokenService for TokenInteractor {
 
         let claims = Claims {
             sub: user_id,
-            role: role.clone(),
+            role,
             iat: Utc::now().timestamp() as usize,
             exp: expiration,
         };

@@ -1,19 +1,38 @@
 use uuid::Uuid;
 
-use crate::user::{User, UserRole};
+use crate::{
+    auth::policies::{
+        activate_user::{ActivateUserPayload, ActivateUserPolicy},
+        change_email::{ChangeEmailPayload, ChangeEmailPolicy},
+        deactivate_user::{DeactivateUserPayload, DeactivateUserPolicy},
+        list_users::{ListUsersPayload, ListUsersPolicy},
+        promote_to_admin::{PromoteToAdminPayload, PromoteToAdminPolicy},
+        suspend_user::{SuspendUserPayload, SuspendUserPolicy},
+        unlock_user::{UnlockUserPayload, UnlockUserPolicy},
+        update_profile::{UpdateProfilePayload, UpdateProfilePolicy},
+        view_profile::{ViewProfilePayload, ViewProfilePolicy},
+    },
+    user::UserRole,
+};
 
 // 操作（アクション）を定義 [4]
 #[derive(Clone, Copy)]
 pub enum UserAction<'a> {
-    SuspendUser { target: &'a User },    // 利用停止
-    UnlockUser { target: &'a User },     // ロック解除
-    DeactivateUser { target: &'a User }, // 退会
-    ActivateUser { target: &'a User },   // 利用再開
-    PromoteToAdmin { target: &'a User }, // 管理者への昇格
-    ListUsers,                           // ユーザー一覧の取得
-    ViewProfile { target: &'a User },    // プロフィール閲覧
-    UpdateProfile { target: &'a User },  // プロフィール更新
-    ChangeEmail { target: &'a User },    // メールアドレス変更
+    SuspendUser(SuspendUserPayload<'a>),       // 利用停止
+    UnlockUser(UnlockUserPayload<'a>),         // ロック解除
+    DeactivateUser(DeactivateUserPayload<'a>), // 退会
+    ActivateUser(ActivateUserPayload<'a>),     // 利用再開
+    PromoteToAdmin(PromoteToAdminPayload<'a>), // 管理者への昇格
+    ListUsers(ListUsersPayload),               // ユーザー一覧の取得
+    ViewProfile(ViewProfilePayload<'a>),       // プロフィール閲覧
+    UpdateProfile(UpdateProfilePayload<'a>),   // プロフィール更新
+    ChangeEmail(ChangeEmailPayload<'a>),       // メールアドレス変更
+}
+
+pub struct AuthorizationContext<'a> {
+    pub actor_id: Uuid,
+    pub actor_role: UserRole,
+    pub action: UserAction<'a>,
 }
 
 // 認可エラーの定義
@@ -29,99 +48,37 @@ pub enum AuthorizationError {
     CannotSuspendAdmin,
 }
 
+pub trait Policy<'a> {
+    fn check(&self, ctx: &AuthorizationContext<'a>) -> Result<(), AuthorizationError>;
+}
+
 // 認可サービス（ポリシーの管理） [5]
 pub struct AuthorizationService;
 
 impl AuthorizationService {
     pub fn can(
         actor_id: Uuid,
-        actor_role: &UserRole,
+        actor_role: UserRole,
         action: UserAction,
     ) -> Result<(), AuthorizationError> {
-        match (actor_role, action) {
-            // 管理者は自分以外の非管理者ユーザーを停止できる
-            (UserRole::Admin, UserAction::SuspendUser { target }) => {
-                // ターゲットユーザーが自分自身でないことを確認
-                if actor_id == target.id() {
-                    return Err(AuthorizationError::CannotSuspendSelf);
-                }
-                // ターゲットユーザーが管理者でないことを確認
-                if target.role() == &UserRole::Admin {
-                    return Err(AuthorizationError::CannotSuspendAdmin);
-                }
-                Ok(())
-            }
+        let ctx = AuthorizationContext {
+            actor_id,
+            actor_role,
+            action,
+        };
 
-            // 管理者は自身以外のユーザーのロックを解除できる
-            (UserRole::Admin, UserAction::UnlockUser { target }) => {
-                if actor_id == target.id() {
-                    return Err(AuthorizationError::CannotUnlockSelf);
-                }
-                Ok(())
-            }
+        let policy: Box<dyn Policy> = match action {
+            UserAction::SuspendUser(payload) => Box::new(SuspendUserPolicy::new(payload)),
+            UserAction::UnlockUser(payload) => Box::new(UnlockUserPolicy::new(payload)),
+            UserAction::DeactivateUser(payload) => Box::new(DeactivateUserPolicy::new(payload)),
+            UserAction::ActivateUser(payload) => Box::new(ActivateUserPolicy::new(payload)),
+            UserAction::PromoteToAdmin(payload) => Box::new(PromoteToAdminPolicy::new(payload)),
+            UserAction::ListUsers(payload) => Box::new(ListUsersPolicy::new(payload)),
+            UserAction::ViewProfile(payload) => Box::new(ViewProfilePolicy::new(payload)),
+            UserAction::UpdateProfile(payload) => Box::new(UpdateProfilePolicy::new(payload)),
+            UserAction::ChangeEmail(payload) => Box::new(ChangeEmailPolicy::new(payload)),
+        };
 
-            // 管理者は任意のユーザーを退会させることができる
-            (UserRole::Admin, UserAction::DeactivateUser { .. }) => Ok(()),
-
-            // ユーザーは自分自身を退会させることができる
-            (UserRole::User, UserAction::DeactivateUser { target }) => {
-                if actor_id == target.id() {
-                    Ok(())
-                } else {
-                    Err(AuthorizationError::Forbidden)
-                }
-            }
-
-            // 管理者は任意のユーザーを利用再開できる
-            (UserRole::Admin, UserAction::ActivateUser { .. }) => Ok(()),
-
-            // ユーザーは自分自身を利用再開できる
-            (UserRole::User, UserAction::ActivateUser { target }) => {
-                if actor_id == target.id() {
-                    Ok(())
-                } else {
-                    Err(AuthorizationError::Forbidden)
-                }
-            }
-
-            // 管理者は任意のユーザーを管理者に昇格できる
-            (UserRole::Admin, UserAction::PromoteToAdmin { .. }) => Ok(()),
-
-            // 管理者はユーザー一覧を取得できる
-            (UserRole::Admin, UserAction::ListUsers) => Ok(()),
-
-            // 管理者は任意のユーザーのプロフィールを閲覧できる
-            (UserRole::Admin, UserAction::ViewProfile { .. }) => Ok(()),
-
-            // ユーザーは自分自身のプロフィールを閲覧できる
-            (UserRole::User, UserAction::ViewProfile { target }) => {
-                if actor_id == target.id() {
-                    Ok(())
-                } else {
-                    Err(AuthorizationError::Forbidden)
-                }
-            }
-
-            // ユーザーは自分自身のプロフィールを更新できる
-            (UserRole::User, UserAction::UpdateProfile { target }) => {
-                if actor_id == target.id() {
-                    Ok(())
-                } else {
-                    Err(AuthorizationError::Forbidden)
-                }
-            }
-
-            // ユーザーは自分自身のメールアドレスを変更できる
-            (UserRole::User, UserAction::ChangeEmail { target }) => {
-                if actor_id == target.id() {
-                    Ok(())
-                } else {
-                    Err(AuthorizationError::Forbidden)
-                }
-            }
-
-            // デフォルトは拒否
-            _ => Err(AuthorizationError::Forbidden),
-        }
+        policy.check(&ctx)
     }
 }
