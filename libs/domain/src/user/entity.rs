@@ -40,7 +40,7 @@ impl User {
             },
             created_at: now,
             updated_at: now,
-            events: vec![UserEvent::UserCreated {
+            events: vec![UserEvent::Created {
                 user_id: id,
                 email,
                 registered_at: now,
@@ -207,7 +207,7 @@ impl User {
             }
         }
 
-        self.record_event(UserEvent::UserEmailChanged {
+        self.record_event(UserEvent::EmailChanged {
             user_id: self.id,
             new_email,
             changed_at: Utc::now(),
@@ -241,7 +241,7 @@ impl User {
             }
         }
 
-        self.record_event(UserEvent::UserSuspended {
+        self.record_event(UserEvent::Suspended {
             user_id: self.id,
             reason,
             suspended_at: Utc::now(),
@@ -273,7 +273,7 @@ impl User {
             }
         }
 
-        self.record_event(UserEvent::UserDeactivated {
+        self.record_event(UserEvent::Deactivated {
             user_id: self.id,
             deactivated_at: Utc::now(),
         });
@@ -304,7 +304,7 @@ impl User {
             }
         }
 
-        self.record_event(UserEvent::UserReactivated {
+        self.record_event(UserEvent::Reactivated {
             user_id: self.id,
             reactivated_at: Utc::now(),
         });
@@ -329,7 +329,7 @@ impl User {
             }
         }
 
-        self.record_event(UserEvent::UserUnlocked {
+        self.record_event(UserEvent::Unlocked {
             user_id: self.id,
             unlocked_at: Utc::now(),
         });
