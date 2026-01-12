@@ -1,10 +1,10 @@
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::user::UnverifiedEmail;
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub enum UserEvent {
     Created(UserCreatedEvent),
     Suspended(UserSuspendedEvent),
@@ -17,59 +17,59 @@ pub enum UserEvent {
     EmailVerified(UserEmailVerifiedEvent),
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct UserCreatedEvent {
     pub user_id: Uuid,
     pub email: UnverifiedEmail,
     pub registered_at: DateTime<Utc>,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct UserSuspendedEvent {
     pub user_id: Uuid,
     pub reason: String,
     pub suspended_at: DateTime<Utc>,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct UserUnlockedEvent {
     pub user_id: Uuid,
     pub unlocked_at: DateTime<Utc>,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct UserDeactivatedEvent {
     pub user_id: Uuid,
     pub deactivated_at: DateTime<Utc>,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct UserReactivatedEvent {
     pub user_id: Uuid,
     pub reactivated_at: DateTime<Utc>,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct UserPromotedToAdminEvent {
     pub user_id: Uuid,
     pub promoted_at: DateTime<Utc>,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct UsernameChangedEvent {
     pub user_id: Uuid,
     pub new_username: String,
     pub changed_at: DateTime<Utc>,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct UserEmailChangedEvent {
     pub user_id: Uuid,
     pub new_email: UnverifiedEmail,
     pub changed_at: DateTime<Utc>,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct UserEmailVerifiedEvent {
     pub user_id: Uuid,
     pub verified_at: DateTime<Utc>,

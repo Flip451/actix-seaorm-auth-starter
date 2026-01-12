@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use opentelemetry::trace::{TraceContextExt, TraceId};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::Span;
 use tracing_opentelemetry::OpenTelemetrySpanExt;
@@ -40,7 +40,7 @@ impl OutboxEvent {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub enum DomainEvent {
     UserEvent(UserEvent),
     // 将来的に他のイベントタイプも追加可能

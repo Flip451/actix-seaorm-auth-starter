@@ -35,6 +35,15 @@ pub enum RelayError {
     #[error(transparent)]
     EmailServiceError(#[from] EmailServiceError),
 
+    #[error("トレースIDのパースに失敗しました: {0}")]
+    ParseTraceIdError(#[source] anyhow::Error),
+
+    #[error("未知のイベントタイプ: {0}")]
+    UnknownEventType(String),
+
+    #[error("イベントの再構築に失敗しました: {0}")]
+    ReconstructionError(#[source] anyhow::Error),
+
     #[error("イベントの処理に失敗しました: {0}")]
     ProcessingError(#[source] anyhow::Error),
 }

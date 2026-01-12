@@ -12,6 +12,7 @@ async-trait = { workspace = true }
 futures-util = { workspace = true }
 uuid = { workspace = true }
 tracing = { workspace = true }
+opentelemetry = { workspace = true }
 tracing-opentelemetry = { workspace = true }
 anyhow = { workspace = true }
 chrono = { workspace = true }
