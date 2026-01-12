@@ -2,10 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use chrono::Utc;
-use domain::{
-    shared::outbox::{DomainEvent, OutboxEvent},
-    user::{UserCreatedEvent, UserEvent, UserSuspendedEvent},
-};
+use domain::shared::outbox::{DomainEvent, OutboxEvent};
 use opentelemetry::trace::TraceId;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder,
@@ -26,64 +23,9 @@ impl SeaOrmOutboxRelay {
     }
 
     /// DBモデルをドメインレベルの OutboxEvent に変換する内部ヘルパー
-    // TODO: リファクタリングの余地あり
     fn map_to_outbox_event(&self, model: outbox_entity::Model) -> Result<OutboxEvent, RelayError> {
-        let event: DomainEvent = match model.event_type.as_str() {
-            "UserEvent::Created" => {
-                let user_created_event: UserCreatedEvent = serde_json::from_value(model.payload)
-                    .map_err(|e| RelayError::ReconstructionError(e.into()))?;
-                DomainEvent::UserEvent(UserEvent::Created(user_created_event))
-            }
-            "UserEvent::Suspended" => {
-                let user_suspended_event: UserSuspendedEvent =
-                    serde_json::from_value(model.payload)
-                        .map_err(|e| RelayError::ReconstructionError(e.into()))?;
-                DomainEvent::UserEvent(UserEvent::Suspended(user_suspended_event))
-            }
-            "UserEvent::Unlocked" => {
-                let user_unlocked_event: domain::user::UserUnlockedEvent =
-                    serde_json::from_value(model.payload)
-                        .map_err(|e| RelayError::ReconstructionError(e.into()))?;
-                DomainEvent::UserEvent(UserEvent::Unlocked(user_unlocked_event))
-            }
-            "UserEvent::Deactivated" => {
-                let user_deactivated_event: domain::user::UserDeactivatedEvent =
-                    serde_json::from_value(model.payload)
-                        .map_err(|e| RelayError::ReconstructionError(e.into()))?;
-                DomainEvent::UserEvent(UserEvent::Deactivated(user_deactivated_event))
-            }
-            "UserEvent::Reactivated" => {
-                let user_reactivated_event: domain::user::UserReactivatedEvent =
-                    serde_json::from_value(model.payload)
-                        .map_err(|e| RelayError::ReconstructionError(e.into()))?;
-                DomainEvent::UserEvent(UserEvent::Reactivated(user_reactivated_event))
-            }
-            "UserEvent::PromotedToAdmin" => {
-                let user_promoted_to_admin_event: domain::user::UserPromotedToAdminEvent =
-                    serde_json::from_value(model.payload)
-                        .map_err(|e| RelayError::ReconstructionError(e.into()))?;
-                DomainEvent::UserEvent(UserEvent::PromotedToAdmin(user_promoted_to_admin_event))
-            }
-            "UserEvent::UsernameChanged" => {
-                let username_changed_event: domain::user::UsernameChangedEvent =
-                    serde_json::from_value(model.payload)
-                        .map_err(|e| RelayError::ReconstructionError(e.into()))?;
-                DomainEvent::UserEvent(UserEvent::UsernameChanged(username_changed_event))
-            }
-            "UserEvent::EmailChanged" => {
-                let user_email_changed_event: domain::user::UserEmailChangedEvent =
-                    serde_json::from_value(model.payload)
-                        .map_err(|e| RelayError::ReconstructionError(e.into()))?;
-                DomainEvent::UserEvent(UserEvent::EmailChanged(user_email_changed_event))
-            }
-            "UserEvent::EmailVerified" => {
-                let user_email_verified_event: domain::user::UserEmailVerifiedEvent =
-                    serde_json::from_value(model.payload)
-                        .map_err(|e| RelayError::ReconstructionError(e.into()))?;
-                DomainEvent::UserEvent(UserEvent::EmailVerified(user_email_verified_event))
-            }
-            _other => Err(RelayError::UnknownEventType(model.event_type))?,
-        };
+        let event: DomainEvent = serde_json::from_value(model.payload)
+            .map_err(|e| RelayError::ReconstructionError(e.into()))?;
 
         let trace_id = model
             .trace_id

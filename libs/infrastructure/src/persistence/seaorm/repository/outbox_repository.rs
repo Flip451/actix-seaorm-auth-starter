@@ -1,10 +1,7 @@
 use std::fmt;
 
 use async_trait::async_trait;
-use domain::{
-    shared::outbox::{DomainEvent, OutboxEvent, OutboxRepository, OutboxRepositoryError},
-    user::UserEvent,
-};
+use domain::shared::outbox::{DomainEvent, OutboxEvent, OutboxRepository, OutboxRepositoryError};
 use sea_orm::{ActiveValue::Set, EntityTrait};
 
 use crate::persistence::seaorm::connect::Connectable;
@@ -25,17 +22,7 @@ struct EventTypeFormatter<'a>(&'a DomainEvent);
 impl fmt::Display for EventTypeFormatter<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let event_type = match self.0 {
-            DomainEvent::UserEvent(user_event) => match user_event {
-                UserEvent::Created { .. } => "UserEvent::Created",
-                UserEvent::Suspended { .. } => "UserEvent::Suspended",
-                UserEvent::Unlocked { .. } => "UserEvent::Unlocked",
-                UserEvent::Deactivated { .. } => "UserEvent::Deactivated",
-                UserEvent::Reactivated { .. } => "UserEvent::Reactivated",
-                UserEvent::PromotedToAdmin { .. } => "UserEvent::PromotedToAdmin",
-                UserEvent::UsernameChanged { .. } => "UserEvent::UsernameChanged",
-                UserEvent::EmailChanged { .. } => "UserEvent::EmailChanged",
-                UserEvent::EmailVerified { .. } => "UserEvent::EmailVerified",
-            },
+            DomainEvent::UserEvent(user_event) => user_event.as_ref(),
         };
         write!(f, "{}", event_type)
     }
