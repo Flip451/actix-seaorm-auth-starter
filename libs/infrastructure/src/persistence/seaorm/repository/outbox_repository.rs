@@ -54,7 +54,7 @@ fn get_active_model_from_event(
         event_type: Set(event_type),
         payload: Set(payload),
         status: Set("PENDING".to_string()),
-        trace_id: Set(event.trace_id),
+        trace_id: Set(event.trace_id.map(|tid| tid.to_string())),
         created_at: Set(event.created_at.into()),
         processed_at: Set(None),
     })

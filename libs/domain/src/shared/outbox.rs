@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use opentelemetry::trace::TraceContextExt;
+use opentelemetry::trace::{TraceContextExt, TraceId};
 use serde::Serialize;
 use thiserror::Error;
 use tracing::Span;
@@ -12,7 +12,7 @@ use crate::user::UserEvent;
 pub struct OutboxEvent {
     pub id: Uuid,
     pub event: DomainEvent,
-    pub trace_id: Option<String>,
+    pub trace_id: Option<TraceId>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -26,15 +26,14 @@ impl OutboxEvent {
         }
     }
 
-    fn get_current_trace_id() -> Option<String> {
+    fn get_current_trace_id() -> Option<TraceId> {
         let span = Span::current();
         let context = span.context();
         let span_ref = context.span();
         let span_context = span_ref.span_context();
 
         if span_context.is_valid() {
-            // Format the trace ID as a hex string
-            Some(format!("{:x}", span_context.trace_id()))
+            Some(span_context.trace_id())
         } else {
             None
         }

@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod email_service;
 pub mod persistence;
 
 use std::sync::Arc;

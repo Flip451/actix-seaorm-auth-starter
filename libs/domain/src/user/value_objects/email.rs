@@ -1,3 +1,5 @@
+use std::fmt;
+
 use super::super::error::UserDomainError;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -77,5 +79,17 @@ impl EmailTrait for UnverifiedEmail {
 
     fn as_str(&self) -> &str {
         &self.0
+    }
+}
+
+impl fmt::Display for VerifiedEmail {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl fmt::Display for UnverifiedEmail {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }

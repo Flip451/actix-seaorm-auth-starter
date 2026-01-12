@@ -4092,9 +4092,11 @@ dependencies = [
  "chrono",
  "domain",
  "jsonwebtoken",
+ "opentelemetry",
  "serde",
  "thiserror 2.0.17",
  "tracing",
+ "tracing-opentelemetry",
  "uuid",
  "validator",
 ]
