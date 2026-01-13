@@ -8,6 +8,7 @@ use domain::auth::policies::update_profile::UpdateProfilePayload;
 use domain::auth::policies::view_profile::ViewProfilePayload;
 use uuid::Uuid;
 
+use crate::shared::identity::Identity;
 use crate::user::service::UserService;
 
 use super::dto::UserResponse;
@@ -15,7 +16,7 @@ use super::error::UserError;
 use domain::auth::policy::{AuthorizationService, UserAction};
 use domain::transaction::TransactionManager;
 use domain::tx;
-use domain::user::{EmailTrait, UnverifiedEmail, UserRole};
+use domain::user::{EmailTrait, UnverifiedEmail};
 
 pub struct UserInteractor<TM: TransactionManager> {
     transaction_manager: Arc<TM>,
@@ -32,22 +33,21 @@ impl<TM: TransactionManager> UserInteractor<TM> {
 #[async_trait]
 impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     #[tracing::instrument(
-        skip(self),
+        skip(self, identity),
         fields(
-            actor_id = %actor_id,
-            actor_role = %actor_role,
+            actor_id = %identity.actor_id(),
+            actor_role = %identity.actor_role(),
         )
     )]
     async fn list_users(
         &self,
-        actor_id: Uuid,
-        actor_role: UserRole,
+        identity: Box<dyn Identity>,
     ) -> Result<Vec<UserResponse>, UserError> {
         let users = tx!(self.transaction_manager, |factory| {
             // ポリシーチェック
             AuthorizationService::can(
-                actor_id,
-                actor_role,
+                identity.actor_id(),
+                identity.actor_role(),
                 UserAction::ListUsers(ListUsersPayload),
             )?;
 
@@ -68,17 +68,16 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     }
 
     #[tracing::instrument(
-        skip(self),
+        skip(self, identity),
         fields(
-            actor_id = %actor_id,
-            actor_role = %actor_role,
+            actor_id = %identity.actor_id(),
+            actor_role = %identity.actor_role(),
             user_id = %user_id,
         )
     )]
     async fn get_user_by_id(
         &self,
-        actor_id: Uuid,
-        actor_role: UserRole,
+        identity: Box<dyn Identity>,
         user_id: Uuid,
     ) -> Result<UserResponse, UserError> {
         let user = tx!(self.transaction_manager, |factory| {
@@ -91,8 +90,8 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
 
             // ポリシーチェック
             AuthorizationService::can(
-                actor_id,
-                actor_role,
+                identity.actor_id(),
+                identity.actor_role(),
                 UserAction::ViewProfile(ViewProfilePayload { target: &user }),
             )?;
 
@@ -109,23 +108,21 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     }
 
     #[tracing::instrument(
-        skip(self, input),
+        skip(self, identity, input),
         fields(
-            actor_id = %actor_id,
-            actor_role = %actor_role,
+            actor_id = %identity.actor_id(),
+            actor_role = %identity.actor_role(),
             target_id = %target_id,
         )
     )]
     async fn update_user(
         &self,
-        actor_id: Uuid,
-        actor_role: UserRole,
+        identity: Box<dyn Identity>,
         target_id: Uuid,
         input: super::dto::UpdateUserInput,
     ) -> Result<UserResponse, UserError> {
         let updated_user = tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
-            let outbox_repo = factory.outbox_repository();
 
             let mut user = user_repo
                 .find_by_id(target_id)
@@ -135,8 +132,8 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             if let Some(username) = input.username {
                 // ポリシーチェック
                 AuthorizationService::can(
-                    actor_id,
-                    actor_role,
+                    identity.actor_id(),
+                    identity.actor_role(),
                     UserAction::UpdateProfile(UpdateProfilePayload { target: &user }),
                 )?;
 
@@ -151,8 +148,8 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             if let Some(email) = input.email {
                 // ポリシーチェック
                 AuthorizationService::can(
-                    actor_id,
-                    actor_role,
+                    identity.actor_id(),
+                    identity.actor_role(),
                     UserAction::ChangeEmail(ChangeEmailPayload { target: &user }),
                 )?;
 
@@ -165,14 +162,8 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                 }
             }
 
-            // イベントの取り出し
-            let events = user.pull_outbox_events();
-
             // 変更の保存
             let updated_user = user_repo.save(user).await?;
-
-            // Outbox イベントの保存
-            outbox_repo.save_all(events).await?;
 
             Ok::<_, UserError>(updated_user)
         })
@@ -187,23 +178,21 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     }
 
     #[tracing::instrument(
-        skip(self),
+        skip(self, identity),
         fields(
-            actor_id = %actor_id,
-            actor_role = %actor_role,
+            actor_id = %identity.actor_id(),
+            actor_role = %identity.actor_role(),
             target_id = %target_id,
         )
     )]
     async fn suspend_user(
         &self,
-        actor_id: Uuid,
-        actor_role: UserRole,
+        identity: Box<dyn Identity>,
         target_id: Uuid,
         reason: String,
     ) -> Result<(), UserError> {
         tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
-            let outbox_repo = factory.outbox_repository();
 
             let mut target_user = user_repo
                 .find_by_id(target_id)
@@ -212,8 +201,8 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
 
             // ポリシーチェック
             AuthorizationService::can(
-                actor_id,
-                actor_role,
+                identity.actor_id(),
+                identity.actor_role(),
                 UserAction::SuspendUser(SuspendUserPayload {
                     target: &target_user,
                 }),
@@ -222,14 +211,8 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             // ユーザーの状態を停止に変更
             target_user.suspend(reason)?;
 
-            // イベントの取り出し
-            let events = target_user.pull_outbox_events();
-
             // 変更を保存
             user_repo.save(target_user).await?;
-
-            // Outbox イベントの保存
-            outbox_repo.save_all(events).await?;
 
             Ok::<_, UserError>(())
         })

@@ -7,7 +7,7 @@ mod value_objects;
 
 pub use entity::{User, UserState};
 pub use error::{UserDomainError, UserStateTransitionError, UserUniqueConstraint};
-pub use events::UserEvent;
+pub use events::*;
 pub use repository::{UserRepository, UserRepositoryError};
 pub use service::{EmailVerificationError, EmailVerifier, PasswordHasher, PasswordHashingError};
 pub use value_objects::{

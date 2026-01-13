@@ -1,7 +1,6 @@
 use crate::middleware::{AdminContext, AuthenticatedUserContext};
 use crate::{error::AppError, user::error::ApiUserError};
 use actix_web::{HttpResponse, Responder, web};
-use domain::user::UserRole;
 use serde::Deserialize;
 use usecase::user::dto::UpdateUserInput;
 use usecase::user::service::UserService;
@@ -33,12 +32,7 @@ pub async fn suspend_user_handler(
     let target_id = path.into_inner();
 
     service
-        .suspend_user(
-            admin.user_id,
-            UserRole::Admin,
-            target_id,
-            body.reason.clone(),
-        )
+        .suspend_user(Box::new(admin), target_id, body.reason.clone())
         .await
         .map_err(ApiUserError::from)?;
 
@@ -51,7 +45,7 @@ pub async fn list_users_handler(
     service: web::Data<dyn UserService>,
 ) -> Result<impl Responder, AppError> {
     let users = service
-        .list_users(admin.user_id, UserRole::Admin)
+        .list_users(Box::new(admin))
         .await
         .map_err(ApiUserError::from)?;
     Ok(HttpResponse::Ok().json(users))
@@ -63,7 +57,7 @@ pub async fn get_user_handler(
     service: web::Data<dyn UserService>,
 ) -> Result<impl Responder, AppError> {
     let user = service
-        .get_user_by_id(user.user_id, UserRole::User, user.user_id)
+        .get_user_by_id(Box::new(user), user.user_id)
         .await
         .map_err(ApiUserError::from)?;
     Ok(HttpResponse::Ok().json(user))
@@ -83,7 +77,7 @@ pub async fn update_user_handler(
     };
 
     let updated_user = service
-        .update_user(user.user_id, UserRole::User, user.user_id, input)
+        .update_user(Box::new(user), user.user_id, input)
         .await
         .map_err(ApiUserError::from)?;
     Ok(HttpResponse::Ok().json(updated_user))

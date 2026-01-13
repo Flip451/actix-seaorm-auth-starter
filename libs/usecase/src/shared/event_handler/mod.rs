@@ -1,0 +1,7 @@
+pub mod send_email_when_user_created;
+pub mod send_email_when_user_deactivated;
+pub mod send_email_when_user_email_changed;
+pub mod send_email_when_user_reactivated;
+pub mod send_email_when_user_suspended;
+pub mod send_email_when_user_unlocked;
+pub mod send_email_when_user_username_changed;

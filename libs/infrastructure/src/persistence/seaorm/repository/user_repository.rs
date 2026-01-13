@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
 use async_trait::async_trait;
 use chrono::Utc;
@@ -8,7 +8,7 @@ use sea_orm::{
 use uuid::Uuid;
 
 use super::super::entities::user as user_entity;
-use crate::persistence::seaorm::connect::Connectable;
+use crate::persistence::seaorm::{connect::Connectable, transaction::EntityTracker};
 use domain::user::{
     EmailTrait, HashedPassword, UnverifiedEmail, User, UserDomainError, UserRepository,
     UserRepositoryError, UserRole, UserState, UserUniqueConstraint, VerifiedEmail,
@@ -20,13 +20,15 @@ where
     T: sea_orm::ConnectionTrait,
 {
     conn: C,
+    tracker: Arc<EntityTracker>,
     _marker: std::marker::PhantomData<T>,
 }
 
 impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmUserRepository<C, T> {
-    pub fn new(conn: C) -> Self {
+    pub fn new(conn: C, tracker: Arc<EntityTracker>) -> Self {
         Self {
             conn,
+            tracker,
             _marker: std::marker::PhantomData,
         }
     }
@@ -188,6 +190,8 @@ where
                 // その他のエラーはPersistenceとして扱う
                 UserRepositoryError::Persistence(e.into())
             })?;
+
+        self.tracker.track(Box::new(user));
 
         self.map_to_domain(saved_model)
     }

@@ -1,0 +1,85 @@
+use std::sync::Arc;
+
+use async_trait::async_trait;
+use domain::user::{UserRepository, UserSuspendedEvent};
+use opentelemetry::trace::TraceId;
+use tracing::{Level, Span};
+use uuid::Uuid;
+
+use crate::shared::{
+    email_service::{EmailMessage, EmailService},
+    relay::{EventHandler, RelayError},
+};
+
+pub struct SendEmailWhenUserSuspendedHandler {
+    outbox_event_id: Uuid,
+    trace_id: Option<TraceId>,
+    event: UserSuspendedEvent,
+    email_service: Arc<dyn EmailService>,
+    user_repository: Arc<dyn UserRepository>,
+}
+
+impl SendEmailWhenUserSuspendedHandler {
+    pub fn new(
+        outbox_event_id: Uuid,
+        trace_id: Option<TraceId>,
+        event: UserSuspendedEvent,
+        email_service: Arc<dyn EmailService>,
+        user_repository: Arc<dyn UserRepository>,
+    ) -> Self {
+        Self {
+            outbox_event_id,
+            trace_id,
+            event,
+            email_service,
+            user_repository,
+        }
+    }
+}
+
+#[async_trait]
+impl EventHandler for SendEmailWhenUserSuspendedHandler {
+    fn outbox_event_id(&self) -> Uuid {
+        self.outbox_event_id
+    }
+
+    fn trace_id(&self) -> Option<TraceId> {
+        self.trace_id
+    }
+
+    fn construct_span(&self) -> Span {
+        tracing::span!(Level::INFO, "SendEmailWhenUserSuspended")
+    }
+
+    async fn handle_event_raw(&self) -> Result<(), RelayError> {
+        let UserSuspendedEvent {
+            user_id,
+            suspended_at: _,
+            reason,
+        } = &self.event;
+
+        let user = self
+            .user_repository
+            .find_by_id(*user_id)
+            .await
+            .map_err(RelayError::UserRepositoryError)?
+            .ok_or_else(|| RelayError::UserNotFound(*user_id))?;
+
+        let username = user.username();
+
+        let to = user.email().as_str().to_string();
+        let subject = "Your Account Has Been Suspended".to_string();
+        let body = format!(
+            "Dear {username},\n\nYour account has been suspended for the following reason:\n{reason}\n\nIf you believe this is a mistake, please contact support.",
+        );
+
+        let email_message = EmailMessage { to, subject, body };
+
+        self.email_service
+            .send_email(email_message)
+            .await
+            .map_err(RelayError::EmailServiceError)?;
+
+        Ok(())
+    }
+}
