@@ -63,3 +63,7 @@ pub trait OutboxRepository: Send + Sync {
     async fn save(&self, event: OutboxEvent) -> Result<(), OutboxRepositoryError>;
     async fn save_all(&self, events: Vec<OutboxEvent>) -> Result<(), OutboxRepositoryError>;
 }
+
+pub trait EntityWithEvents: Send {
+    fn pull_events(&mut self) -> Vec<OutboxEvent>;
+}

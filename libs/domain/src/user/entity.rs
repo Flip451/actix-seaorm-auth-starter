@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use crate::{
-    shared::outbox::OutboxEvent,
+    shared::outbox::{EntityWithEvents, OutboxEvent},
     user::{
         Email, UserEvent, UserStateTransitionError,
         events::{
@@ -80,7 +80,7 @@ impl User {
         self.events.push(event);
     }
 
-    pub fn pull_outbox_events(&mut self) -> Vec<OutboxEvent> {
+    fn pull_outbox_events(&mut self) -> Vec<OutboxEvent> {
         std::mem::take(&mut self.events)
             .into_iter()
             .map(|e| OutboxEvent::new(e.into()))
@@ -339,5 +339,11 @@ impl User {
         }));
 
         Ok(())
+    }
+}
+
+impl EntityWithEvents for User {
+    fn pull_events(&mut self) -> Vec<OutboxEvent> {
+        self.pull_outbox_events()
     }
 }
