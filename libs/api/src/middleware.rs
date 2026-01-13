@@ -4,9 +4,21 @@ use domain::user::UserRole;
 use futures_util::future::{Ready, ready};
 use usecase::auth::error::AuthError;
 use usecase::auth::token_service::TokenService;
+use usecase::shared::identity::Identity;
 
+#[derive(Clone, Copy)]
 pub struct AdminContext {
     pub user_id: uuid::Uuid,
+}
+
+impl Identity for AdminContext {
+    fn actor_id(&self) -> uuid::Uuid {
+        self.user_id
+    }
+
+    fn actor_role(&self) -> UserRole {
+        UserRole::Admin
+    }
 }
 
 impl FromRequest for AdminContext {
@@ -41,8 +53,20 @@ impl FromRequest for AdminContext {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct AuthenticatedUserContext {
     pub user_id: uuid::Uuid,
+    pub user_role: UserRole,
+}
+
+impl Identity for AuthenticatedUserContext {
+    fn actor_id(&self) -> uuid::Uuid {
+        self.user_id
+    }
+
+    fn actor_role(&self) -> UserRole {
+        self.user_role
+    }
 }
 
 impl FromRequest for AuthenticatedUserContext {
@@ -69,6 +93,7 @@ impl FromRequest for AuthenticatedUserContext {
         match token_service.verify_token(token) {
             Ok(claims) => ready(Ok(AuthenticatedUserContext {
                 user_id: claims.sub,
+                user_role: claims.role,
             })),
             Err(e) => ready(Err(ApiAuthError::AuthError(e))),
         }
