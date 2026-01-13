@@ -3,7 +3,13 @@ use uuid::Uuid;
 
 use crate::{
     shared::outbox::OutboxEvent,
-    user::{Email, UserEvent, UserStateTransitionError},
+    user::{
+        Email, UserEvent, UserStateTransitionError,
+        events::{
+            UserCreatedEvent, UserDeactivatedEvent, UserEmailChangedEvent, UserEmailVerifiedEvent,
+            UserReactivatedEvent, UserSuspendedEvent, UserUnlockedEvent, UsernameChangedEvent,
+        },
+    },
 };
 
 use super::{
@@ -40,11 +46,11 @@ impl User {
             },
             created_at: now,
             updated_at: now,
-            events: vec![UserEvent::Created {
+            events: vec![UserEvent::Created(UserCreatedEvent {
                 user_id: id,
                 email,
                 registered_at: now,
-            }],
+            })],
         })
     }
 
@@ -133,12 +139,11 @@ impl User {
     pub fn change_username(&mut self, new_username: String) -> Result<(), UserDomainError> {
         self.username = new_username;
 
-        self.record_event(UserEvent::UsernameChanged {
+        self.record_event(UserEvent::UsernameChanged(UsernameChangedEvent {
             user_id: self.id,
             new_username: self.username.clone(),
             changed_at: Utc::now(),
-        });
-
+        }));
         Ok(())
     }
 }
@@ -170,10 +175,10 @@ impl User {
             }
         }
 
-        self.record_event(UserEvent::EmailVerified {
+        self.record_event(UserEvent::EmailVerified(UserEmailVerifiedEvent {
             user_id: self.id,
             verified_at: Utc::now(),
-        });
+        }));
 
         Ok(())
     }
@@ -207,12 +212,11 @@ impl User {
             }
         }
 
-        self.record_event(UserEvent::EmailChanged {
+        self.record_event(UserEvent::EmailChanged(UserEmailChangedEvent {
             user_id: self.id,
             new_email,
             changed_at: Utc::now(),
-        });
-
+        }));
         Ok(())
     }
 
@@ -241,11 +245,11 @@ impl User {
             }
         }
 
-        self.record_event(UserEvent::Suspended {
+        self.record_event(UserEvent::Suspended(UserSuspendedEvent {
             user_id: self.id,
             reason,
             suspended_at: Utc::now(),
-        });
+        }));
 
         Ok(())
     }
@@ -273,10 +277,10 @@ impl User {
             }
         }
 
-        self.record_event(UserEvent::Deactivated {
+        self.record_event(UserEvent::Deactivated(UserDeactivatedEvent {
             user_id: self.id,
             deactivated_at: Utc::now(),
-        });
+        }));
 
         Ok(())
     }
@@ -304,10 +308,10 @@ impl User {
             }
         }
 
-        self.record_event(UserEvent::Reactivated {
+        self.record_event(UserEvent::Reactivated(UserReactivatedEvent {
             user_id: self.id,
             reactivated_at: Utc::now(),
-        });
+        }));
 
         Ok(())
     }
@@ -329,10 +333,10 @@ impl User {
             }
         }
 
-        self.record_event(UserEvent::Unlocked {
+        self.record_event(UserEvent::Unlocked(UserUnlockedEvent {
             user_id: self.id,
             unlocked_at: Utc::now(),
-        });
+        }));
 
         Ok(())
     }

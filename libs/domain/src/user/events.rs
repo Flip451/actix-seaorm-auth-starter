@@ -1,49 +1,78 @@
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use strum::AsRefStr;
 use uuid::Uuid;
 
 use crate::user::UnverifiedEmail;
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, AsRefStr)]
+#[strum(prefix = "UserEvent::")]
 pub enum UserEvent {
-    Created {
-        user_id: Uuid,
-        email: UnverifiedEmail,
-        registered_at: DateTime<Utc>,
-    },
-    Suspended {
-        user_id: Uuid,
-        reason: String,
-        suspended_at: DateTime<Utc>,
-    },
-    Unlocked {
-        user_id: Uuid,
-        unlocked_at: DateTime<Utc>,
-    },
-    Deactivated {
-        user_id: Uuid,
-        deactivated_at: DateTime<Utc>,
-    },
-    Reactivated {
-        user_id: Uuid,
-        reactivated_at: DateTime<Utc>,
-    },
-    PromotedToAdmin {
-        user_id: Uuid,
-        promoted_at: DateTime<Utc>,
-    },
-    UsernameChanged {
-        user_id: Uuid,
-        new_username: String,
-        changed_at: DateTime<Utc>,
-    },
-    EmailChanged {
-        user_id: Uuid,
-        new_email: UnverifiedEmail,
-        changed_at: DateTime<Utc>,
-    },
-    EmailVerified {
-        user_id: Uuid,
-        verified_at: DateTime<Utc>,
-    },
+    Created(UserCreatedEvent),
+    Suspended(UserSuspendedEvent),
+    Unlocked(UserUnlockedEvent),
+    Deactivated(UserDeactivatedEvent),
+    Reactivated(UserReactivatedEvent),
+    PromotedToAdmin(UserPromotedToAdminEvent),
+    UsernameChanged(UsernameChangedEvent),
+    EmailChanged(UserEmailChangedEvent),
+    EmailVerified(UserEmailVerifiedEvent),
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct UserCreatedEvent {
+    pub user_id: Uuid,
+    pub email: UnverifiedEmail,
+    pub registered_at: DateTime<Utc>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct UserSuspendedEvent {
+    pub user_id: Uuid,
+    pub reason: String,
+    pub suspended_at: DateTime<Utc>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct UserUnlockedEvent {
+    pub user_id: Uuid,
+    pub unlocked_at: DateTime<Utc>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct UserDeactivatedEvent {
+    pub user_id: Uuid,
+    pub deactivated_at: DateTime<Utc>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct UserReactivatedEvent {
+    pub user_id: Uuid,
+    pub reactivated_at: DateTime<Utc>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct UserPromotedToAdminEvent {
+    pub user_id: Uuid,
+    pub promoted_at: DateTime<Utc>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct UsernameChangedEvent {
+    pub user_id: Uuid,
+    pub new_username: String,
+    pub changed_at: DateTime<Utc>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct UserEmailChangedEvent {
+    pub user_id: Uuid,
+    pub new_email: UnverifiedEmail,
+    pub changed_at: DateTime<Utc>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct UserEmailVerifiedEvent {
+    pub user_id: Uuid,
+    pub verified_at: DateTime<Utc>,
 }
