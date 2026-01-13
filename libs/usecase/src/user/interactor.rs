@@ -125,7 +125,6 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     ) -> Result<UserResponse, UserError> {
         let updated_user = tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
-            let outbox_repo = factory.outbox_repository();
 
             let mut user = user_repo
                 .find_by_id(target_id)
@@ -165,14 +164,8 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                 }
             }
 
-            // イベントの取り出し
-            let events = user.pull_outbox_events();
-
             // 変更の保存
             let updated_user = user_repo.save(user).await?;
-
-            // Outbox イベントの保存
-            outbox_repo.save_all(events).await?;
 
             Ok::<_, UserError>(updated_user)
         })
@@ -203,7 +196,6 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     ) -> Result<(), UserError> {
         tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
-            let outbox_repo = factory.outbox_repository();
 
             let mut target_user = user_repo
                 .find_by_id(target_id)
@@ -222,14 +214,8 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             // ユーザーの状態を停止に変更
             target_user.suspend(reason)?;
 
-            // イベントの取り出し
-            let events = target_user.pull_outbox_events();
-
             // 変更を保存
             user_repo.save(target_user).await?;
-
-            // Outbox イベントの保存
-            outbox_repo.save_all(events).await?;
 
             Ok::<_, UserError>(())
         })
