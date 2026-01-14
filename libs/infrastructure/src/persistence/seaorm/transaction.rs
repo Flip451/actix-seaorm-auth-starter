@@ -46,15 +46,15 @@ pub struct SeaOrmRepositoryFactory<'a> {
     tracker: Arc<EntityTracker>,
 }
 
-impl<'a> RepositoryFactory for SeaOrmRepositoryFactory<'a> {
-    fn user_repository(&self) -> Box<dyn UserRepository + '_> {
+impl<'a> RepositoryFactory<'a> for SeaOrmRepositoryFactory<'a> {
+    fn user_repository(&self) -> Arc<dyn UserRepository + 'a> {
         // ここで初めてインスタンス化される（遅延初期化）
         // SeaOrmUserRepositoryは軽量（接続参照を持つだけ）なので作成コストは低い
-        Box::new(SeaOrmUserRepository::new(self.txn, self.tracker.clone()))
+        Arc::new(SeaOrmUserRepository::new(self.txn, self.tracker.clone()))
     }
 
-    fn outbox_repository(&self) -> Box<dyn OutboxRepository + '_> {
-        Box::new(SeaOrmOutboxRepository::new(self.txn))
+    fn outbox_repository(&self) -> Arc<dyn OutboxRepository + 'a> {
+        Arc::new(SeaOrmOutboxRepository::new(self.txn))
     }
 }
 
