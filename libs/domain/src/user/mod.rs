@@ -17,4 +17,5 @@ pub use value_objects::{
     email::{Email, EmailTrait, UnverifiedEmail, VerifiedEmail},
     password::{HashedPassword, RawPassword},
     role::UserRole,
+    user_id::UserId,
 };
