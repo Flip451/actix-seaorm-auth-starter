@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::{
     shared::outbox::{EntityWithEvents, OutboxEvent},
     user::{
-        Email, UserEvent, UserStateTransitionError,
+        Email, UserEvent, UserId, UserStateTransitionError,
         events::{
             UserCreatedEvent, UserDeactivatedEvent, UserEmailChangedEvent, UserEmailVerifiedEvent,
             UserReactivatedEvent, UserSuspendedEvent, UserUnlockedEvent, UsernameChangedEvent,
@@ -18,7 +18,7 @@ use super::{
 };
 
 pub struct User {
-    id: Uuid,
+    id: UserId,
     username: String,
     password: HashedPassword,
     role: UserRole,
@@ -34,7 +34,7 @@ impl User {
         UniqueUserInfo { email, username }: UniqueUserInfo,
         password: HashedPassword,
     ) -> Result<Self, UserDomainError> {
-        let id = Uuid::new_v4();
+        let id = UserId(Uuid::new_v4());
         let now = Utc::now();
         Ok(Self {
             id,
@@ -56,7 +56,7 @@ impl User {
 
     // 永続化処理されたユーザーを再構築するためのコンストラクタ
     pub fn reconstruct(
-        id: Uuid,
+        id: UserId,
         username: String,
         password: HashedPassword,
         role: UserRole,
@@ -87,7 +87,7 @@ impl User {
             .collect()
     }
 
-    pub fn id(&self) -> Uuid {
+    pub fn id(&self) -> UserId {
         self.id
     }
 

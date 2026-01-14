@@ -6,7 +6,6 @@ use domain::auth::policies::list_users::ListUsersPayload;
 use domain::auth::policies::suspend_user::SuspendUserPayload;
 use domain::auth::policies::update_profile::UpdateProfilePayload;
 use domain::auth::policies::view_profile::ViewProfilePayload;
-use uuid::Uuid;
 
 use crate::shared::identity::Identity;
 use crate::user::service::UserService;
@@ -16,7 +15,7 @@ use super::error::UserError;
 use domain::auth::policy::{AuthorizationService, UserAction};
 use domain::transaction::TransactionManager;
 use domain::tx;
-use domain::user::UserUniquenessService;
+use domain::user::{UserId, UserUniquenessService};
 
 pub struct UserInteractor<TM: TransactionManager> {
     transaction_manager: Arc<TM>,
@@ -78,7 +77,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     async fn get_user_by_id(
         &self,
         identity: Box<dyn Identity>,
-        user_id: Uuid,
+        user_id: UserId,
     ) -> Result<UserResponse, UserError> {
         let user = tx!(self.transaction_manager, |factory| {
             // プロフィールの取得
@@ -118,7 +117,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     async fn update_user(
         &self,
         identity: Box<dyn Identity>,
-        target_id: Uuid,
+        target_id: UserId,
         input: super::dto::UpdateUserInput,
     ) -> Result<UserResponse, UserError> {
         let updated_user = tx!(self.transaction_manager, |factory| {
@@ -187,7 +186,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     async fn suspend_user(
         &self,
         identity: Box<dyn Identity>,
-        target_id: Uuid,
+        target_id: UserId,
         reason: String,
     ) -> Result<(), UserError> {
         tx!(self.transaction_manager, |factory| {

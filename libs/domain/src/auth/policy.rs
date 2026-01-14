@@ -1,5 +1,3 @@
-use uuid::Uuid;
-
 use crate::{
     auth::policies::{
         activate_user::{ActivateUserPayload, ActivateUserPolicy},
@@ -12,7 +10,7 @@ use crate::{
         update_profile::{UpdateProfilePayload, UpdateProfilePolicy},
         view_profile::{ViewProfilePayload, ViewProfilePolicy},
     },
-    user::UserRole,
+    user::{UserId, UserRole},
 };
 
 // 操作（アクション）を定義 [4]
@@ -30,7 +28,7 @@ pub enum UserAction<'a> {
 }
 
 pub struct AuthorizationContext<'a> {
-    pub actor_id: Uuid,
+    pub actor_id: UserId,
     pub actor_role: UserRole,
     pub action: UserAction<'a>,
 }
@@ -57,7 +55,7 @@ pub struct AuthorizationService;
 
 impl AuthorizationService {
     pub fn can(
-        actor_id: Uuid,
+        actor_id: UserId,
         actor_role: UserRole,
         action: UserAction,
     ) -> Result<(), AuthorizationError> {

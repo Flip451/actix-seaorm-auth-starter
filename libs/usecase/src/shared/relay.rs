@@ -3,7 +3,7 @@ use std::{sync::Arc, vec};
 use async_trait::async_trait;
 use domain::{
     shared::outbox::{DomainEvent, OutboxEvent},
-    user::{UserRepository, UserRepositoryError},
+    user::{UserId, UserRepository, UserRepositoryError},
 };
 use opentelemetry::trace::{TraceContextExt, TraceId};
 use thiserror::Error;
@@ -27,7 +27,7 @@ use crate::shared::{
 #[derive(Debug, Error)]
 pub enum RelayError {
     #[error("ユーザーが見つかりません: {0}")]
-    UserNotFound(Uuid),
+    UserNotFound(UserId),
 
     #[error(transparent)]
     UserRepositoryError(#[from] UserRepositoryError),

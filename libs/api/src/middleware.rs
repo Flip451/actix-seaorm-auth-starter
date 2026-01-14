@@ -1,6 +1,6 @@
 use crate::auth::error::ApiAuthError;
 use actix_web::{FromRequest, HttpRequest, dev::Payload, web};
-use domain::user::UserRole;
+use domain::user::{UserId, UserRole};
 use futures_util::future::{Ready, ready};
 use usecase::auth::error::AuthError;
 use usecase::auth::token_service::TokenService;
@@ -8,11 +8,11 @@ use usecase::shared::identity::Identity;
 
 #[derive(Clone, Copy)]
 pub struct AdminContext {
-    pub user_id: uuid::Uuid,
+    pub user_id: UserId,
 }
 
 impl Identity for AdminContext {
-    fn actor_id(&self) -> uuid::Uuid {
+    fn actor_id(&self) -> UserId {
         self.user_id
     }
 
@@ -55,12 +55,12 @@ impl FromRequest for AdminContext {
 
 #[derive(Clone, Copy)]
 pub struct AuthenticatedUserContext {
-    pub user_id: uuid::Uuid,
+    pub user_id: UserId,
     pub user_role: UserRole,
 }
 
 impl Identity for AuthenticatedUserContext {
-    fn actor_id(&self) -> uuid::Uuid {
+    fn actor_id(&self) -> UserId {
         self.user_id
     }
 

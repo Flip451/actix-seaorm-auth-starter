@@ -1,3 +1,4 @@
+use domain::user::UserId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -9,7 +10,7 @@ pub struct SignupInput {
 
 #[derive(Debug, Serialize)]
 pub struct SignupOutput {
-    pub user_id: uuid::Uuid,
+    pub user_id: UserId,
 }
 
 #[derive(Debug, Deserialize)]
