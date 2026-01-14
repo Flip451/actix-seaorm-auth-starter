@@ -315,7 +315,6 @@ dependencies = [
  "thiserror 2.0.17",
  "tracing",
  "usecase",
- "uuid",
  "validator",
 ]
 
@@ -1898,7 +1897,6 @@ dependencies = [
  "tracing",
  "tracing-opentelemetry",
  "usecase",
- "uuid",
 ]
 
 [[package]]
@@ -4098,7 +4096,6 @@ dependencies = [
  "thiserror 2.0.17",
  "tracing",
  "tracing-opentelemetry",
- "uuid",
  "validator",
 ]
 

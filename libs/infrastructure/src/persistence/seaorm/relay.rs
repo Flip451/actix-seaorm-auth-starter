@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use chrono::Utc;
-use domain::shared::outbox::{DomainEvent, OutboxEvent};
+use domain::shared::outbox::{DomainEvent, OutboxEvent, OutboxEventId};
 use opentelemetry::trace::TraceId;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder,
@@ -33,7 +33,7 @@ impl SeaOrmOutboxRelay {
             .transpose()?;
 
         Ok(OutboxEvent {
-            id: model.id,
+            id: OutboxEventId::reconstruct(model.id),
             event,
             trace_id,
             created_at: model.created_at.into(),

@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use domain::user::{EmailTrait, UserEmailChangedEvent, UserRepository};
+use domain::{
+    shared::outbox::OutboxEventId,
+    user::{EmailTrait, UserEmailChangedEvent, UserRepository},
+};
 use opentelemetry::trace::TraceId;
-use uuid::Uuid;
 
 use crate::shared::{
     email_service::{EmailMessage, EmailService},
@@ -11,7 +13,7 @@ use crate::shared::{
 };
 
 pub struct SendEmailWhenUserEmailChanged {
-    outbox_event_id: Uuid,
+    outbox_event_id: OutboxEventId,
     trace_id: Option<TraceId>,
     event: UserEmailChangedEvent,
     email_service: Arc<dyn EmailService>,
@@ -20,7 +22,7 @@ pub struct SendEmailWhenUserEmailChanged {
 
 impl SendEmailWhenUserEmailChanged {
     pub fn new(
-        outbox_event_id: Uuid,
+        outbox_event_id: OutboxEventId,
         trace_id: Option<TraceId>,
         event: UserEmailChangedEvent,
         email_service: Arc<dyn EmailService>,
@@ -38,7 +40,7 @@ impl SendEmailWhenUserEmailChanged {
 
 #[async_trait]
 impl EventHandler for SendEmailWhenUserEmailChanged {
-    fn outbox_event_id(&self) -> Uuid {
+    fn outbox_event_id(&self) -> OutboxEventId {
         self.outbox_event_id
     }
 
