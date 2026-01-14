@@ -3,9 +3,8 @@ use crate::auth::token_service::{Claims, TokenService};
 use super::error::AuthError;
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
-use domain::user::UserRole;
+use domain::user::{UserId, UserRole};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
-use uuid::Uuid;
 
 #[derive(Clone)] // Clone可能にしておく（ActixのStateで共有するため）
 pub struct TokenInteractor {
@@ -21,7 +20,7 @@ impl TokenInteractor {
 #[async_trait]
 impl TokenService for TokenInteractor {
     /// トークンの発行 (Login時に使用)
-    fn issue_token(&self, user_id: Uuid, role: UserRole) -> Result<String, AuthError> {
+    fn issue_token(&self, user_id: UserId, role: UserRole) -> Result<String, AuthError> {
         let expiration = Utc::now()
             .checked_add_signed(Duration::hours(24))
             .expect("valid timestamp")

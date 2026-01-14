@@ -9,17 +9,32 @@ use uuid::Uuid;
 
 use crate::user::UserEvent;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct OutboxEventId(pub(crate) Uuid);
+
 pub struct OutboxEvent {
-    pub id: Uuid,
+    pub id: OutboxEventId,
     pub event: DomainEvent,
     pub trace_id: Option<TraceId>,
     pub created_at: DateTime<Utc>,
 }
 
+impl From<OutboxEventId> for Uuid {
+    fn from(outbox_event_id: OutboxEventId) -> Self {
+        outbox_event_id.0
+    }
+}
+
+impl From<Uuid> for OutboxEventId {
+    fn from(uuid: Uuid) -> Self {
+        OutboxEventId(uuid)
+    }
+}
+
 impl OutboxEvent {
     pub fn new(event: DomainEvent) -> Self {
         Self {
-            id: Uuid::new_v4(),
+            id: OutboxEventId(Uuid::new_v4()),
             event,
             trace_id: Self::get_current_trace_id(),
             created_at: Utc::now(),

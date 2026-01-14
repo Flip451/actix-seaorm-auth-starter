@@ -33,7 +33,7 @@ impl SeaOrmOutboxRelay {
             .transpose()?;
 
         Ok(OutboxEvent {
-            id: model.id,
+            id: model.id.into(),
             event,
             trace_id,
             created_at: model.created_at.into(),

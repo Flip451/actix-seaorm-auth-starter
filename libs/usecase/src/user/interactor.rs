@@ -6,7 +6,6 @@ use domain::auth::policies::list_users::ListUsersPayload;
 use domain::auth::policies::suspend_user::SuspendUserPayload;
 use domain::auth::policies::update_profile::UpdateProfilePayload;
 use domain::auth::policies::view_profile::ViewProfilePayload;
-use uuid::Uuid;
 
 use crate::shared::identity::Identity;
 use crate::user::service::UserService;
@@ -16,7 +15,7 @@ use super::error::UserError;
 use domain::auth::policy::{AuthorizationService, UserAction};
 use domain::transaction::TransactionManager;
 use domain::tx;
-use domain::user::{EmailTrait, UnverifiedEmail};
+use domain::user::{UserId, UserUniquenessService};
 
 pub struct UserInteractor<TM: TransactionManager> {
     transaction_manager: Arc<TM>,
@@ -78,7 +77,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     async fn get_user_by_id(
         &self,
         identity: Box<dyn Identity>,
-        user_id: Uuid,
+        user_id: UserId,
     ) -> Result<UserResponse, UserError> {
         let user = tx!(self.transaction_manager, |factory| {
             // プロフィールの取得
@@ -118,11 +117,12 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     async fn update_user(
         &self,
         identity: Box<dyn Identity>,
-        target_id: Uuid,
+        target_id: UserId,
         input: super::dto::UpdateUserInput,
     ) -> Result<UserResponse, UserError> {
         let updated_user = tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
+            let user_uniqueness_service = UserUniquenessService::new(user_repo.clone());
 
             let mut user = user_repo
                 .find_by_id(target_id)
@@ -137,13 +137,13 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                     UserAction::UpdateProfile(UpdateProfilePayload { target: &user }),
                 )?;
 
-                // ドメインロジックの実行
-                user.change_username(username.clone())?;
-
                 // ユーザー名の重複チェック
-                if user_repo.find_by_username(&username).await?.is_some() {
-                    return Err(UserError::UsernameAlreadyExists(username));
-                }
+                let username = user_uniqueness_service
+                    .ensure_unique_username(&username)
+                    .await?;
+
+                // ドメインロジックの実行
+                user.change_username(username)?;
             }
             if let Some(email) = input.email {
                 // ポリシーチェック
@@ -153,13 +153,11 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                     UserAction::ChangeEmail(ChangeEmailPayload { target: &user }),
                 )?;
 
-                // ドメインロジックの実行
-                user.change_email(UnverifiedEmail::new(&email)?)?;
-
                 // メールアドレスの重複チェック
-                if user_repo.find_by_email(&email).await?.is_some() {
-                    return Err(UserError::EmailAlreadyExists(email));
-                }
+                let email = user_uniqueness_service.ensure_unique_email(&email).await?;
+
+                // ドメインロジックの実行
+                user.change_email(email)?;
             }
 
             // 変更の保存
@@ -188,7 +186,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     async fn suspend_user(
         &self,
         identity: Box<dyn Identity>,
-        target_id: Uuid,
+        target_id: UserId,
         reason: String,
     ) -> Result<(), UserError> {
         tx!(self.transaction_manager, |factory| {

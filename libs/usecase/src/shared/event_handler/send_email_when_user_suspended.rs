@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use domain::user::{UserRepository, UserSuspendedEvent};
+use domain::{
+    shared::outbox::OutboxEventId,
+    user::{UserRepository, UserSuspendedEvent},
+};
 use opentelemetry::trace::TraceId;
 use tracing::{Level, Span};
-use uuid::Uuid;
 
 use crate::shared::{
     email_service::{EmailMessage, EmailService},
@@ -12,7 +14,7 @@ use crate::shared::{
 };
 
 pub struct SendEmailWhenUserSuspendedHandler {
-    outbox_event_id: Uuid,
+    outbox_event_id: OutboxEventId,
     trace_id: Option<TraceId>,
     event: UserSuspendedEvent,
     email_service: Arc<dyn EmailService>,
@@ -21,7 +23,7 @@ pub struct SendEmailWhenUserSuspendedHandler {
 
 impl SendEmailWhenUserSuspendedHandler {
     pub fn new(
-        outbox_event_id: Uuid,
+        outbox_event_id: OutboxEventId,
         trace_id: Option<TraceId>,
         event: UserSuspendedEvent,
         email_service: Arc<dyn EmailService>,
@@ -39,7 +41,7 @@ impl SendEmailWhenUserSuspendedHandler {
 
 #[async_trait]
 impl EventHandler for SendEmailWhenUserSuspendedHandler {
-    fn outbox_event_id(&self) -> Uuid {
+    fn outbox_event_id(&self) -> OutboxEventId {
         self.outbox_event_id
     }
 

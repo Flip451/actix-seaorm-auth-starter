@@ -1,10 +1,10 @@
-use domain::user::UserRole;
+use domain::user::{UserId, UserRole};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 #[derive(Serialize)]
 pub struct UserResponse {
-    pub id: uuid::Uuid,
+    pub id: UserId,
     pub username: String,
     pub email: String,
     pub role: UserRole,

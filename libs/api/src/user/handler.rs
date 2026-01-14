@@ -1,10 +1,10 @@
 use crate::middleware::{AdminContext, AuthenticatedUserContext};
 use crate::{error::AppError, user::error::ApiUserError};
 use actix_web::{HttpResponse, Responder, web};
+use domain::user::UserId;
 use serde::Deserialize;
 use usecase::user::dto::UpdateUserInput;
 use usecase::user::service::UserService;
-use uuid::Uuid;
 use validator::Validate;
 
 // --- API層専用のリクエスト構造体 ---
@@ -25,7 +25,7 @@ pub struct SuspendUserRequest {
 #[tracing::instrument(skip(service, admin, body))]
 pub async fn suspend_user_handler(
     admin: AdminContext,
-    path: web::Path<Uuid>,
+    path: web::Path<UserId>,
     service: web::Data<dyn UserService>,
     body: web::Json<SuspendUserRequest>,
 ) -> Result<impl Responder, AppError> {

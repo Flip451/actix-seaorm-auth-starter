@@ -1,14 +1,14 @@
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
 
 use crate::{
     shared::outbox::{EntityWithEvents, OutboxEvent},
     user::{
-        Email, UserEvent, UserStateTransitionError,
+        Email, UserEvent, UserId, UserStateTransitionError,
         events::{
             UserCreatedEvent, UserDeactivatedEvent, UserEmailChangedEvent, UserEmailVerifiedEvent,
             UserReactivatedEvent, UserSuspendedEvent, UserUnlockedEvent, UsernameChangedEvent,
         },
+        service::{UniqueEmail, UniqueUserInfo, UniqueUsername},
     },
 };
 
@@ -17,7 +17,7 @@ use super::{
 };
 
 pub struct User {
-    id: Uuid,
+    id: UserId,
     username: String,
     password: HashedPassword,
     role: UserRole,
@@ -29,12 +29,11 @@ pub struct User {
 
 impl User {
     // 新規ユーザー作成のためのコンストラクタ
-    pub fn new(
-        username: String,
-        email: UnverifiedEmail,
+    pub(crate) fn new(
+        id: UserId,
+        UniqueUserInfo { email, username }: UniqueUserInfo,
         password: HashedPassword,
     ) -> Result<Self, UserDomainError> {
-        let id = Uuid::new_v4();
         let now = Utc::now();
         Ok(Self {
             id,
@@ -56,7 +55,7 @@ impl User {
 
     // 永続化処理されたユーザーを再構築するためのコンストラクタ
     pub fn reconstruct(
-        id: Uuid,
+        id: UserId,
         username: String,
         password: HashedPassword,
         role: UserRole,
@@ -87,7 +86,7 @@ impl User {
             .collect()
     }
 
-    pub fn id(&self) -> Uuid {
+    pub fn id(&self) -> UserId {
         self.id
     }
 
@@ -136,7 +135,10 @@ pub enum UserState {
 }
 
 impl User {
-    pub fn change_username(&mut self, new_username: String) -> Result<(), UserDomainError> {
+    pub fn change_username(
+        &mut self,
+        UniqueUsername(new_username): UniqueUsername,
+    ) -> Result<(), UserDomainError> {
         self.username = new_username;
 
         self.record_event(UserEvent::UsernameChanged(UsernameChangedEvent {
@@ -183,7 +185,10 @@ impl User {
         Ok(())
     }
 
-    pub fn change_email(&mut self, new_email: UnverifiedEmail) -> Result<(), UserDomainError> {
+    pub fn change_email(
+        &mut self,
+        UniqueEmail(new_email): UniqueEmail,
+    ) -> Result<(), UserDomainError> {
         match self.state {
             UserState::Active { .. } => {
                 self.state = UserState::ActiveWithUnverifiedEmail {

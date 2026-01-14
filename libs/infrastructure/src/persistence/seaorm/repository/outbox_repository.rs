@@ -37,7 +37,7 @@ fn get_active_model_from_event(
     let event_type = EventTypeFormatter(&event.event).to_string();
 
     Ok(outbox_entity::ActiveModel {
-        id: Set(event.id),
+        id: Set(event.id.into()),
         event_type: Set(event_type),
         payload: Set(payload),
         status: Set("PENDING".to_string()),

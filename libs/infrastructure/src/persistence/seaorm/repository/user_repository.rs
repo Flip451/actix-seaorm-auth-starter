@@ -5,12 +5,11 @@ use chrono::Utc;
 use sea_orm::{
     ColumnTrait, DbErr, EntityTrait, QueryFilter, RuntimeErr, Set, sea_query::OnConflict,
 };
-use uuid::Uuid;
 
 use super::super::entities::user as user_entity;
 use crate::persistence::seaorm::{connect::Connectable, transaction::EntityTracker};
 use domain::user::{
-    EmailTrait, HashedPassword, UnverifiedEmail, User, UserDomainError, UserRepository,
+    EmailTrait, HashedPassword, UnverifiedEmail, User, UserDomainError, UserId, UserRepository,
     UserRepositoryError, UserRole, UserState, UserUniqueConstraint, VerifiedEmail,
 };
 
@@ -60,7 +59,7 @@ impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmUserRepository<C, T> 
         };
 
         let user = User::reconstruct(
-            model.id,
+            model.id.into(),
             model.username,
             HashedPassword::from_raw_str(&model.password_hash),
             UserRole::from_str(&model.role).unwrap_or(UserRole::User),
@@ -94,7 +93,7 @@ where
     C: Connectable<T> + Send + Sync,
     T: sea_orm::ConnectionTrait + Send + Sync,
 {
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<User>, UserRepositoryError> {
+    async fn find_by_id(&self, id: UserId) -> Result<Option<User>, UserRepositoryError> {
         let model = user_entity::Entity::find_by_id(id)
             .one(self.conn.connect())
             .await
@@ -138,7 +137,7 @@ where
         let email = user.email();
 
         let active_model = user_entity::ActiveModel {
-            id: Set(user.id()),
+            id: Set(user.id().into()),
             username: Set(user.username().to_string()),
             email: Set(user.email().as_str().to_string()),
             password_hash: Set(user.password().to_string()),
