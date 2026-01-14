@@ -25,8 +25,8 @@ impl From<OutboxEventId> for Uuid {
     }
 }
 
-impl OutboxEventId {
-    pub fn reconstruct(uuid: Uuid) -> Self {
+impl From<Uuid> for OutboxEventId {
+    fn from(uuid: Uuid) -> Self {
         OutboxEventId(uuid)
     }
 }

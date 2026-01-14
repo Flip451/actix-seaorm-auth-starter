@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod email_service;
 pub mod persistence;
+pub mod user;
 
 use std::sync::Arc;
 
@@ -11,6 +12,7 @@ use usecase::user::interactor::UserInteractor;
 // 各レイヤーのインポート
 use crate::auth::argon2::password_service::Argon2PasswordHasher;
 use crate::persistence::seaorm::transaction::SeaOrmTransactionManager;
+use crate::user::uuid_generator::UuidUserIdGenerator;
 use usecase::auth::service::AuthService;
 use usecase::auth::token_service::TokenService;
 use usecase::user::service::UserService;
@@ -46,10 +48,13 @@ impl AppRegistry {
 
         let token_service = Arc::new(TokenInteractor::new(jwt_secret));
 
+        let user_id_generator = Arc::new(UuidUserIdGenerator);
+
         let auth_service = Arc::new(AuthInteractor::new(
             repos.transaction_manager.clone(),
             password_hasher,
             token_service.clone(),
+            user_id_generator.clone(),
         ));
 
         let user_service = Arc::new(UserInteractor::new(repos.transaction_manager.clone()));

@@ -1,6 +1,7 @@
 mod entity;
 mod error;
 mod events;
+mod factory;
 mod repository;
 mod service;
 mod value_objects;
@@ -8,9 +9,10 @@ mod value_objects;
 pub use entity::{User, UserState};
 pub use error::{UserDomainError, UserStateTransitionError, UserUniqueConstraint};
 pub use events::*;
+pub use factory::UserFactory;
 pub use repository::{UserRepository, UserRepositoryError};
 pub use service::{
-    EmailVerificationError, EmailVerifier, PasswordHasher, PasswordHashingError,
+    EmailVerificationError, EmailVerifier, IdGenerator, PasswordHasher, PasswordHashingError,
     UserUniquenessService,
 };
 pub use value_objects::{

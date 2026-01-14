@@ -59,7 +59,7 @@ impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmUserRepository<C, T> 
         };
 
         let user = User::reconstruct(
-            UserId::reconstruct(model.id),
+            model.id.into(),
             model.username,
             HashedPassword::from_raw_str(&model.password_hash),
             UserRole::from_str(&model.role).unwrap_or(UserRole::User),
