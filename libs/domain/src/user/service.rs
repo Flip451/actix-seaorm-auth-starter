@@ -3,7 +3,7 @@ use std::sync::Arc;
 use thiserror::Error;
 
 use crate::user::{
-    EmailTrait, UnverifiedEmail, UserDomainError, UserRepository, UserRepositoryError,
+    EmailTrait, UnverifiedEmail, UserDomainError, UserId, UserRepository, UserRepositoryError,
     UserUniqueConstraint, VerifiedEmail,
 };
 
@@ -27,6 +27,10 @@ pub enum EmailVerificationError {
 
 pub trait EmailVerifier {
     fn verify(&self, email: &UnverifiedEmail) -> Result<VerifiedEmail, EmailVerificationError>;
+}
+
+pub trait IdGenerator: Send + Sync {
+    fn generate(&self) -> UserId;
 }
 
 pub struct UserUniquenessService<'a> {

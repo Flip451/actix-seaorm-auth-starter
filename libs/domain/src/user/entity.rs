@@ -1,5 +1,4 @@
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
 
 use crate::{
     shared::outbox::{EntityWithEvents, OutboxEvent},
@@ -30,11 +29,11 @@ pub struct User {
 
 impl User {
     // 新規ユーザー作成のためのコンストラクタ
-    pub fn new(
+    pub(crate) fn new(
+        id: UserId,
         UniqueUserInfo { email, username }: UniqueUserInfo,
         password: HashedPassword,
     ) -> Result<Self, UserDomainError> {
-        let id = UserId(Uuid::new_v4());
         let now = Utc::now();
         Ok(Self {
             id,

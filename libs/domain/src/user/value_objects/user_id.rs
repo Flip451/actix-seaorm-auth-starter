@@ -6,9 +6,9 @@ use uuid::Uuid;
 #[derive(Deserialize, Serialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct UserId(pub(crate) Uuid);
 
-impl UserId {
-    pub fn reconstruct(id: Uuid) -> Self {
-        Self(id)
+impl From<Uuid> for UserId {
+    fn from(uuid: Uuid) -> Self {
+        UserId(uuid)
     }
 }
 

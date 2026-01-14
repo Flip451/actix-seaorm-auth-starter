@@ -9,8 +9,8 @@ use domain::{
     transaction::TransactionManager,
     tx,
     user::{
-        EmailTrait, HashedPassword, PasswordHasher, RawPassword, UnverifiedEmail, User,
-        UserUniquenessService,
+        EmailTrait, HashedPassword, IdGenerator, PasswordHasher, RawPassword, UnverifiedEmail,
+        User, UserFactory, UserUniquenessService,
     },
 };
 use std::sync::Arc;
@@ -19,6 +19,7 @@ pub struct AuthInteractor<TM> {
     transaction_manager: Arc<TM>,
     password_hasher: Arc<dyn PasswordHasher>,
     token_service: Arc<dyn TokenService>,
+    id_generator: Arc<dyn IdGenerator>,
     dummy_hash: HashedPassword,
 }
 
@@ -27,6 +28,7 @@ impl<TM> AuthInteractor<TM> {
         transaction_manager: Arc<TM>,
         password_hasher: Arc<dyn PasswordHasher>,
         token_service: Arc<dyn TokenService>,
+        id_generator: Arc<dyn IdGenerator>,
     ) -> Self {
         let dummy_password = RawPassword::new("dummy_password_for_timing_attack").unwrap();
         let dummy_hash = password_hasher.hash(&dummy_password).unwrap();
@@ -35,6 +37,7 @@ impl<TM> AuthInteractor<TM> {
             transaction_manager,
             password_hasher,
             token_service,
+            id_generator,
             dummy_hash,
         }
     }
@@ -53,25 +56,25 @@ impl<TM: TransactionManager> AuthService for AuthInteractor<TM> {
     async fn signup(&self, input: SignupInput) -> Result<User, AuthError> {
         // ここでDTOからValueObjectへの変換を行う
         let username = input.username;
-        let email = UnverifiedEmail::new(&input.email)?;
+        let email = input.email;
         let password = RawPassword::new(&input.password)?;
 
         // パスワードのハッシュ化
         let hashed_password = self.password_hasher.hash(&password)?;
 
+        let id_generator = self.id_generator.clone();
+
         tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
             let user_uniqueness_service = UserUniquenessService::new(user_repo.clone());
+            let user_factory = UserFactory::new(id_generator, user_uniqueness_service);
 
-            // 1. ユーザー名とメールアドレスの重複チェック
-            let user_info = user_uniqueness_service
-                .ensure_unique(&username, email.as_str())
+            // 1. ドメインモデル作成と保存
+            let user = user_factory
+                .create_new_user(&username, &email, hashed_password)
                 .await?;
 
-            // 2. ドメインモデル作成と保存
-            let user = User::new(user_info, hashed_password)?;
-
-            // 3. 永続化
+            // 2. 永続化
             let user = user_repo.save(user).await?;
 
             Ok(user)
