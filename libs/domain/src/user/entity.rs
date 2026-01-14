@@ -9,6 +9,7 @@ use crate::{
             UserCreatedEvent, UserDeactivatedEvent, UserEmailChangedEvent, UserEmailVerifiedEvent,
             UserReactivatedEvent, UserSuspendedEvent, UserUnlockedEvent, UsernameChangedEvent,
         },
+        service::{UniqueEmail, UniqueUserInfo, UniqueUsername},
     },
 };
 
@@ -30,8 +31,7 @@ pub struct User {
 impl User {
     // 新規ユーザー作成のためのコンストラクタ
     pub fn new(
-        username: String,
-        email: UnverifiedEmail,
+        UniqueUserInfo { email, username }: UniqueUserInfo,
         password: HashedPassword,
     ) -> Result<Self, UserDomainError> {
         let id = Uuid::new_v4();
@@ -136,7 +136,10 @@ pub enum UserState {
 }
 
 impl User {
-    pub fn change_username(&mut self, new_username: String) -> Result<(), UserDomainError> {
+    pub fn change_username(
+        &mut self,
+        UniqueUsername(new_username): UniqueUsername,
+    ) -> Result<(), UserDomainError> {
         self.username = new_username;
 
         self.record_event(UserEvent::UsernameChanged(UsernameChangedEvent {
@@ -183,7 +186,10 @@ impl User {
         Ok(())
     }
 
-    pub fn change_email(&mut self, new_email: UnverifiedEmail) -> Result<(), UserDomainError> {
+    pub fn change_email(
+        &mut self,
+        UniqueEmail(new_email): UniqueEmail,
+    ) -> Result<(), UserDomainError> {
         match self.state {
             UserState::Active { .. } => {
                 self.state = UserState::ActiveWithUnverifiedEmail {

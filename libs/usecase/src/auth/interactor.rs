@@ -8,7 +8,10 @@ use async_trait::async_trait;
 use domain::{
     transaction::TransactionManager,
     tx,
-    user::{EmailTrait, HashedPassword, PasswordHasher, RawPassword, UnverifiedEmail, User},
+    user::{
+        EmailTrait, HashedPassword, PasswordHasher, RawPassword, UnverifiedEmail, User,
+        UserUniquenessService,
+    },
 };
 use std::sync::Arc;
 
@@ -58,18 +61,15 @@ impl<TM: TransactionManager> AuthService for AuthInteractor<TM> {
 
         tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
+            let user_uniqueness_service = UserUniquenessService::new(user_repo.clone());
 
-            // 1. 重複チェック
-            if user_repo.find_by_email(email.as_str()).await?.is_some() {
-                return Err(AuthError::EmailAlreadyExists(email.as_str().to_string()));
-            }
-
-            if user_repo.find_by_username(&username).await?.is_some() {
-                return Err(AuthError::UsernameAlreadyExists(username.to_string()));
-            }
+            // 1. ユーザー名とメールアドレスの重複チェック
+            let user_info = user_uniqueness_service
+                .ensure_unique(&username, email.as_str())
+                .await?;
 
             // 2. ドメインモデル作成と保存
-            let user = User::new(username.to_string(), email, hashed_password)?;
+            let user = User::new(user_info, hashed_password)?;
 
             // 3. 永続化
             let user = user_repo.save(user).await?;

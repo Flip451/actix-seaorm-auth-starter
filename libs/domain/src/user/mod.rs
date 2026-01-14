@@ -9,7 +9,10 @@ pub use entity::{User, UserState};
 pub use error::{UserDomainError, UserStateTransitionError, UserUniqueConstraint};
 pub use events::*;
 pub use repository::{UserRepository, UserRepositoryError};
-pub use service::{EmailVerificationError, EmailVerifier, PasswordHasher, PasswordHashingError};
+pub use service::{
+    EmailVerificationError, EmailVerifier, PasswordHasher, PasswordHashingError,
+    UserUniquenessService,
+};
 pub use value_objects::{
     email::{Email, EmailTrait, UnverifiedEmail, VerifiedEmail},
     password::{HashedPassword, RawPassword},

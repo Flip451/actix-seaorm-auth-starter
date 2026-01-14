@@ -16,7 +16,7 @@ use super::error::UserError;
 use domain::auth::policy::{AuthorizationService, UserAction};
 use domain::transaction::TransactionManager;
 use domain::tx;
-use domain::user::{EmailTrait, UnverifiedEmail};
+use domain::user::UserUniquenessService;
 
 pub struct UserInteractor<TM: TransactionManager> {
     transaction_manager: Arc<TM>,
@@ -123,6 +123,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     ) -> Result<UserResponse, UserError> {
         let updated_user = tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
+            let user_uniqueness_service = UserUniquenessService::new(user_repo.clone());
 
             let mut user = user_repo
                 .find_by_id(target_id)
@@ -137,13 +138,13 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                     UserAction::UpdateProfile(UpdateProfilePayload { target: &user }),
                 )?;
 
-                // ドメインロジックの実行
-                user.change_username(username.clone())?;
-
                 // ユーザー名の重複チェック
-                if user_repo.find_by_username(&username).await?.is_some() {
-                    return Err(UserError::UsernameAlreadyExists(username));
-                }
+                let username = user_uniqueness_service
+                    .ensure_unique_username(&username)
+                    .await?;
+
+                // ドメインロジックの実行
+                user.change_username(username)?;
             }
             if let Some(email) = input.email {
                 // ポリシーチェック
@@ -153,13 +154,11 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                     UserAction::ChangeEmail(ChangeEmailPayload { target: &user }),
                 )?;
 
-                // ドメインロジックの実行
-                user.change_email(UnverifiedEmail::new(&email)?)?;
-
                 // メールアドレスの重複チェック
-                if user_repo.find_by_email(&email).await?.is_some() {
-                    return Err(UserError::EmailAlreadyExists(email));
-                }
+                let email = user_uniqueness_service.ensure_unique_email(&email).await?;
+
+                // ドメインロジックの実行
+                user.change_email(email)?;
             }
 
             // 変更の保存
