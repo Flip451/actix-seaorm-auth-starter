@@ -2,14 +2,13 @@ use std::{sync::Arc, vec};
 
 use async_trait::async_trait;
 use domain::{
-    shared::outbox::{DomainEvent, OutboxEvent},
+    shared::outbox::{DomainEvent, OutboxEvent, OutboxEventId},
     user::{UserId, UserRepository, UserRepositoryError},
 };
 use opentelemetry::trace::{TraceContextExt, TraceId};
 use thiserror::Error;
 use tracing::{Instrument, Span};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
-use uuid::Uuid;
 
 use crate::shared::{
     email_service::{EmailService, EmailServiceError},
@@ -57,7 +56,7 @@ pub trait OutboxRelay: Send + Sync {
 
 #[async_trait]
 pub trait EventHandler: Send + Sync {
-    fn outbox_event_id(&self) -> Uuid;
+    fn outbox_event_id(&self) -> OutboxEventId;
 
     fn trace_id(&self) -> Option<TraceId>;
 

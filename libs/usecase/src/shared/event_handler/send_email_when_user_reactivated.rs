@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use domain::user::{UserReactivatedEvent, UserRepository};
+use domain::{
+    shared::outbox::OutboxEventId,
+    user::{UserReactivatedEvent, UserRepository},
+};
 use opentelemetry::trace::TraceId;
-use uuid::Uuid;
 
 use crate::shared::{
     email_service::{EmailMessage, EmailService},
@@ -11,7 +13,7 @@ use crate::shared::{
 };
 
 pub struct SendEmailWhenUserReactivated {
-    outbox_event_id: Uuid,
+    outbox_event_id: OutboxEventId,
     trace_id: Option<TraceId>,
     event: UserReactivatedEvent,
     email_service: Arc<dyn EmailService>,
@@ -20,7 +22,7 @@ pub struct SendEmailWhenUserReactivated {
 
 impl SendEmailWhenUserReactivated {
     pub fn new(
-        outbox_event_id: Uuid,
+        outbox_event_id: OutboxEventId,
         trace_id: Option<TraceId>,
         event: UserReactivatedEvent,
         email_service: Arc<dyn EmailService>,
@@ -38,7 +40,7 @@ impl SendEmailWhenUserReactivated {
 
 #[async_trait]
 impl EventHandler for SendEmailWhenUserReactivated {
-    fn outbox_event_id(&self) -> Uuid {
+    fn outbox_event_id(&self) -> OutboxEventId {
         self.outbox_event_id
     }
 
