@@ -8,4 +8,4 @@ infrastructure = { workspace = true }
 usecase = { workspace = true }
 tracing = { workspace = true }
 sea-orm = { workspace = true }
-tokio = { version = "1.49.0", features = ["full"] }
+tokio = "1.49.0"
