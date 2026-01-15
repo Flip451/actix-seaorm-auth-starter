@@ -12,4 +12,4 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 tracing = { workspace = true }
 futures-util = { workspace = true }
-actix-web = "4.12.1"
+actix-web = { workspace = true }

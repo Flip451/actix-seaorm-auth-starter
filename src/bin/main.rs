@@ -2,6 +2,7 @@ use actix_web::{App, HttpServer, web};
 use app::telemetry;
 use dotenvy::dotenv;
 use sea_orm::Database;
+use tokio_util::sync::CancellationToken;
 use tracing_actix_web::TracingLogger;
 
 use infrastructure::{AppRegistry, RepoRegistry};
@@ -20,6 +21,9 @@ async fn main() -> std::io::Result<()> {
     let db_conn = Database::connect(database_url)
         .await
         .expect("Failed to connect DB");
+
+    let cancel_token = CancellationToken::new();
+    let relay_handle = relay::spawn_relay(db_conn.clone(), cancel_token.clone());
 
     // 2. 依存関係の構築 (DI Containerとしての役割)
     // リポジトリ群を一括生成
@@ -49,6 +53,9 @@ async fn main() -> std::io::Result<()> {
     .run();
 
     let result = server.await;
+
+    cancel_token.cancel();
+    let _ = relay_handle.await;
 
     telemetry::shutdown();
 

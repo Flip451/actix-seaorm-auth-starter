@@ -13,12 +13,12 @@ use usecase::shared::relay::{EventMapper, OutboxRelay, RelayError};
 use super::entities::outbox as outbox_entity;
 
 pub struct SeaOrmOutboxRelay {
-    db: Arc<DatabaseConnection>,
+    db: DatabaseConnection,
     mapper: Arc<EventMapper>,
 }
 
 impl SeaOrmOutboxRelay {
-    pub fn new(db: Arc<DatabaseConnection>, mapper: Arc<EventMapper>) -> Self {
+    pub fn new(db: DatabaseConnection, mapper: Arc<EventMapper>) -> Self {
         Self { db, mapper }
     }
 
@@ -51,7 +51,7 @@ impl OutboxRelay for SeaOrmOutboxRelay {
             .filter(outbox_entity::Column::Status.eq("PENDING"))
             .order_by_asc(outbox_entity::Column::CreatedAt)
             .limit(10) // 1回あたりのバッチサイズ
-            .all(self.db.as_ref())
+            .all(&self.db)
             .await
             .map_err(|e| RelayError::ProcessingError(e.into()))?;
 
@@ -92,7 +92,7 @@ impl OutboxRelay for SeaOrmOutboxRelay {
             }
 
             active_model
-                .update(self.db.as_ref())
+                .update(&self.db)
                 .await
                 .map_err(|e| RelayError::ProcessingError(e.into()))?;
         }
