@@ -19,7 +19,7 @@ use usecase::auth::token_service::TokenService;
 use usecase::user::service::UserService;
 
 pub struct RepoRegistry<TM: TransactionManager> {
-    pub transaction_manager: Arc<TM>,
+    transaction_manager: Arc<TM>,
 }
 
 impl RepoRegistry<SeaOrmTransactionManager> {

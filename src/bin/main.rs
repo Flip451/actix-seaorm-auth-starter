@@ -21,6 +21,8 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("Failed to connect DB");
 
+    relay::spawn_relay(db_conn.clone());
+
     // 2. 依存関係の構築 (DI Containerとしての役割)
     // リポジトリ群を一括生成
     let repos = RepoRegistry::new_seaorm(db_conn);

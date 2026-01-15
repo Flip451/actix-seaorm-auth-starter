@@ -15,6 +15,7 @@ members = [
     "libs/api",
     "app",
     "migration",
+    "relay",
 ]
 resolver = "2"
 
@@ -25,6 +26,7 @@ usecase = { path = "libs/usecase" }
 infrastructure = { path = "libs/infrastructure" }
 api = { path = "libs/api" }
 app = { path = "app" }
+relay = { path = "relay" }
 # 外部ライブラリ (バージョンの一元管理)
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.147"
@@ -40,13 +42,20 @@ tracing = "0.1"
 opentelemetry = { version = "0.27", features = ["trace"] }
 tracing-opentelemetry = "0.28"
 futures-util = "0.3.31"
+sea-orm = { version = "1.1.19", features = [
+    "runtime-tokio-rustls",
+    "sqlx-postgres",
+    "macros",
+] }
+actix-web = "4.12.1"
 
 [dependencies]
 infrastructure = { workspace = true }
 api = { workspace = true }
 app = { workspace = true }
+relay = { workspace = true }
+sea-orm = { workspace = true }
+actix-web = { workspace = true }
 
-actix-web = "4.12.1"
 tracing-actix-web = "0.7"
 dotenvy = "0.15.7"
-sea-orm = "1.1.19"

@@ -1,0 +1,11 @@
+[package]
+name = "relay"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+infrastructure = { workspace = true }
+usecase = { workspace = true }
+tracing = { workspace = true }
+sea-orm = { workspace = true }
+tokio = { version = "1.49.0", features = ["full"] }
