@@ -90,8 +90,20 @@ pub trait EventHandler: Send + Sync {
 }
 
 pub struct EventMapper {
-    pub email_service: Arc<dyn EmailService>,
-    pub user_repository: Arc<dyn UserRepository>,
+    email_service: Arc<dyn EmailService>,
+    user_repository: Arc<dyn UserRepository>,
+}
+
+impl EventMapper {
+    pub fn new(
+        email_service: Arc<dyn EmailService>,
+        user_repository: Arc<dyn UserRepository>,
+    ) -> Self {
+        Self {
+            email_service,
+            user_repository,
+        }
+    }
 }
 
 impl EventMapper {

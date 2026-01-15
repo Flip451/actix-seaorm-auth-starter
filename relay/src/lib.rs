@@ -19,10 +19,7 @@ pub fn spawn_relay(db_conn: DatabaseConnection, token: CancellationToken) -> Joi
         Arc::new(EntityTracker::new()),
     ));
 
-    let event_mapper = Arc::new(EventMapper {
-        email_service,
-        user_repository: relay_user_repo,
-    });
+    let event_mapper = Arc::new(EventMapper::new(email_service, relay_user_repo));
 
     let relay = SeaOrmOutboxRelay::new(relay_db, event_mapper);
 
