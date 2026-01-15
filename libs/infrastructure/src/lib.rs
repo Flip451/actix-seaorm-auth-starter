@@ -25,7 +25,6 @@ pub struct RepoRegistry<TM: TransactionManager> {
 impl RepoRegistry<SeaOrmTransactionManager> {
     /// SeaORM 用の具体的な実装で構築
     pub fn new_seaorm(db: sea_orm::DatabaseConnection) -> Self {
-        let db = Arc::new(db);
         let transaction_manager = Arc::new(SeaOrmTransactionManager::new(db.clone()));
         Self {
             transaction_manager,

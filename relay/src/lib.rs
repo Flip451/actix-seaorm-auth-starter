@@ -12,16 +12,15 @@ use tokio_util::sync::CancellationToken;
 use usecase::shared::relay::{EventMapper, OutboxRelay};
 
 pub fn spawn_relay(db_conn: DatabaseConnection, token: CancellationToken) -> JoinHandle<()> {
-    let relay_db = db_conn.clone();
     let email_service = Arc::new(StubEmailService::new());
     let relay_user_repo = Arc::new(SeaOrmUserRepository::new(
-        relay_db.clone(),
+        db_conn.clone(),
         Arc::new(EntityTracker::new()),
     ));
 
     let event_mapper = Arc::new(EventMapper::new(email_service, relay_user_repo));
 
-    let relay = SeaOrmOutboxRelay::new(relay_db, event_mapper);
+    let relay = SeaOrmOutboxRelay::new(db_conn, event_mapper);
 
     tokio::spawn(async move {
         // 5秒ごとにポーリングを実行する設定
