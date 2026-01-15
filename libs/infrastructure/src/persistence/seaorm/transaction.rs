@@ -59,11 +59,11 @@ impl<'a> RepositoryFactory<'a> for SeaOrmRepositoryFactory<'a> {
 }
 
 pub struct SeaOrmTransactionManager {
-    db: Arc<DatabaseConnection>,
+    db: DatabaseConnection,
 }
 
 impl SeaOrmTransactionManager {
-    pub fn new(db: Arc<DatabaseConnection>) -> Self {
+    pub fn new(db: DatabaseConnection) -> Self {
         Self { db }
     }
 }

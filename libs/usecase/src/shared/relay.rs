@@ -95,6 +95,18 @@ pub struct EventMapper {
 }
 
 impl EventMapper {
+    pub fn new(
+        email_service: Arc<dyn EmailService>,
+        user_repository: Arc<dyn UserRepository>,
+    ) -> Self {
+        Self {
+            email_service,
+            user_repository,
+        }
+    }
+}
+
+impl EventMapper {
     pub fn map_event_to_handler(&self, outbox_event: OutboxEvent) -> Vec<Box<dyn EventHandler>> {
         let OutboxEvent {
             id,
