@@ -6,6 +6,7 @@ pub mod user;
 use std::sync::Arc;
 
 use domain::transaction::TransactionManager;
+use domain::user::UserFactory;
 use usecase::auth::interactor::AuthInteractor;
 use usecase::auth::token_interactor::TokenInteractor;
 use usecase::user::interactor::UserInteractor;
@@ -50,11 +51,13 @@ impl AppRegistry {
 
         let user_id_generator = Arc::new(UuidUserIdGenerator);
 
+        let user_factory = Arc::new(UserFactory::new(user_id_generator.clone()));
+
         let auth_service = Arc::new(AuthInteractor::new(
             repos.transaction_manager.clone(),
             password_hasher,
             token_service.clone(),
-            user_id_generator.clone(),
+            user_factory.clone(),
         ));
 
         let user_service = Arc::new(UserInteractor::new(repos.transaction_manager.clone()));
