@@ -76,6 +76,16 @@ fmt: ## コードのフォーマット
 lint: ## コードの静的解析
 	$(DOCKER_COMPOSE) --profile tools run --rm --entrypoint cargo $(CLI_SERVICE) clippy --all -- -D warnings
 
+add: ## 依存クレートを追加 (使用例: make add d=serde)
+	@if [ -z "$(d)" ]; then \
+		echo "エラー: d (dependency) の指定が必要です。"; \
+		echo "使用例: make add d=\"uuid --features v4\""; \
+		exit 1; \
+	fi
+	$(DOCKER_COMPOSE) --profile tools run --rm --entrypoint cargo $(CLI_SERVICE) add $(d)
+	@# 変更されたファイルの所有権をホストユーザーに戻す (rootで書き換わるため)
+	sudo chown -R $(shell id -u):$(shell id -g) .
+
 # テスト実行
 test: ## アプリケーションのテスト
 	$(DOCKER_COMPOSE) run --rm $(APP_SERVICE) cargo test
