@@ -83,8 +83,8 @@ add: ## 依存クレートを追加 (使用例: make add d=serde)
 		exit 1; \
 	fi
 	$(DOCKER_COMPOSE) --profile tools run --rm --entrypoint cargo $(CLI_SERVICE) add $(d)
-	@# 変更されたファイルの所有権をホストユーザーに戻す (rootで書き換わるため)
-	sudo chown -R $(shell id -u):$(shell id -g) .
+	@# 変更されたCargo関連ファイルの所有権をホストユーザーに戻す (rootで書き換わるため)
+	sudo find . \( -name 'Cargo.toml' -o -name 'Cargo.lock' \) -exec chown $(shell id -u):$(shell id -g) {} +
 
 # テスト実行
 test: ## アプリケーションのテスト
