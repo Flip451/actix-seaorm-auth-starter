@@ -1,7 +1,10 @@
 use std::fmt;
 
 use async_trait::async_trait;
-use domain::shared::outbox::{DomainEvent, OutboxEvent, OutboxRepository, OutboxRepositoryError};
+use domain::shared::{
+    domain_event::DomainEvent,
+    outbox_event::{OutboxEvent, OutboxRepository, OutboxRepositoryError},
+};
 use sea_orm::{ActiveValue::Set, EntityTrait};
 
 use crate::persistence::seaorm::connect::Connectable;

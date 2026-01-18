@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use chrono::Utc;
-use domain::shared::outbox::{DomainEvent, OutboxEvent};
+use domain::shared::{domain_event::DomainEvent, outbox_event::OutboxEvent};
 use opentelemetry::trace::TraceId;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder,

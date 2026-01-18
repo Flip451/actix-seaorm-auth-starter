@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::shared::outbox::OutboxRepository;
+use crate::shared::outbox_event::OutboxRepository;
 
 use super::user::UserRepository;
 // use super::post::PostRepository; // 仮定: 追加されたリポジトリ

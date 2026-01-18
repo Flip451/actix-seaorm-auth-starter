@@ -2,7 +2,10 @@ use std::{sync::Arc, vec};
 
 use async_trait::async_trait;
 use domain::{
-    shared::outbox::{DomainEvent, OutboxEvent, OutboxEventId},
+    shared::{
+        domain_event::DomainEvent,
+        outbox_event::{OutboxEvent, OutboxEventId},
+    },
     user::{UserId, UserRepository, UserRepositoryError},
 };
 use opentelemetry::trace::{TraceContextExt, TraceId};

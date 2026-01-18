@@ -6,7 +6,7 @@ use crate::persistence::seaorm::repository::outbox_repository::SeaOrmOutboxRepos
 use super::repository::user_repository::SeaOrmUserRepository;
 use async_trait::async_trait;
 use domain::repository::RepositoryFactory;
-use domain::shared::outbox::{EntityWithEvents, OutboxEvent, OutboxRepository};
+use domain::shared::outbox_event::{EntityWithEvents, OutboxEvent, OutboxRepository};
 use domain::transaction::{IntoTxError, TransactionManager};
 use domain::user::UserRepository;
 use futures_util::future::BoxFuture;

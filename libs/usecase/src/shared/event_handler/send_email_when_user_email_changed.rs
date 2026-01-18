@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use domain::{
-    shared::outbox::OutboxEventId,
+    shared::outbox_event::OutboxEventId,
     user::{EmailTrait, UserEmailChangedEvent, UserRepository},
 };
 use opentelemetry::trace::TraceId;
