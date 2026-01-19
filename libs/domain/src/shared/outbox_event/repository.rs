@@ -9,6 +9,15 @@ pub enum OutboxRepositoryError {
     Persistence(#[source] anyhow::Error),
 }
 
+#[derive(Debug, Error)]
+pub enum OutboxReconstructionError {
+    #[error("無効なイベントステータスです: {0}")]
+    InvalidOutboxEventStatus(#[from] strum::ParseError),
+
+    #[error("イベントの再構築に失敗しました: {0}")]
+    EventReconstructionError(#[source] anyhow::Error),
+}
+
 #[async_trait]
 pub trait OutboxRepository: Send + Sync {
     async fn save(&self, event: OutboxEvent) -> Result<(), OutboxRepositoryError>;

@@ -34,18 +34,18 @@ impl fmt::Display for EventTypeFormatter<'_> {
 fn get_active_model_from_event(
     event: OutboxEvent,
 ) -> Result<outbox_entity::ActiveModel, OutboxRepositoryError> {
-    let payload = serde_json::to_value(&event.event)
+    let payload = serde_json::to_value(event.domain_event())
         .map_err(|e| OutboxRepositoryError::Persistence(e.into()))?;
 
-    let event_type = EventTypeFormatter(&event.event).to_string();
+    let event_type = EventTypeFormatter(event.domain_event()).to_string();
 
     Ok(outbox_entity::ActiveModel {
-        id: Set(event.id.into()),
+        id: Set(event.id().into()),
         event_type: Set(event_type),
         payload: Set(payload),
-        status: Set("PENDING".to_string()),
-        trace_id: Set(event.trace_id.map(|tid| tid.to_string())),
-        created_at: Set(event.created_at.into()),
+        status: Set(event.status().to_string()),
+        trace_id: Set(event.trace_id().map(|tid| tid.to_string())),
+        created_at: Set(event.created_at().into()),
         processed_at: Set(None),
     })
 }

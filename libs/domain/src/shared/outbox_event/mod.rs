@@ -1,7 +1,9 @@
 pub mod entity;
+pub mod error;
 pub mod repository;
 pub mod value_objects;
 
-pub use entity::{EntityWithEvents, OutboxEvent};
-pub use repository::{OutboxRepository, OutboxRepositoryError};
+pub use entity::{EntityWithEvents, OutboxEvent, OutboxEventStatus};
+pub use error::OutboxEventError;
+pub use repository::{OutboxReconstructionError, OutboxRepository, OutboxRepositoryError};
 pub use value_objects::outbox_event_id::OutboxEventId;

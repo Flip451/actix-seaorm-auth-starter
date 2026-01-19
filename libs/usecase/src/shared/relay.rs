@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use domain::{
     shared::{
         domain_event::DomainEvent,
-        outbox_event::{OutboxEvent, OutboxEventId},
+        outbox_event::{OutboxEvent, OutboxEventId, OutboxReconstructionError},
     },
     user::{UserId, UserRepository, UserRepositoryError},
 };
@@ -43,8 +43,8 @@ pub enum RelayError {
     #[error("未知のイベントタイプ: {0}")]
     UnknownEventType(String),
 
-    #[error("イベントの再構築に失敗しました: {0}")]
-    ReconstructionError(#[source] anyhow::Error),
+    #[error(transparent)]
+    ReconstructionError(#[from] OutboxReconstructionError),
 
     #[error("イベントの処理に失敗しました: {0}")]
     ProcessingError(#[source] anyhow::Error),
@@ -111,12 +111,9 @@ impl EventMapper {
 
 impl EventMapper {
     pub fn map_event_to_handler(&self, outbox_event: OutboxEvent) -> Vec<Box<dyn EventHandler>> {
-        let OutboxEvent {
-            id,
-            event,
-            trace_id,
-            created_at: _,
-        } = outbox_event;
+        let id = outbox_event.id();
+        let trace_id = outbox_event.trace_id();
+        let event = outbox_event.domain_event();
 
         match event {
             DomainEvent::UserEvent(user_event) => match user_event {

@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use chrono::Utc;
-use domain::shared::{domain_event::DomainEvent, outbox_event::OutboxEvent};
+use domain::shared::{
+    domain_event::DomainEvent,
+    outbox_event::{OutboxEvent, OutboxEventStatus, OutboxReconstructionError},
+};
 use opentelemetry::trace::TraceId;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder,
@@ -25,19 +28,23 @@ impl SeaOrmOutboxRelay {
     /// DBモデルをドメインレベルの OutboxEvent に変換する内部ヘルパー
     fn map_to_outbox_event(&self, model: outbox_entity::Model) -> Result<OutboxEvent, RelayError> {
         let event: DomainEvent = serde_json::from_value(model.payload)
-            .map_err(|e| RelayError::ReconstructionError(e.into()))?;
+            .map_err(|e| OutboxReconstructionError::EventReconstructionError(e.into()))?;
 
         let trace_id = model
             .trace_id
             .map(|tid| TraceId::from_hex(&tid).map_err(|e| RelayError::ParseTraceIdError(e.into())))
             .transpose()?;
 
-        Ok(OutboxEvent {
-            id: model.id.into(),
+        Ok(OutboxEvent::reconstruct(
+            model.id.into(),
             event,
+            model
+                .status
+                .parse()
+                .map_err(OutboxReconstructionError::InvalidOutboxEventStatus)?,
             trace_id,
-            created_at: model.created_at.into(),
-        })
+            model.created_at.into(),
+        ))
     }
 }
 
@@ -48,7 +55,7 @@ impl OutboxRelay for SeaOrmOutboxRelay {
         // 1. PENDING状態のイベントを一定数取得
         // TODO: 複数インスタンスでの競合を防ぐため、本来は SELECT FOR UPDATE SKIP LOCKED が望ましい
         let pending_events = outbox_entity::Entity::find()
-            .filter(outbox_entity::Column::Status.eq("PENDING"))
+            .filter(outbox_entity::Column::Status.eq(OutboxEventStatus::Pending.to_string()))
             .order_by_asc(outbox_entity::Column::CreatedAt)
             .limit(10) // 1回あたりのバッチサイズ
             .all(&self.db)
@@ -84,10 +91,10 @@ impl OutboxRelay for SeaOrmOutboxRelay {
             };
 
             if success {
-                active_model.status = Set("COMPLETED".to_string());
+                active_model.status = Set(OutboxEventStatus::Completed.to_string());
                 active_model.processed_at = Set(Some(Utc::now().into()));
             } else {
-                active_model.status = Set("FAILED".to_string());
+                active_model.status = Set(OutboxEventStatus::Failed.to_string());
                 // 必要に応じてリトライカウントを増やすロジックをここに追加
             }
 
