@@ -17,7 +17,7 @@ pub struct OutboxEvent {
     status: OutboxEventStatus,
     trace_id: Option<TraceId>,
     created_at: DateTime<Utc>,
-    processed_at: Option<DateTime<Utc>>, // イベントが処理に成功した日時 TODO: #52 で processed_at と completed_at に分ける
+    processed_at: Option<DateTime<Utc>>, // イベント処理が成功し完了した日時。将来的に issue #52 で processed_at と completed_at に分割予定
 }
 
 impl OutboxEvent {
