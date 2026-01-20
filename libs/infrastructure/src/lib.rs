@@ -24,7 +24,7 @@ use usecase::user::service::UserService;
 
 pub struct RepoRegistry<TM: TransactionManager> {
     transaction_manager: Arc<TM>,
-    user_repository: Arc<dyn UserRepository>, // TODO: Remove this
+    user_repository: Arc<dyn UserRepository>, // TODO: Remove this at #34
 }
 
 impl RepoRegistry<SeaOrmTransactionManager> {
@@ -36,7 +36,7 @@ impl RepoRegistry<SeaOrmTransactionManager> {
             user_repository: Arc::new(SeaOrmUserRepository::new(
                 db,
                 Arc::new(EntityTracker::new()),
-            )),  // TODO: Remove this
+            )), // TODO: Remove this at #34
         }
     }
 }
@@ -76,7 +76,7 @@ impl AppRegistry {
             repos.transaction_manager.clone(),
             Arc::new(EventMapper::new(
                 email_service,
-                repos.user_repository.clone(), // TODO: Remove this (EventMapper should not depend on UserRepository)
+                repos.user_repository.clone(), // TODO: Remove this at #34 (EventMapper should not depend on UserRepository)
             )),
         ));
 
