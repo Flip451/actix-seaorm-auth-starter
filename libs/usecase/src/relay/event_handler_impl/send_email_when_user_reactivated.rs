@@ -3,28 +3,27 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use domain::{
     shared::outbox_event::OutboxEventId,
-    user::{EmailTrait, UserEmailChangedEvent, UserRepository},
+    user::{UserReactivatedEvent, UserRepository},
 };
 use opentelemetry::trace::TraceId;
 
-use crate::shared::{
-    email_service::{EmailMessage, EmailService},
-    relay::{EventHandler, RelayError},
-};
+use crate::shared::email_service::{EmailMessage, EmailService};
 
-pub struct SendEmailWhenUserEmailChanged {
+use super::super::{error::RelayError, event_handler::EventHandler};
+
+pub struct SendEmailWhenUserReactivated {
     outbox_event_id: OutboxEventId,
     trace_id: Option<TraceId>,
-    event: UserEmailChangedEvent,
+    event: UserReactivatedEvent,
     email_service: Arc<dyn EmailService>,
     user_repository: Arc<dyn UserRepository>,
 }
 
-impl SendEmailWhenUserEmailChanged {
+impl SendEmailWhenUserReactivated {
     pub fn new(
         outbox_event_id: OutboxEventId,
         trace_id: Option<TraceId>,
-        event: UserEmailChangedEvent,
+        event: UserReactivatedEvent,
         email_service: Arc<dyn EmailService>,
         user_repository: Arc<dyn UserRepository>,
     ) -> Self {
@@ -39,7 +38,7 @@ impl SendEmailWhenUserEmailChanged {
 }
 
 #[async_trait]
-impl EventHandler for SendEmailWhenUserEmailChanged {
+impl EventHandler for SendEmailWhenUserReactivated {
     fn outbox_event_id(&self) -> OutboxEventId {
         self.outbox_event_id
     }
@@ -49,14 +48,13 @@ impl EventHandler for SendEmailWhenUserEmailChanged {
     }
 
     fn construct_span(&self) -> tracing::Span {
-        tracing::span!(tracing::Level::INFO, "SendEmailWhenUserEmailChanged")
+        tracing::span!(tracing::Level::INFO, "SendEmailWhenUserReactivated")
     }
 
     async fn handle_event_raw(&self) -> Result<(), RelayError> {
-        let UserEmailChangedEvent {
+        let UserReactivatedEvent {
             user_id,
-            new_email,
-            changed_at: _,
+            reactivated_at: _,
         } = &self.event;
 
         // ここでメール送信のロジックを実装します
@@ -68,11 +66,12 @@ impl EventHandler for SendEmailWhenUserEmailChanged {
             .ok_or_else(|| RelayError::UserNotFound(*user_id))?;
 
         let username = user.username();
+        let email = user.email().as_str().to_string();
 
-        let to = new_email.as_str().to_string();
-        let subject = "Your email has been changed".to_string();
+        let to = email;
+        let subject = "Your Account Has Been Reactivated".to_string();
         let body = format!(
-            "Hello {username},\n\nYour email has been changed to {new_email}.\n\nIf you did not make this change, please contact support immediately.",
+            "Hello {username},\n\nYour account with user ID: {user_id} has been successfully reactivated.\n\nBest regards,\nThe Team",
         );
 
         let email_message = EmailMessage { to, subject, body };

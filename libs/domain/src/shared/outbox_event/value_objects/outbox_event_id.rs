@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -13,5 +15,11 @@ impl From<OutboxEventId> for Uuid {
 impl From<Uuid> for OutboxEventId {
     fn from(uuid: Uuid) -> Self {
         OutboxEventId(uuid)
+    }
+}
+
+impl Display for OutboxEventId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }

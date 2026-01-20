@@ -7,10 +7,9 @@ use domain::{
 };
 use opentelemetry::trace::TraceId;
 
-use crate::shared::{
-    email_service::{EmailMessage, EmailService},
-    relay::{EventHandler, RelayError},
-};
+use crate::shared::email_service::{EmailMessage, EmailService};
+
+use super::super::{error::RelayError, event_handler::EventHandler};
 
 pub struct SendEmailWhenUsernameChanged {
     outbox_event_id: OutboxEventId,

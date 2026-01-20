@@ -3,28 +3,28 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use domain::{
     shared::outbox_event::OutboxEventId,
-    user::{UserReactivatedEvent, UserRepository},
+    user::{UserRepository, UserUnlockedEvent},
 };
 use opentelemetry::trace::TraceId;
+use tracing::{Level, Span};
 
-use crate::shared::{
-    email_service::{EmailMessage, EmailService},
-    relay::{EventHandler, RelayError},
-};
+use crate::shared::email_service::{EmailMessage, EmailService};
 
-pub struct SendEmailWhenUserReactivated {
+use super::super::{error::RelayError, event_handler::EventHandler};
+
+pub struct SendEmailWhenUserUnlockedHandler {
     outbox_event_id: OutboxEventId,
     trace_id: Option<TraceId>,
-    event: UserReactivatedEvent,
+    event: UserUnlockedEvent,
     email_service: Arc<dyn EmailService>,
     user_repository: Arc<dyn UserRepository>,
 }
 
-impl SendEmailWhenUserReactivated {
+impl SendEmailWhenUserUnlockedHandler {
     pub fn new(
         outbox_event_id: OutboxEventId,
         trace_id: Option<TraceId>,
-        event: UserReactivatedEvent,
+        event: UserUnlockedEvent,
         email_service: Arc<dyn EmailService>,
         user_repository: Arc<dyn UserRepository>,
     ) -> Self {
@@ -39,7 +39,7 @@ impl SendEmailWhenUserReactivated {
 }
 
 #[async_trait]
-impl EventHandler for SendEmailWhenUserReactivated {
+impl EventHandler for SendEmailWhenUserUnlockedHandler {
     fn outbox_event_id(&self) -> OutboxEventId {
         self.outbox_event_id
     }
@@ -48,17 +48,16 @@ impl EventHandler for SendEmailWhenUserReactivated {
         self.trace_id
     }
 
-    fn construct_span(&self) -> tracing::Span {
-        tracing::span!(tracing::Level::INFO, "SendEmailWhenUserReactivated")
+    fn construct_span(&self) -> Span {
+        tracing::span!(Level::INFO, "SendEmailWhenUserUnlocked")
     }
 
     async fn handle_event_raw(&self) -> Result<(), RelayError> {
-        let UserReactivatedEvent {
+        let UserUnlockedEvent {
             user_id,
-            reactivated_at: _,
+            unlocked_at: _,
         } = &self.event;
 
-        // ここでメール送信のロジックを実装します
         let user = self
             .user_repository
             .find_by_id(*user_id)
@@ -67,12 +66,11 @@ impl EventHandler for SendEmailWhenUserReactivated {
             .ok_or_else(|| RelayError::UserNotFound(*user_id))?;
 
         let username = user.username();
-        let email = user.email().as_str().to_string();
 
-        let to = email;
-        let subject = "Your Account Has Been Reactivated".to_string();
+        let to = user.email().as_str().to_string();
+        let subject = "Your Account Has Been Unlocked".to_string();
         let body = format!(
-            "Hello {username},\n\nYour account with user ID: {user_id} has been successfully reactivated.\n\nBest regards,\nThe Team",
+            "Dear {username},\n\nYour account has been successfully unlocked. You can now log in and access our services.\n\nBest regards,\nThe Team"
         );
 
         let email_message = EmailMessage { to, subject, body };

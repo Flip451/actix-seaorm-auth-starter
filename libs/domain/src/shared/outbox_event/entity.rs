@@ -4,7 +4,10 @@ use tracing::Span;
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 use uuid::Uuid;
 
-use crate::shared::domain_event::DomainEvent;
+use crate::shared::{
+    domain_event::DomainEvent,
+    outbox_event::error::{OutboxEventDomainError, OutboxStatusTransitionError},
+};
 
 use super::OutboxEventId;
 
@@ -14,6 +17,7 @@ pub struct OutboxEvent {
     status: OutboxEventStatus,
     trace_id: Option<TraceId>,
     created_at: DateTime<Utc>,
+    processed_at: Option<DateTime<Utc>>,
 }
 
 impl OutboxEvent {
@@ -24,6 +28,7 @@ impl OutboxEvent {
             status: OutboxEventStatus::Pending,
             trace_id: Self::get_current_trace_id(),
             created_at: Utc::now(),
+            processed_at: None,
         }
     }
 
@@ -33,6 +38,7 @@ impl OutboxEvent {
         status: OutboxEventStatus,
         trace_id: Option<TraceId>,
         created_at: DateTime<Utc>,
+        processed_at: Option<DateTime<Utc>>,
     ) -> Self {
         Self {
             id,
@@ -40,6 +46,7 @@ impl OutboxEvent {
             status,
             trace_id,
             created_at,
+            processed_at,
         }
     }
 
@@ -75,16 +82,53 @@ impl OutboxEvent {
     pub fn created_at(&self) -> DateTime<Utc> {
         self.created_at
     }
+
+    pub fn processed_at(&self) -> Option<DateTime<Utc>> {
+        self.processed_at
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum OutboxEventStatus {
     Pending,
-    Failed,
+    Failed, // TODO: のちほどリトライカウントを追加する
     Completed,
 }
 
+// TODO: わかりやすい位置に移動する
 pub trait EntityWithEvents: Send {
     fn pull_events(&mut self) -> Vec<OutboxEvent>;
+}
+
+impl OutboxEvent {
+    pub fn complete(&mut self) -> Result<(), OutboxEventDomainError> {
+        match self.status {
+            OutboxEventStatus::Pending | OutboxEventStatus::Failed => {
+                self.status = OutboxEventStatus::Completed;
+                self.processed_at = Some(Utc::now());
+            }
+            OutboxEventStatus::Completed => Err(OutboxStatusTransitionError::AlreadyCompleted {
+                from: OutboxEventStatus::Completed,
+            })?,
+        }
+
+        Ok(())
+    }
+
+    pub fn fail(&mut self) -> Result<(), OutboxEventDomainError> {
+        match self.status {
+            OutboxEventStatus::Pending => {
+                self.status = OutboxEventStatus::Failed;
+            }
+            OutboxEventStatus::Completed => Err(OutboxStatusTransitionError::AlreadyCompleted {
+                from: OutboxEventStatus::Completed,
+            })?,
+            OutboxEventStatus::Failed => {
+                // TODO: 後程リトライカウントを+1するロジックを追加する
+            }
+        }
+
+        Ok(())
+    }
 }

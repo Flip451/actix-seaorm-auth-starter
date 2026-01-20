@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use actix_web::{App, HttpServer, web};
 use app::telemetry;
 use dotenvy::dotenv;
@@ -5,7 +7,9 @@ use sea_orm::Database;
 use tokio_util::sync::CancellationToken;
 use tracing_actix_web::TracingLogger;
 
-use infrastructure::{AppRegistry, RepoRegistry};
+use infrastructure::{
+    AppRegistry, RepoRegistry, email_service::stub_email_service::email_service::StubEmailService,
+};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -23,19 +27,26 @@ async fn main() -> std::io::Result<()> {
         .expect("Failed to connect DB");
 
     let cancel_token = CancellationToken::new();
-    let relay_handle = relay::spawn_relay(db_conn.clone(), cancel_token.clone());
 
     // 2. 依存関係の構築 (DI Containerとしての役割)
     // リポジトリ群を一括生成
     let repos = RepoRegistry::new_seaorm(db_conn);
 
+    let email_service = Arc::new(StubEmailService::new());
+
     // DIコンテナ（Registry）の初期化
-    let registry = AppRegistry::new(repos, jwt_secret);
+    let registry = AppRegistry::new(repos, email_service, jwt_secret);
 
     // Actix-web 内で共有するために web::Data にラップ
     let auth_service = web::Data::from(registry.auth_service.clone());
     let user_service = web::Data::from(registry.user_service.clone());
     let token_service = web::Data::from(registry.token_service.clone());
+
+    print!("Starting outbox relay worker... ");
+
+    // Relayワーカーの起動
+    let relay_handle =
+        relay::spawn_relay(registry.outbox_relay_service.clone(), cancel_token.clone());
 
     println!("Starting server at http://0.0.0.0:8080");
 

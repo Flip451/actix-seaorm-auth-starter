@@ -5,21 +5,26 @@ pub mod user;
 
 use std::sync::Arc;
 
-use domain::transaction::TransactionManager;
-use domain::user::UserFactory;
-use usecase::auth::interactor::AuthInteractor;
-use usecase::auth::token_interactor::TokenInteractor;
-use usecase::user::interactor::UserInteractor;
-// 各レイヤーのインポート
 use crate::auth::argon2::password_service::Argon2PasswordHasher;
-use crate::persistence::seaorm::transaction::SeaOrmTransactionManager;
+use crate::persistence::seaorm::repository::user_repository::SeaOrmUserRepository;
+use crate::persistence::seaorm::transaction::{EntityTracker, SeaOrmTransactionManager};
 use crate::user::uuid_generator::UuidUserIdGenerator;
+use domain::transaction::TransactionManager;
+use domain::user::{UserFactory, UserRepository};
+use usecase::auth::interactor::AuthInteractor;
 use usecase::auth::service::AuthService;
+use usecase::auth::token_interactor::TokenInteractor;
 use usecase::auth::token_service::TokenService;
+use usecase::relay::event_mapper::EventMapper;
+use usecase::relay::interactor::RelayInteractor;
+use usecase::relay::service::OutboxRelayService;
+use usecase::shared::email_service::EmailService;
+use usecase::user::interactor::UserInteractor;
 use usecase::user::service::UserService;
 
 pub struct RepoRegistry<TM: TransactionManager> {
     transaction_manager: Arc<TM>,
+    user_repository: Arc<dyn UserRepository>, // TODO: Remove this
 }
 
 impl RepoRegistry<SeaOrmTransactionManager> {
@@ -28,6 +33,10 @@ impl RepoRegistry<SeaOrmTransactionManager> {
         let transaction_manager = Arc::new(SeaOrmTransactionManager::new(db.clone()));
         Self {
             transaction_manager,
+            user_repository: Arc::new(SeaOrmUserRepository::new(
+                db,
+                Arc::new(EntityTracker::new()),
+            )),  // TODO: Remove this
         }
     }
 }
@@ -37,11 +46,13 @@ pub struct AppRegistry {
     pub auth_service: Arc<dyn AuthService>,
     pub user_service: Arc<dyn UserService>,
     pub token_service: Arc<dyn TokenService>,
+    pub outbox_relay_service: Arc<dyn OutboxRelayService>,
 }
 
 impl AppRegistry {
     pub fn new<TM: TransactionManager + 'static>(
         repos: RepoRegistry<TM>,
+        email_service: Arc<dyn EmailService>,
         jwt_secret: String,
     ) -> Self {
         let password_hasher = Arc::new(Argon2PasswordHasher);
@@ -61,10 +72,19 @@ impl AppRegistry {
 
         let user_service = Arc::new(UserInteractor::new(repos.transaction_manager.clone()));
 
+        let outbox_relay_service = Arc::new(RelayInteractor::new(
+            repos.transaction_manager.clone(),
+            Arc::new(EventMapper::new(
+                email_service,
+                repos.user_repository.clone(), // TODO: Remove this (EventMapper should not depend on UserRepository)
+            )),
+        ));
+
         Self {
             auth_service,
             user_service,
             token_service,
+            outbox_relay_service,
         }
     }
 }

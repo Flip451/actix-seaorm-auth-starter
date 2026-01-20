@@ -3,28 +3,27 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use domain::{
     shared::outbox_event::OutboxEventId,
-    user::{UserDeactivatedEvent, UserRepository},
+    user::{EmailTrait, UserEmailChangedEvent, UserRepository},
 };
 use opentelemetry::trace::TraceId;
 
-use crate::shared::{
-    email_service::{EmailMessage, EmailService},
-    relay::{EventHandler, RelayError},
-};
+use crate::shared::email_service::{EmailMessage, EmailService};
 
-pub struct SendEmailWhenUserDeactivatedHandler {
+use super::super::{error::RelayError, event_handler::EventHandler};
+
+pub struct SendEmailWhenUserEmailChanged {
     outbox_event_id: OutboxEventId,
     trace_id: Option<TraceId>,
-    event: UserDeactivatedEvent,
+    event: UserEmailChangedEvent,
     email_service: Arc<dyn EmailService>,
     user_repository: Arc<dyn UserRepository>,
 }
 
-impl SendEmailWhenUserDeactivatedHandler {
+impl SendEmailWhenUserEmailChanged {
     pub fn new(
         outbox_event_id: OutboxEventId,
         trace_id: Option<TraceId>,
-        event: UserDeactivatedEvent,
+        event: UserEmailChangedEvent,
         email_service: Arc<dyn EmailService>,
         user_repository: Arc<dyn UserRepository>,
     ) -> Self {
@@ -39,7 +38,7 @@ impl SendEmailWhenUserDeactivatedHandler {
 }
 
 #[async_trait]
-impl EventHandler for SendEmailWhenUserDeactivatedHandler {
+impl EventHandler for SendEmailWhenUserEmailChanged {
     fn outbox_event_id(&self) -> OutboxEventId {
         self.outbox_event_id
     }
@@ -49,13 +48,14 @@ impl EventHandler for SendEmailWhenUserDeactivatedHandler {
     }
 
     fn construct_span(&self) -> tracing::Span {
-        tracing::span!(tracing::Level::INFO, "SendEmailWhenUserDeactivated")
+        tracing::span!(tracing::Level::INFO, "SendEmailWhenUserEmailChanged")
     }
 
     async fn handle_event_raw(&self) -> Result<(), RelayError> {
-        let UserDeactivatedEvent {
+        let UserEmailChangedEvent {
             user_id,
-            deactivated_at: _,
+            new_email,
+            changed_at: _,
         } = &self.event;
 
         // ここでメール送信のロジックを実装します
@@ -67,10 +67,11 @@ impl EventHandler for SendEmailWhenUserDeactivatedHandler {
             .ok_or_else(|| RelayError::UserNotFound(*user_id))?;
 
         let username = user.username();
-        let to = user.email().as_str().to_string();
-        let subject = "Account Deactivation Notice".to_string();
+
+        let to = new_email.as_str().to_string();
+        let subject = "Your email has been changed".to_string();
         let body = format!(
-            "Dear {username},\n\nYour account has been deactivated. If you have any questions, please contact support.\n\nBest regards,\nThe Team"
+            "Hello {username},\n\nYour email has been changed to {new_email}.\n\nIf you did not make this change, please contact support immediately.",
         );
 
         let email_message = EmailMessage { to, subject, body };

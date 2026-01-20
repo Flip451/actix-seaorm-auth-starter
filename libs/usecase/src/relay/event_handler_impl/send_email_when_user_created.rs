@@ -3,29 +3,28 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use domain::{
     shared::outbox_event::OutboxEventId,
-    user::{UserRepository, UserUnlockedEvent},
+    user::{EmailTrait, UserCreatedEvent, UserRepository},
 };
 use opentelemetry::trace::TraceId;
 use tracing::{Level, Span};
 
-use crate::shared::{
-    email_service::{EmailMessage, EmailService},
-    relay::{EventHandler, RelayError},
-};
+use crate::shared::email_service::{EmailMessage, EmailService};
 
-pub struct SendEmailWhenUserUnlockedHandler {
+use super::super::{error::RelayError, event_handler::EventHandler};
+
+pub struct SendEmailWhenUserCreatedHandler {
     outbox_event_id: OutboxEventId,
     trace_id: Option<TraceId>,
-    event: UserUnlockedEvent,
+    event: UserCreatedEvent,
     email_service: Arc<dyn EmailService>,
     user_repository: Arc<dyn UserRepository>,
 }
 
-impl SendEmailWhenUserUnlockedHandler {
+impl SendEmailWhenUserCreatedHandler {
     pub fn new(
         outbox_event_id: OutboxEventId,
         trace_id: Option<TraceId>,
-        event: UserUnlockedEvent,
+        event: UserCreatedEvent,
         email_service: Arc<dyn EmailService>,
         user_repository: Arc<dyn UserRepository>,
     ) -> Self {
@@ -40,7 +39,7 @@ impl SendEmailWhenUserUnlockedHandler {
 }
 
 #[async_trait]
-impl EventHandler for SendEmailWhenUserUnlockedHandler {
+impl EventHandler for SendEmailWhenUserCreatedHandler {
     fn outbox_event_id(&self) -> OutboxEventId {
         self.outbox_event_id
     }
@@ -50,13 +49,14 @@ impl EventHandler for SendEmailWhenUserUnlockedHandler {
     }
 
     fn construct_span(&self) -> Span {
-        tracing::span!(Level::INFO, "SendEmailWhenUserUnlocked")
+        tracing::span!(Level::INFO, "SendEmailWhenUserCreated")
     }
 
     async fn handle_event_raw(&self) -> Result<(), RelayError> {
-        let UserUnlockedEvent {
+        let UserCreatedEvent {
             user_id,
-            unlocked_at: _,
+            email,
+            registered_at: _,
         } = &self.event;
 
         let user = self
@@ -68,10 +68,10 @@ impl EventHandler for SendEmailWhenUserUnlockedHandler {
 
         let username = user.username();
 
-        let to = user.email().as_str().to_string();
-        let subject = "Your Account Has Been Unlocked".to_string();
+        let to = email.as_str().to_string();
+        let subject = "Welcome to Our Service!".to_string();
         let body = format!(
-            "Dear {username},\n\nYour account has been successfully unlocked. You can now log in and access our services.\n\nBest regards,\nThe Team"
+            "Dear {username},\n\nThank you for registering with us. Your user ID is: {user_id}\n\nBest regards,\nThe Team",
         );
 
         let email_message = EmailMessage { to, subject, body };
