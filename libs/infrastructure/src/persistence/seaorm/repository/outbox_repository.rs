@@ -1,7 +1,6 @@
 use std::fmt;
 
 use async_trait::async_trait;
-use chrono::Utc;
 use domain::shared::{
     domain_event::DomainEvent,
     outbox_event::{
@@ -10,7 +9,7 @@ use domain::shared::{
     },
 };
 use opentelemetry::trace::TraceId;
-use sea_orm::{ActiveValue::Set, DbBackend, EntityTrait, Statement, sea_query::OnConflict};
+use sea_orm::{ActiveValue::Set, DbBackend, EntityTrait, Statement, Value, sea_query::OnConflict};
 
 use crate::persistence::seaorm::connect::Connectable;
 
@@ -149,20 +148,25 @@ where
         &self,
         limit: u64,
     ) -> Result<Vec<OutboxEvent>, OutboxReconstructionError> {
-        let sql = format!(
-            r#"
+        let sql = r#"
             SELECT * FROM outbox
-            WHERE status = '{0}'
+            WHERE status = $1
             ORDER BY created_at ASC
-            LIMIT {1}
+            LIMIT $2
             FOR UPDATE SKIP LOCKED
-            "#,
-            OutboxEventStatus::Pending,
-            limit
+        "#;
+
+        let stmt = Statement::from_sql_and_values(
+            DbBackend::Postgres,
+            sql,
+            vec![
+                OutboxEventStatus::Pending.to_string().into(),
+                Value::BigUnsigned(Some(limit)),
+            ],
         );
 
         let models = outbox_entity::Entity::find()
-            .from_raw_sql(Statement::from_string(DbBackend::Postgres, sql))
+            .from_raw_sql(stmt)
             .all(self.conn.connect())
             .await
             .map_err(|e| OutboxReconstructionError::DataStoreError(e.into()))?;
