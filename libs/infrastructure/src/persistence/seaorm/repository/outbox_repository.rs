@@ -51,7 +51,7 @@ fn get_active_model_from_event(
         status: Set(event.status().to_string()),
         trace_id: Set(event.trace_id().map(|tid| tid.to_string())),
         created_at: Set(event.created_at().into()),
-        processed_at: Set(Some(Utc::now().into())),
+        processed_at: Set(event.processed_at().map(|dt| dt.into())),
     })
 }
 
