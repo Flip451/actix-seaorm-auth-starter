@@ -13,4 +13,8 @@ pub enum OutboxStatusTransitionError {
         "すでに完了済みのイベントのステータス変更を試みました: {from:?} からの遷移は許可されていません"
     )]
     AlreadyCompleted { from: OutboxEventStatus },
+    #[error(
+        "恒久的に失敗したイベントのステータス変更を試みました: {from:?} からの遷移は許可されていません"
+    )]
+    AlreadyPermanentlyFailed { from: OutboxEventStatus },
 }

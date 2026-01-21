@@ -2,7 +2,7 @@ pub mod config;
 pub use config::RelayConfig;
 
 use std::sync::Arc;
-use tokio::{task::JoinHandle, time::Interval};
+use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use usecase::relay::service::OutboxRelayService;
 
@@ -13,8 +13,8 @@ pub fn spawn_relay(
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         // interval_secs 秒ごとにポーリングを実行する設定
-        let mut interval: Interval = config.interval_secs.into();
-        let batch_size = config.batch_size.into();
+        let mut interval = config.interval_secs();
+        let batch_size = config.batch_size();
 
         loop {
             tokio::select! {

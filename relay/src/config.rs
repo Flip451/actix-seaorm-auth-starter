@@ -15,7 +15,7 @@ pub struct RelayConfig {
     /// # 推奨値とトレードオフ
     /// - **小さい値 (例: 10)**: トランザクションが短くなり、ロック競合が減りますが、大量のイベントに対するスループットは低下します。
     /// - **大きい値 (例: 100+)**: スループットは向上しますが、処理時間が長引くとDB接続を占有し続けたり、メモリ使用量が増加するリスクがあります。
-    pub(crate) batch_size: BatchSize,
+    batch_size: BatchSize,
 
     /// ポーリングを実行する間隔（秒単位）。
     ///
@@ -28,7 +28,7 @@ pub struct RelayConfig {
     /// # トレードオフ
     /// - **短い間隔 (例: 1-5秒)**: リアルタイム性が向上しますが、アイドル時でもDBへのクエリ負荷が発生します。
     /// - **長い間隔 (例: 60秒)**: DB負荷は下がりますが、イベント発生から処理開始までの遅延（レイテンシ）が増加します。
-    pub(crate) interval_secs: IntervalSecs,
+    interval_secs: IntervalSecs,
 }
 
 impl RelayConfig {
@@ -38,19 +38,36 @@ impl RelayConfig {
             interval_secs: IntervalSecs::new(interval_secs)?,
         })
     }
+
+    pub fn batch_size(&self) -> u64 {
+        self.batch_size.into()
+    }
+
+    pub fn interval_secs(&self) -> Interval {
+        self.interval_secs.into()
+    }
 }
 
 #[derive(Debug, Error)]
 pub enum RelayConfigError {
-    #[error("Invalid batch size")]
+    #[error("Batch size must be greater than 0")]
     InvalidBatchSize,
-    #[error("Invalid interval seconds")]
+    #[error("Interval seconds must be greater than 0")]
     InvalidIntervalSecs,
 }
 
+/// バッチサイズの値を検証・保持するラッパー型。
+///
+/// データベースから一度に取得するイベント件数を表します。
+/// コンストラクタを通して生成することで、**値が必ず1以上であること**を保証します。
+#[derive(Clone, Copy)]
 pub struct BatchSize(u64);
 
 impl BatchSize {
+    /// 新しい `BatchSize` を生成します。
+    ///
+    /// # エラー
+    /// 指定された値が `0` の場合、`RelayConfigError::InvalidBatchSize` を返します。
     pub fn new(value: u64) -> Result<Self, RelayConfigError> {
         if value == 0 {
             return Err(RelayConfigError::InvalidBatchSize);
@@ -59,15 +76,26 @@ impl BatchSize {
     }
 }
 
+// 内部的な値へのアクセス用
 impl From<BatchSize> for u64 {
     fn from(value: BatchSize) -> Self {
         value.0
     }
 }
 
+/// ポーリング間隔（秒）の値を検証・保持するラッパー型。
+///
+/// RelayプロセスがDBを確認しに行く頻度を表します。
+/// コンストラクタを通して生成することで、**値が必ず1以上であること**を保証します。
+#[derive(Clone, Copy)]
 pub struct IntervalSecs(u64);
 
 impl IntervalSecs {
+    /// 新しい `IntervalSecs` を生成します。
+    ///
+    /// # エラー
+    /// 指定された値が `0` の場合、`RelayConfigError::InvalidIntervalSecs` を返します。
+    /// 間隔が0の場合、CPUリソースを過剰に消費するタイトなループが発生するリスクがあるため禁止されています。
     pub fn new(value: u64) -> Result<Self, RelayConfigError> {
         if value == 0 {
             return Err(RelayConfigError::InvalidIntervalSecs);
