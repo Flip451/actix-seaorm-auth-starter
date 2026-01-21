@@ -44,6 +44,7 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
+        // emailカラムに対するユニークインデックスを作成
         manager
             .create_index(
                 Index::create()

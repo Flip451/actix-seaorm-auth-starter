@@ -4,8 +4,7 @@ use crate::persistence::db_error_mapper::DbErrorMapper;
 
 impl DbErrorMapper for DbErr {
     fn is_unique_violation(&self) -> bool {
-        // バックエンド（Postgres/MySQL）に応じたコード判定を行う
-        // Postgresなら "23505", MySQLなら "1062" など
+        // Postgresのエラーコード "23505" (unique_violation) をチェック
         if let DbErr::Query(RuntimeErr::SqlxError(e)) = self {
             e.as_database_error()
                 .map(|d| d.code().as_deref() == Some("23505"))
