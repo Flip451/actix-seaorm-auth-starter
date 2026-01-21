@@ -3,7 +3,7 @@ use std::{str::FromStr, sync::Arc};
 use async_trait::async_trait;
 use chrono::Utc;
 use migration::constants::UniqueConstraints;
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Set, sea_query::OnConflict};
+use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter, Set, sea_query::OnConflict};
 
 use super::super::entities::user as user_entity;
 use crate::persistence::{
@@ -70,6 +70,26 @@ impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmUserRepository<C, T> 
             model.updated_at.into(),
         )?;
         Ok(user)
+    }
+
+    fn map_save_error(&self, e: DbErr, username: &str, email: &str) -> UserRepositoryError {
+        if e.is_unique_violation() {
+            let constraint = e.constraint_name().unwrap_or("");
+
+            if constraint == UniqueConstraints::UserEmailKey.to_string() {
+                return UserDomainError::AlreadyExists(UserUniqueConstraint::Email(
+                    email.to_string(),
+                ))
+                .into();
+            } else if constraint == UniqueConstraints::UserUsernameKey.to_string() {
+                return UserDomainError::AlreadyExists(UserUniqueConstraint::Username(
+                    username.to_string(),
+                ))
+                .into();
+            }
+        }
+        // その他のエラーはPersistenceとして扱う
+        UserRepositoryError::Persistence(e.into())
     }
 }
 
@@ -165,25 +185,7 @@ where
             )
             .exec_with_returning(self.conn.connect())
             .await
-            .map_err(|e| {
-                if e.is_unique_violation() {
-                    let constraint = e.constraint_name().unwrap_or("");
-
-                    if constraint == UniqueConstraints::UserEmailKey.to_string() {
-                        return UserDomainError::AlreadyExists(UserUniqueConstraint::Email(
-                            email.as_str().to_string(),
-                        ))
-                        .into();
-                    } else if constraint == UniqueConstraints::UserUsernameKey.to_string() {
-                        return UserDomainError::AlreadyExists(UserUniqueConstraint::Username(
-                            username.to_string(),
-                        ))
-                        .into();
-                    }
-                }
-                // その他のエラーはPersistenceとして扱う
-                UserRepositoryError::Persistence(e.into())
-            })?;
+            .map_err(|e| self.map_save_error(e, username, email.as_str()))?;
 
         self.tracker.track(Box::new(user));
 
