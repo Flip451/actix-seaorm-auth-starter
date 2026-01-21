@@ -96,7 +96,7 @@ pub enum OutboxEventStatus {
     Completed,
 }
 
-// #52 で completed_at と processed_at を分ける際に修正する
+// TODO: #52 で completed_at と processed_at を分ける際に修正する
 impl OutboxEvent {
     pub fn complete(&mut self) -> Result<(), OutboxEventDomainError> {
         match self.status {
