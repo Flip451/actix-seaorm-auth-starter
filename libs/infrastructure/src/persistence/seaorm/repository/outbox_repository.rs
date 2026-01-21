@@ -15,7 +15,7 @@ use crate::persistence::seaorm::connect::Connectable;
 
 use super::super::entities::outbox as outbox_entity;
 
-pub struct SeaOrmOutboxRepository<C, T>
+pub struct SeaOrmPostgresOutboxRepository<C, T>
 where
     C: Connectable<T>,
     T: sea_orm::ConnectionTrait,
@@ -54,7 +54,7 @@ fn get_active_model_from_event(
     })
 }
 
-impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmOutboxRepository<C, T> {
+impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmPostgresOutboxRepository<C, T> {
     pub fn new(conn: C) -> Self {
         Self {
             conn,
@@ -92,7 +92,7 @@ impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmOutboxRepository<C, T
 }
 
 #[async_trait]
-impl<C, T> OutboxRepository for SeaOrmOutboxRepository<C, T>
+impl<C, T> OutboxRepository for SeaOrmPostgresOutboxRepository<C, T>
 where
     C: Connectable<T> + Send + Sync,
     T: sea_orm::ConnectionTrait + Send + Sync,

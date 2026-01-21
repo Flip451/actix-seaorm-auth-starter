@@ -21,6 +21,8 @@ impl<TM: TransactionManager> RelayInteractor<TM> {
     }
 }
 
+// TODO: #51 で成功したハンドラーを追跡し、部分的な再試行ロジックを実装する
+// TODO: #43 で冪等性の確保
 #[async_trait]
 impl<TM: TransactionManager> OutboxRelayService for RelayInteractor<TM> {
     #[tracing::instrument(skip(self))]
@@ -34,6 +36,8 @@ impl<TM: TransactionManager> OutboxRelayService for RelayInteractor<TM> {
 
             let count = events.len();
 
+            // NOTE: ここで件数が0の場合、何もせずに正常終了(Ok)する
+            // TransactionManagerはこれを「成功」とみなして空のトランザクションをコミットする
             if count == 0 {
                 return Ok(0);
             }

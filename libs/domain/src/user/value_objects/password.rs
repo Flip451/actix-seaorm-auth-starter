@@ -9,7 +9,7 @@ pub struct RawPassword(String);
 
 impl RawPassword {
     pub fn new(value: &str) -> Result<Self, UserDomainError> {
-        // TODO: パスワードポリシーを強化する
+        // TODO: #54 でパスワードポリシーを強化する
         if value.len() >= 8 {
             Ok(Self(value.to_string()))
         } else {

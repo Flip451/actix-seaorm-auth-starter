@@ -22,7 +22,7 @@ pub trait PasswordHasher: Send + Sync {
 
 #[derive(Debug, Error)]
 pub enum EmailVerificationError {
-    // TODO: エラーの詳細を追加する
+    // TODO: #35 でエラーの詳細を追加する
 }
 
 pub trait EmailVerifier {

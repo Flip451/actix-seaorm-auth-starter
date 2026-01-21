@@ -3,16 +3,25 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use usecase::relay::service::OutboxRelayService;
 
-pub fn spawn_relay(relay: Arc<dyn OutboxRelayService>, token: CancellationToken) -> JoinHandle<()> {
+pub struct RelayConfig {
+    pub batch_size: u64,
+    pub interval_secs: u64,
+}
+
+pub fn spawn_relay(
+    relay: Arc<dyn OutboxRelayService>,
+    token: CancellationToken,
+    config: RelayConfig,
+) -> JoinHandle<()> {
     tokio::spawn(async move {
-        // 5秒ごとにポーリングを実行する設定
-        let mut interval = tokio::time::interval(Duration::from_secs(5));
+        // interval_secs 秒ごとにポーリングを実行する設定
+        let mut interval = tokio::time::interval(Duration::from_secs(config.interval_secs));
 
         loop {
             tokio::select! {
                 _ = interval.tick() => {
                     // PENDING状態のイベントをバッチ処理
-                    match relay.process_batch(10).await {
+                    match relay.process_batch(config.batch_size).await {
                         Ok(count) => {
                             if count > 0 {
                                 tracing::info!("Processed {} events", count);

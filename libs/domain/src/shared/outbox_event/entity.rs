@@ -92,15 +92,11 @@ impl OutboxEvent {
 #[strum(serialize_all = "UPPERCASE")]
 pub enum OutboxEventStatus {
     Pending,
-    Failed, // TODO: のちほどリトライカウントを追加する
+    Failed, // TODO: #47 でリトライカウントを追加する
     Completed,
 }
 
-// TODO: わかりやすい位置に移動する
-pub trait EntityWithEvents: Send {
-    fn pull_events(&mut self) -> Vec<OutboxEvent>;
-}
-
+// #52 で completed_at と processed_at を分ける際に修正する
 impl OutboxEvent {
     pub fn complete(&mut self) -> Result<(), OutboxEventDomainError> {
         match self.status {
@@ -125,7 +121,7 @@ impl OutboxEvent {
                 from: OutboxEventStatus::Completed,
             })?,
             OutboxEventStatus::Failed => {
-                // TODO: 後程リトライカウントを+1するロジックを追加する
+                // TODO: #47 でリトライカウントを+1するロジックを追加する
             }
         }
 

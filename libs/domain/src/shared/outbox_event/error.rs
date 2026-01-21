@@ -9,6 +9,8 @@ pub enum OutboxEventDomainError {
 
 #[derive(Debug, Error)]
 pub enum OutboxStatusTransitionError {
-    #[error("すでに完了済みのイベントです: {from:?} からの遷移は許可されていません")]
+    #[error(
+        "すでに完了済みのイベントのステータス変更を試みました: {from:?} からの遷移は許可されていません"
+    )]
     AlreadyCompleted { from: OutboxEventStatus },
 }

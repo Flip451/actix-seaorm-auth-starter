@@ -3,6 +3,7 @@ use std::sync::Arc;
 use actix_web::{App, HttpServer, web};
 use app::telemetry;
 use dotenvy::dotenv;
+use relay::RelayConfig;
 use sea_orm::Database;
 use tokio_util::sync::CancellationToken;
 use tracing_actix_web::TracingLogger;
@@ -21,6 +22,19 @@ async fn main() -> std::io::Result<()> {
 
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let jwt_secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+    let relay_batch_size = std::env::var("RELAY_BATCH_SIZE")
+        .expect("RELAY_BATCH_SIZE must be set")
+        .parse()
+        .expect("RELAY_BATCH_SIZE must be a valid number");
+    let relay_interval_secs = std::env::var("RELAY_INTERVAL_SECS")
+        .expect("RELAY_INTERVAL_SECS must be set")
+        .parse()
+        .expect("RELAY_INTERVAL_SECS must be a valid number");
+
+    let relay_config = RelayConfig {
+        batch_size: relay_batch_size,
+        interval_secs: relay_interval_secs,
+    };
 
     let db_conn = Database::connect(database_url)
         .await
@@ -45,8 +59,11 @@ async fn main() -> std::io::Result<()> {
     print!("Starting outbox relay worker... ");
 
     // Relayワーカーの起動
-    let relay_handle =
-        relay::spawn_relay(registry.outbox_relay_service.clone(), cancel_token.clone());
+    let relay_handle = relay::spawn_relay(
+        registry.outbox_relay_service.clone(),
+        cancel_token.clone(),
+        relay_config,
+    );
 
     println!("Starting server at http://0.0.0.0:8080");
 
