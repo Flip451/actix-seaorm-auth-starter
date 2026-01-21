@@ -55,7 +55,7 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
-        // ユニーク制約の追加
+        // usernameカラムに対するユニークインデックスを作成
         manager
             .create_index(
                 Index::create()
