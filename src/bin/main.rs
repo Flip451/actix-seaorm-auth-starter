@@ -31,10 +31,8 @@ async fn main() -> std::io::Result<()> {
         .parse()
         .expect("RELAY_INTERVAL_SECS must be a valid number");
 
-    let relay_config = RelayConfig {
-        batch_size: relay_batch_size,
-        interval_secs: relay_interval_secs,
-    };
+    let relay_config = RelayConfig::new(relay_batch_size, relay_interval_secs)
+        .unwrap_or_else(|e| panic!("Failed to create RelayConfig: {e}"));
 
     let db_conn = Database::connect(database_url)
         .await

@@ -2797,6 +2797,7 @@ name = "relay"
 version = "0.1.0"
 dependencies = [
  "sea-orm",
+ "thiserror 2.0.17",
  "tokio",
  "tokio-util",
  "tracing",
