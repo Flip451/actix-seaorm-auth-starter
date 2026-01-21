@@ -3,12 +3,13 @@ use std::{str::FromStr, sync::Arc};
 use async_trait::async_trait;
 use chrono::Utc;
 use migration::constants::UniqueConstraints;
-use sea_orm::{
-    ColumnTrait, DbErr, EntityTrait, QueryFilter, RuntimeErr, Set, sea_query::OnConflict,
-};
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Set, sea_query::OnConflict};
 
 use super::super::entities::user as user_entity;
-use crate::persistence::seaorm::{connect::Connectable, transaction::EntityTracker};
+use crate::persistence::{
+    db_error_mapper::DbErrorMapper,
+    seaorm::{connect::Connectable, transaction::EntityTracker},
+};
 use domain::user::{
     EmailTrait, HashedPassword, UnverifiedEmail, User, UserDomainError, UserId, UserRepository,
     UserRepositoryError, UserRole, UserState, UserUniqueConstraint, VerifiedEmail,
@@ -165,26 +166,19 @@ where
             .exec_with_returning(self.conn.connect())
             .await
             .map_err(|e| {
-                // エラーハンドリングの詳細化
-                if let DbErr::Query(RuntimeErr::SqlxError(sqlx_err)) = &e {
-                    // Postgresのエラーコード "23505" (unique_violation) をチェック
-                    if let Some(db_err) = sqlx_err.as_database_error()
-                        && let Some(code) = db_err.code()
-                        && code == "23505"
-                    {
-                        let constraint = db_err.constraint().unwrap_or("");
+                if e.is_unique_violation() {
+                    let constraint = e.constraint_name().unwrap_or("");
 
-                        if constraint == UniqueConstraints::UserEmailKey.to_string() {
-                            return UserDomainError::AlreadyExists(UserUniqueConstraint::Email(
-                                email.as_str().to_string(),
-                            ))
-                            .into();
-                        } else if constraint == UniqueConstraints::UserUsernameKey.to_string() {
-                            return UserDomainError::AlreadyExists(UserUniqueConstraint::Username(
-                                username.to_string(),
-                            ))
-                            .into();
-                        }
+                    if constraint == UniqueConstraints::UserEmailKey.to_string() {
+                        return UserDomainError::AlreadyExists(UserUniqueConstraint::Email(
+                            email.as_str().to_string(),
+                        ))
+                        .into();
+                    } else if constraint == UniqueConstraints::UserUsernameKey.to_string() {
+                        return UserDomainError::AlreadyExists(UserUniqueConstraint::Username(
+                            username.to_string(),
+                        ))
+                        .into();
                     }
                 }
                 // その他のエラーはPersistenceとして扱う
