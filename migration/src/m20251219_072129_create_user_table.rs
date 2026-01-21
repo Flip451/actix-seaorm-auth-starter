@@ -48,6 +48,7 @@ impl MigrationTrait for Migration {
         manager
             .create_index(
                 Index::create()
+                    .if_not_exists()
                     .name(UniqueConstraints::UserEmailKey.to_string())
                     .table(User::Table)
                     .col(User::Email)
@@ -60,6 +61,7 @@ impl MigrationTrait for Migration {
         manager
             .create_index(
                 Index::create()
+                    .if_not_exists()
                     .name(UniqueConstraints::UserUsernameKey.to_string())
                     .table(User::Table)
                     .col(User::Username)
