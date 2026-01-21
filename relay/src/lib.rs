@@ -1,36 +1,26 @@
-use infrastructure::{
-    email_service::stub_email_service::email_service::StubEmailService,
-    persistence::seaorm::{
-        relay::SeaOrmOutboxRelay, repository::user_repository::SeaOrmUserRepository,
-        transaction::EntityTracker,
-    },
-};
-use sea_orm::DatabaseConnection;
-use std::{sync::Arc, time::Duration};
+pub mod config;
+pub use config::RelayConfig;
+
+use std::sync::Arc;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
-use usecase::shared::relay::{EventMapper, OutboxRelay};
+use usecase::relay::service::OutboxRelayService;
 
-pub fn spawn_relay(db_conn: DatabaseConnection, token: CancellationToken) -> JoinHandle<()> {
-    let email_service = Arc::new(StubEmailService::new());
-    let relay_user_repo = Arc::new(SeaOrmUserRepository::new(
-        db_conn.clone(),
-        Arc::new(EntityTracker::new()),
-    ));
-
-    let event_mapper = Arc::new(EventMapper::new(email_service, relay_user_repo));
-
-    let relay = SeaOrmOutboxRelay::new(db_conn, event_mapper);
-
+pub fn spawn_relay(
+    relay: Arc<dyn OutboxRelayService>,
+    token: CancellationToken,
+    config: RelayConfig,
+) -> JoinHandle<()> {
     tokio::spawn(async move {
-        // 5秒ごとにポーリングを実行する設定
-        let mut interval = tokio::time::interval(Duration::from_secs(5));
+        // interval_secs 秒ごとにポーリングを実行する設定
+        let mut interval = config.interval_secs();
+        let batch_size = config.batch_size();
 
         loop {
             tokio::select! {
                 _ = interval.tick() => {
                     // PENDING状態のイベントをバッチ処理
-                    match relay.process_batch().await {
+                    match relay.process_batch(batch_size).await {
                         Ok(count) => {
                             if count > 0 {
                                 tracing::info!("Processed {} events", count);

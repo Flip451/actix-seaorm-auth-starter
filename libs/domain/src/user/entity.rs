@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 
 use crate::{
-    shared::outbox::{EntityWithEvents, OutboxEvent},
+    shared::outbox_event::{EntityWithEvents, OutboxEvent},
     user::{
         Email, UserEvent, UserId, UserStateTransitionError,
         events::{
