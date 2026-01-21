@@ -1,6 +1,6 @@
 use domain::{
     auth::policy::AuthorizationError,
-    shared::outbox::OutboxRepositoryError,
+    shared::outbox_event::OutboxRepositoryError,
     transaction::IntoTxError,
     user::{
         EmailVerificationError, UserDomainError, UserRepositoryError, UserStateTransitionError,

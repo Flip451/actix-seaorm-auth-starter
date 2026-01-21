@@ -1,12 +1,12 @@
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
-use crate::persistence::seaorm::repository::outbox_repository::SeaOrmOutboxRepository;
+use crate::persistence::seaorm::repository::outbox_repository::SeaOrmPostgresOutboxRepository;
 
 use super::repository::user_repository::SeaOrmUserRepository;
 use async_trait::async_trait;
 use domain::repository::RepositoryFactory;
-use domain::shared::outbox::{EntityWithEvents, OutboxEvent, OutboxRepository};
+use domain::shared::outbox_event::{EntityWithEvents, OutboxEvent, OutboxRepository};
 use domain::transaction::{IntoTxError, TransactionManager};
 use domain::user::UserRepository;
 use futures_util::future::BoxFuture;
@@ -54,7 +54,7 @@ impl<'a> RepositoryFactory<'a> for SeaOrmRepositoryFactory<'a> {
     }
 
     fn outbox_repository(&self) -> Arc<dyn OutboxRepository + 'a> {
-        Arc::new(SeaOrmOutboxRepository::new(self.txn))
+        Arc::new(SeaOrmPostgresOutboxRepository::new(self.txn))
     }
 }
 

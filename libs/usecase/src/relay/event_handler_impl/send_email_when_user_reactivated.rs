@@ -2,15 +2,14 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use domain::{
-    shared::outbox::OutboxEventId,
+    shared::outbox_event::OutboxEventId,
     user::{UserReactivatedEvent, UserRepository},
 };
 use opentelemetry::trace::TraceId;
 
-use crate::shared::{
-    email_service::{EmailMessage, EmailService},
-    relay::{EventHandler, RelayError},
-};
+use crate::shared::email_service::{EmailMessage, EmailService};
+
+use super::super::{error::RelayError, event_handler::EventHandler};
 
 pub struct SendEmailWhenUserReactivated {
     outbox_event_id: OutboxEventId,

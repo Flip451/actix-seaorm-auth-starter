@@ -2,16 +2,15 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use domain::{
-    shared::outbox::OutboxEventId,
+    shared::outbox_event::OutboxEventId,
     user::{UserRepository, UserUnlockedEvent},
 };
 use opentelemetry::trace::TraceId;
 use tracing::{Level, Span};
 
-use crate::shared::{
-    email_service::{EmailMessage, EmailService},
-    relay::{EventHandler, RelayError},
-};
+use crate::shared::email_service::{EmailMessage, EmailService};
+
+use super::super::{error::RelayError, event_handler::EventHandler};
 
 pub struct SendEmailWhenUserUnlockedHandler {
     outbox_event_id: OutboxEventId,

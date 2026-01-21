@@ -2,30 +2,29 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use domain::{
-    shared::outbox::OutboxEventId,
-    user::{EmailTrait, UserCreatedEvent, UserRepository},
+    shared::outbox_event::OutboxEventId,
+    user::{UserRepository, UserSuspendedEvent},
 };
 use opentelemetry::trace::TraceId;
 use tracing::{Level, Span};
 
-use crate::shared::{
-    email_service::{EmailMessage, EmailService},
-    relay::{EventHandler, RelayError},
-};
+use crate::shared::email_service::{EmailMessage, EmailService};
 
-pub struct SendEmailWhenUserCreatedHandler {
+use super::super::{error::RelayError, event_handler::EventHandler};
+
+pub struct SendEmailWhenUserSuspendedHandler {
     outbox_event_id: OutboxEventId,
     trace_id: Option<TraceId>,
-    event: UserCreatedEvent,
+    event: UserSuspendedEvent,
     email_service: Arc<dyn EmailService>,
     user_repository: Arc<dyn UserRepository>,
 }
 
-impl SendEmailWhenUserCreatedHandler {
+impl SendEmailWhenUserSuspendedHandler {
     pub fn new(
         outbox_event_id: OutboxEventId,
         trace_id: Option<TraceId>,
-        event: UserCreatedEvent,
+        event: UserSuspendedEvent,
         email_service: Arc<dyn EmailService>,
         user_repository: Arc<dyn UserRepository>,
     ) -> Self {
@@ -40,7 +39,7 @@ impl SendEmailWhenUserCreatedHandler {
 }
 
 #[async_trait]
-impl EventHandler for SendEmailWhenUserCreatedHandler {
+impl EventHandler for SendEmailWhenUserSuspendedHandler {
     fn outbox_event_id(&self) -> OutboxEventId {
         self.outbox_event_id
     }
@@ -50,14 +49,14 @@ impl EventHandler for SendEmailWhenUserCreatedHandler {
     }
 
     fn construct_span(&self) -> Span {
-        tracing::span!(Level::INFO, "SendEmailWhenUserCreated")
+        tracing::span!(Level::INFO, "SendEmailWhenUserSuspended")
     }
 
     async fn handle_event_raw(&self) -> Result<(), RelayError> {
-        let UserCreatedEvent {
+        let UserSuspendedEvent {
             user_id,
-            email,
-            registered_at: _,
+            suspended_at: _,
+            reason,
         } = &self.event;
 
         let user = self
@@ -69,10 +68,10 @@ impl EventHandler for SendEmailWhenUserCreatedHandler {
 
         let username = user.username();
 
-        let to = email.as_str().to_string();
-        let subject = "Welcome to Our Service!".to_string();
+        let to = user.email().as_str().to_string();
+        let subject = "Your Account Has Been Suspended".to_string();
         let body = format!(
-            "Dear {username},\n\nThank you for registering with us. Your user ID is: {user_id}\n\nBest regards,\nThe Team",
+            "Dear {username},\n\nYour account has been suspended for the following reason:\n{reason}\n\nIf you believe this is a mistake, please contact support.",
         );
 
         let email_message = EmailMessage { to, subject, body };

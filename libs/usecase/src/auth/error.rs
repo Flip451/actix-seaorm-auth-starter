@@ -1,5 +1,5 @@
 use domain::{
-    shared::outbox::OutboxRepositoryError,
+    shared::outbox_event::OutboxRepositoryError,
     transaction::IntoTxError,
     user::{PasswordHashingError, UserDomainError, UserRepositoryError, UserUniqueConstraint},
 };

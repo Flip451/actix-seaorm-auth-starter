@@ -2,29 +2,29 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use domain::{
-    shared::outbox::OutboxEventId,
-    user::{EmailTrait, UserEmailChangedEvent, UserRepository},
+    shared::outbox_event::OutboxEventId,
+    user::{EmailTrait, UserCreatedEvent, UserRepository},
 };
 use opentelemetry::trace::TraceId;
+use tracing::{Level, Span};
 
-use crate::shared::{
-    email_service::{EmailMessage, EmailService},
-    relay::{EventHandler, RelayError},
-};
+use crate::shared::email_service::{EmailMessage, EmailService};
 
-pub struct SendEmailWhenUserEmailChanged {
+use super::super::{error::RelayError, event_handler::EventHandler};
+
+pub struct SendEmailWhenUserCreatedHandler {
     outbox_event_id: OutboxEventId,
     trace_id: Option<TraceId>,
-    event: UserEmailChangedEvent,
+    event: UserCreatedEvent,
     email_service: Arc<dyn EmailService>,
     user_repository: Arc<dyn UserRepository>,
 }
 
-impl SendEmailWhenUserEmailChanged {
+impl SendEmailWhenUserCreatedHandler {
     pub fn new(
         outbox_event_id: OutboxEventId,
         trace_id: Option<TraceId>,
-        event: UserEmailChangedEvent,
+        event: UserCreatedEvent,
         email_service: Arc<dyn EmailService>,
         user_repository: Arc<dyn UserRepository>,
     ) -> Self {
@@ -39,7 +39,7 @@ impl SendEmailWhenUserEmailChanged {
 }
 
 #[async_trait]
-impl EventHandler for SendEmailWhenUserEmailChanged {
+impl EventHandler for SendEmailWhenUserCreatedHandler {
     fn outbox_event_id(&self) -> OutboxEventId {
         self.outbox_event_id
     }
@@ -48,18 +48,17 @@ impl EventHandler for SendEmailWhenUserEmailChanged {
         self.trace_id
     }
 
-    fn construct_span(&self) -> tracing::Span {
-        tracing::span!(tracing::Level::INFO, "SendEmailWhenUserEmailChanged")
+    fn construct_span(&self) -> Span {
+        tracing::span!(Level::INFO, "SendEmailWhenUserCreated")
     }
 
     async fn handle_event_raw(&self) -> Result<(), RelayError> {
-        let UserEmailChangedEvent {
+        let UserCreatedEvent {
             user_id,
-            new_email,
-            changed_at: _,
+            email,
+            registered_at: _,
         } = &self.event;
 
-        // ここでメール送信のロジックを実装します
         let user = self
             .user_repository
             .find_by_id(*user_id)
@@ -69,10 +68,10 @@ impl EventHandler for SendEmailWhenUserEmailChanged {
 
         let username = user.username();
 
-        let to = new_email.as_str().to_string();
-        let subject = "Your email has been changed".to_string();
+        let to = email.as_str().to_string();
+        let subject = "Welcome to Our Service!".to_string();
         let body = format!(
-            "Hello {username},\n\nYour email has been changed to {new_email}.\n\nIf you did not make this change, please contact support immediately.",
+            "Dear {username},\n\nThank you for registering with us. Your user ID is: {user_id}\n\nBest regards,\nThe Team",
         );
 
         let email_message = EmailMessage { to, subject, body };
