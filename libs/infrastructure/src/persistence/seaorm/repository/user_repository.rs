@@ -87,6 +87,15 @@ impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmUserRepository<C, T> 
                 ))
                 .into();
             }
+
+            // 既知の一意制約名以外で一意制約違反が発生した場合は、デバッグしやすいように詳細なエラーを返す
+            return UserRepositoryError::Persistence(anyhow::anyhow!(
+                "Unexpected unique constraint violation (constraint: '{}', username: '{}', email: '{}'): {}",
+                constraint,
+                username,
+                email,
+                e
+            ));
         }
         // その他のエラーはPersistenceとして扱う
         UserRepositoryError::Persistence(e.into())
