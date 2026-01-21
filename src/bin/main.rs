@@ -56,7 +56,7 @@ async fn main() -> std::io::Result<()> {
     let user_service = web::Data::from(registry.user_service.clone());
     let token_service = web::Data::from(registry.token_service.clone());
 
-    print!("Starting outbox relay worker... ");
+    println!("Starting outbox relay worker... ");
 
     // Relayワーカーの起動
     let relay_handle = relay::spawn_relay(

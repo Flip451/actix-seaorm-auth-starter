@@ -7,6 +7,21 @@ use super::error::RelayError;
 use super::event_mapper::EventMapper;
 use super::service::OutboxRelayService;
 
+/// Outboxパターンにおけるリレー処理の中核を担うインタラクター。
+///
+/// この構造体は、永続化されたドメインイベント（Outbox）を非同期に処理し、
+/// 外部システムへの副作用（メール送信など）を確実に実行する責務を持ちます。
+///
+/// # 主な役割
+/// - **バッチ処理**: 未処理（PENDING）のイベントを指定された件数分（limit）取得します。
+/// - **トランザクション管理**: `TransactionManager` と連携し、イベントの取得（ロック）、
+///   ハンドラの実行、ステータス更新（COMPLETED/FAILED）を一連のトランザクションとして原子的に実行します。
+/// - **イベントのディスパッチ**: `EventMapper` を使用して、Outboxイベントを具体的な処理を持つ
+///   `EventHandler` に変換し、実行を委譲します。
+///
+/// # 並列実行について
+/// 複数のRelayプロセスが起動している場合でも、リポジトリ層の `lock_pending_events`
+/// (SELECT FOR UPDATE SKIP LOCKED相当) により、同一イベントの二重処理が防止されます。
 pub struct RelayInteractor<TM: TransactionManager> {
     transaction_manager: Arc<TM>,
     mapper: Arc<EventMapper>,
