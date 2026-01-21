@@ -94,6 +94,7 @@ pub enum OutboxEventStatus {
     Pending,
     Failed, // TODO: #47 でリトライカウントを追加する
     Completed,
+    PermanentlyFailed,
 }
 
 // TODO: #52 で completed_at と processed_at を分ける際に修正する
@@ -107,6 +108,11 @@ impl OutboxEvent {
             OutboxEventStatus::Completed => Err(OutboxStatusTransitionError::AlreadyCompleted {
                 from: OutboxEventStatus::Completed,
             })?,
+            OutboxEventStatus::PermanentlyFailed => {
+                Err(OutboxStatusTransitionError::AlreadyPermanentlyFailed {
+                    from: OutboxEventStatus::PermanentlyFailed,
+                })?
+            }
         }
 
         Ok(())
@@ -122,6 +128,12 @@ impl OutboxEvent {
             })?,
             OutboxEventStatus::Failed => {
                 // TODO: #47 でリトライカウントを+1するロジックを追加する
+                self.status = OutboxEventStatus::PermanentlyFailed;
+            }
+            OutboxEventStatus::PermanentlyFailed => {
+                Err(OutboxStatusTransitionError::AlreadyPermanentlyFailed {
+                    from: OutboxEventStatus::PermanentlyFailed,
+                })?
             }
         }
 
