@@ -1,3 +1,5 @@
+pub mod constants;
+
 pub use sea_orm_migration::prelude::*;
 
 mod m20251219_072129_create_user_table;

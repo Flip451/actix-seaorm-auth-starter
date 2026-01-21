@@ -2,6 +2,7 @@ use std::{str::FromStr, sync::Arc};
 
 use async_trait::async_trait;
 use chrono::Utc;
+use migration::constants::UniqueConstraints;
 use sea_orm::{
     ColumnTrait, DbErr, EntityTrait, QueryFilter, RuntimeErr, Set, sea_query::OnConflict,
 };
@@ -173,12 +174,12 @@ where
                     {
                         let constraint = db_err.constraint().unwrap_or("");
 
-                        if constraint.contains("email") {
+                        if constraint == UniqueConstraints::UserEmailKey.to_string() {
                             return UserDomainError::AlreadyExists(UserUniqueConstraint::Email(
                                 email.as_str().to_string(),
                             ))
                             .into();
-                        } else if constraint.contains("username") {
+                        } else if constraint == UniqueConstraints::UserUsernameKey.to_string() {
                             return UserDomainError::AlreadyExists(UserUniqueConstraint::Username(
                                 username.to_string(),
                             ))
