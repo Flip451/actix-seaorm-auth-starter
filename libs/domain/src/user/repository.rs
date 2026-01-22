@@ -1,4 +1,4 @@
-use crate::user::{UserDomainError, UserId};
+use crate::user::{UserDomainError, UserId, UserUniqueConstraint};
 use async_trait::async_trait;
 use thiserror::Error;
 
@@ -9,7 +9,7 @@ pub enum UserRepositoryError {
     #[error(transparent)]
     DomainError(#[from] UserDomainError),
 
-    #[error("データの保存または取得に失敗しまsした: {0}")]
+    #[error("データの保存または取得に失敗しました: {0}")]
     Persistence(#[source] anyhow::Error),
 }
 
@@ -20,4 +20,10 @@ pub trait UserRepository: Send + Sync {
     async fn find_by_username(&self, username: &str) -> Result<Option<User>, UserRepositoryError>;
     async fn save(&self, user: User) -> Result<User, UserRepositoryError>;
     async fn find_all(&self) -> Result<Vec<User>, UserRepositoryError>;
+}
+
+impl From<UserUniqueConstraint> for UserRepositoryError {
+    fn from(value: UserUniqueConstraint) -> Self {
+        UserRepositoryError::from(UserDomainError::from(value))
+    }
 }

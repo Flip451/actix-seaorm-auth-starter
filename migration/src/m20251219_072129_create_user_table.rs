@@ -1,5 +1,7 @@
 use sea_orm_migration::prelude::*;
 
+use crate::constants::UniqueConstraints;
+
 #[derive(DeriveMigrationName)]
 pub struct Migration;
 
@@ -14,13 +16,8 @@ impl MigrationTrait for Migration {
                     // 1. UUIDを主キーに（推測不可能なID）
                     .col(ColumnDef::new(User::Id).uuid().not_null().primary_key())
                     // 2. ユニーク制約（重複登録をDBレベルで防止）
-                    .col(
-                        ColumnDef::new(User::Username)
-                            .string()
-                            .not_null()
-                            .unique_key(),
-                    )
-                    .col(ColumnDef::new(User::Email).string().not_null().unique_key())
+                    .col(ColumnDef::new(User::Username).string().not_null())
+                    .col(ColumnDef::new(User::Email).string().not_null())
                     // 3. パスワード（ハッシュ化した文字列を格納）
                     .col(ColumnDef::new(User::PasswordHash).string().not_null())
                     // 4. アカウント状態（論理削除や凍結用）
@@ -45,10 +42,59 @@ impl MigrationTrait for Migration {
                     )
                     .to_owned(),
             )
-            .await
+            .await?;
+
+        // emailカラムに対するユニークインデックスを作成
+        manager
+            .create_index(
+                Index::create()
+                    .if_not_exists()
+                    .name(UniqueConstraints::UserEmailKey.to_string())
+                    .table(User::Table)
+                    .col(User::Email)
+                    .unique()
+                    .to_owned(),
+            )
+            .await?;
+
+        // usernameカラムに対するユニークインデックスを作成
+        manager
+            .create_index(
+                Index::create()
+                    .if_not_exists()
+                    .name(UniqueConstraints::UserUsernameKey.to_string())
+                    .table(User::Table)
+                    .col(User::Username)
+                    .unique()
+                    .to_owned(),
+            )
+            .await?;
+
+        Ok(())
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        // 1. username のユニークインデックスを削除
+        manager
+            .drop_index(
+                Index::drop()
+                    .name(UniqueConstraints::UserUsernameKey.to_string())
+                    .table(User::Table)
+                    .to_owned(),
+            )
+            .await?;
+
+        // 2. email のユニークインデックスを削除
+        manager
+            .drop_index(
+                Index::drop()
+                    .name(UniqueConstraints::UserEmailKey.to_string())
+                    .table(User::Table)
+                    .to_owned(),
+            )
+            .await?;
+
+        // 3. テーブルを削除
         manager
             .drop_table(Table::drop().table(User::Table).to_owned())
             .await

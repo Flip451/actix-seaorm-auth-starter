@@ -1890,6 +1890,7 @@ dependencies = [
  "chrono",
  "domain",
  "futures-util",
+ "migration",
  "opentelemetry",
  "sea-orm",
  "serde",
@@ -2115,6 +2116,7 @@ version = "0.1.0"
 dependencies = [
  "async-std",
  "sea-orm-migration",
+ "strum 0.27.2",
 ]
 
 [[package]]
