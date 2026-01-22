@@ -9,7 +9,7 @@ pub enum UserRepositoryError {
     #[error(transparent)]
     DomainError(#[from] UserDomainError),
 
-    #[error("データの保存または取得に失敗しまsした: {0}")]
+    #[error("データの保存または取得に失敗しました: {0}")]
     Persistence(#[source] anyhow::Error),
 }
 

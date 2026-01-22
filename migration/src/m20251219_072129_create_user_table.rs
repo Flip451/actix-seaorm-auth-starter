@@ -74,6 +74,27 @@ impl MigrationTrait for Migration {
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        // 1. username のユニークインデックスを削除
+        manager
+            .drop_index(
+                Index::drop()
+                    .name(UniqueConstraints::UserUsernameKey.to_string())
+                    .table(User::Table)
+                    .to_owned(),
+            )
+            .await?;
+
+        // 2. email のユニークインデックスを削除
+        manager
+            .drop_index(
+                Index::drop()
+                    .name(UniqueConstraints::UserEmailKey.to_string())
+                    .table(User::Table)
+                    .to_owned(),
+            )
+            .await?;
+
+        // 3. テーブルを削除
         manager
             .drop_table(Table::drop().table(User::Table).to_owned())
             .await
