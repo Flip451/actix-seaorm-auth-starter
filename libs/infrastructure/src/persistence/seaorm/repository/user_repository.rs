@@ -2,15 +2,17 @@ use std::{str::FromStr, sync::Arc};
 
 use async_trait::async_trait;
 use chrono::Utc;
-use sea_orm::{
-    ColumnTrait, DbErr, EntityTrait, QueryFilter, RuntimeErr, Set, sea_query::OnConflict,
-};
+use migration::constants::UniqueConstraints;
+use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter, Set, sea_query::OnConflict};
 
 use super::super::entities::user as user_entity;
-use crate::persistence::seaorm::{connect::Connectable, transaction::EntityTracker};
+use crate::persistence::{
+    db_error_mapper::DbErrorMapper,
+    seaorm::{connect::Connectable, transaction::EntityTracker},
+};
 use domain::user::{
-    EmailTrait, HashedPassword, UnverifiedEmail, User, UserDomainError, UserId, UserRepository,
-    UserRepositoryError, UserRole, UserState, UserUniqueConstraint, VerifiedEmail,
+    EmailTrait, HashedPassword, UnverifiedEmail, User, UserId, UserRepository, UserRepositoryError,
+    UserRole, UserState, UserUniqueConstraint, VerifiedEmail,
 };
 
 pub struct SeaOrmUserRepository<C, T>
@@ -68,6 +70,31 @@ impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmUserRepository<C, T> 
             model.updated_at.into(),
         )?;
         Ok(user)
+    }
+
+    fn map_save_error(&self, e: DbErr, username: &str, email: &str) -> UserRepositoryError {
+        if e.is_unique_violation() {
+            let constraint = e.constraint_name().unwrap_or("");
+            let email_unique_key = UniqueConstraints::UserEmailKey.to_string();
+            let username_unique_key = UniqueConstraints::UserUsernameKey.to_string();
+
+            if constraint == email_unique_key {
+                return UserUniqueConstraint::Email(email.to_string()).into();
+            } else if constraint == username_unique_key {
+                return UserUniqueConstraint::Username(username.to_string()).into();
+            }
+
+            // 既知の一意制約名以外で一意制約違反が発生した場合は、デバッグしやすいように詳細なエラーを返す
+            return UserRepositoryError::Persistence(anyhow::anyhow!(
+                "Unexpected unique constraint violation (constraint: '{}', username: '{}', email: '{}'): {}",
+                constraint,
+                username,
+                email,
+                e
+            ));
+        }
+        // その他のエラーはPersistenceとして扱う
+        UserRepositoryError::Persistence(e.into())
     }
 }
 
@@ -163,32 +190,7 @@ where
             )
             .exec_with_returning(self.conn.connect())
             .await
-            .map_err(|e| {
-                // エラーハンドリングの詳細化
-                if let DbErr::Query(RuntimeErr::SqlxError(sqlx_err)) = &e {
-                    // Postgresのエラーコード "23505" (unique_violation) をチェック
-                    if let Some(db_err) = sqlx_err.as_database_error()
-                        && let Some(code) = db_err.code()
-                        && code == "23505"
-                    {
-                        let constraint = db_err.constraint().unwrap_or("");
-
-                        if constraint.contains("email") {
-                            return UserDomainError::AlreadyExists(UserUniqueConstraint::Email(
-                                email.as_str().to_string(),
-                            ))
-                            .into();
-                        } else if constraint.contains("username") {
-                            return UserDomainError::AlreadyExists(UserUniqueConstraint::Username(
-                                username.to_string(),
-                            ))
-                            .into();
-                        }
-                    }
-                }
-                // その他のエラーはPersistenceとして扱う
-                UserRepositoryError::Persistence(e.into())
-            })?;
+            .map_err(|e| self.map_save_error(e, username, email.as_str()))?;
 
         self.tracker.track(Box::new(user));
 
