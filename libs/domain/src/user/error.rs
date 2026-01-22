@@ -1,4 +1,3 @@
-use derive_more::Display;
 use thiserror::Error;
 
 use super::EmailVerificationError;
@@ -21,10 +20,16 @@ pub enum UserDomainError {
     StateTransitionError(#[from] UserStateTransitionError),
 }
 
-#[derive(Debug, Display)]
+#[derive(Debug, derive_more::Display)]
 pub enum UserUniqueConstraint {
     Username(String),
     Email(String),
+}
+
+impl From<UserUniqueConstraint> for UserDomainError {
+    fn from(value: UserUniqueConstraint) -> Self {
+        UserDomainError::AlreadyExists(value)
+    }
 }
 
 #[derive(Debug, Error)]

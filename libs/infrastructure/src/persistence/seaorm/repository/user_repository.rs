@@ -11,8 +11,8 @@ use crate::persistence::{
     seaorm::{connect::Connectable, transaction::EntityTracker},
 };
 use domain::user::{
-    EmailTrait, HashedPassword, UnverifiedEmail, User, UserDomainError, UserId, UserRepository,
-    UserRepositoryError, UserRole, UserState, UserUniqueConstraint, VerifiedEmail,
+    EmailTrait, HashedPassword, UnverifiedEmail, User, UserId, UserRepository, UserRepositoryError,
+    UserRole, UserState, UserUniqueConstraint, VerifiedEmail,
 };
 
 pub struct SeaOrmUserRepository<C, T>
@@ -75,17 +75,13 @@ impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmUserRepository<C, T> 
     fn map_save_error(&self, e: DbErr, username: &str, email: &str) -> UserRepositoryError {
         if e.is_unique_violation() {
             let constraint = e.constraint_name().unwrap_or("");
+            let email_unique_key = UniqueConstraints::UserEmailKey.to_string();
+            let username_unique_key = UniqueConstraints::UserUsernameKey.to_string();
 
-            if constraint == UniqueConstraints::UserEmailKey.to_string() {
-                return UserDomainError::AlreadyExists(UserUniqueConstraint::Email(
-                    email.to_string(),
-                ))
-                .into();
-            } else if constraint == UniqueConstraints::UserUsernameKey.to_string() {
-                return UserDomainError::AlreadyExists(UserUniqueConstraint::Username(
-                    username.to_string(),
-                ))
-                .into();
+            if constraint == email_unique_key {
+                return UserUniqueConstraint::Email(email.to_string()).into();
+            } else if constraint == username_unique_key {
+                return UserUniqueConstraint::Username(username.to_string()).into();
             }
 
             // 既知の一意制約名以外で一意制約違反が発生した場合は、デバッグしやすいように詳細なエラーを返す
