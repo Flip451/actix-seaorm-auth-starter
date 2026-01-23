@@ -22,7 +22,7 @@ impl PasswordHasher for Argon2PasswordHasher {
     }
 
     fn verify(&self, raw: &RawPassword, hashed: &HashedPassword) -> bool {
-        let Ok(parsed_hash) = PasswordHash::new(hashed.as_str()) else {
+        let Ok(parsed_hash) = PasswordHash::new(hashed.as_ref()) else {
             return false;
         };
         Argon2::default()
