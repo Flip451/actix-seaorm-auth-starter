@@ -23,3 +23,6 @@ tracing-opentelemetry = { workspace = true }
 [features]
 # 必要に応じて DTO 用のシリアライズ設定などを切り替え可能にする
 default = []
+
+[dev-dependencies]
+rstest = { workspace = true }
