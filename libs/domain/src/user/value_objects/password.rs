@@ -21,7 +21,15 @@ impl RawPassword {
 }
 
 #[derive(
-    Debug, Clone, PartialEq, Eq, Serialize, Deserialize, derive_more::Display, derive_more::Into,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    derive_more::Display,
+    derive_more::Into,
+    derive_more::AsRef,
 )]
 pub struct HashedPassword(String);
 
