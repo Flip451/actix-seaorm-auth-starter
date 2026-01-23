@@ -60,7 +60,7 @@ pub enum RelayConfigError {
 ///
 /// データベースから一度に取得するイベント件数を表します。
 /// コンストラクタを通して生成することで、**値が必ず1以上であること**を保証します。
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, derive_more::Into)]
 pub struct BatchSize(u64);
 
 impl BatchSize {
@@ -73,13 +73,6 @@ impl BatchSize {
             return Err(RelayConfigError::InvalidBatchSize);
         }
         Ok(Self(value))
-    }
-}
-
-// 内部的な値へのアクセス用
-impl From<BatchSize> for u64 {
-    fn from(value: BatchSize) -> Self {
-        value.0
     }
 }
 

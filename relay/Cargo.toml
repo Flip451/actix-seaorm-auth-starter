@@ -10,3 +10,4 @@ sea-orm = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true }
 thiserror = { workspace = true }
+derive_more = { workspace = true }

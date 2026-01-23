@@ -88,7 +88,7 @@ add: ## 依存クレートを追加 (使用例: make add d=serde)
 
 # テスト実行
 test: ## アプリケーションのテスト
-	$(DOCKER_COMPOSE) run --rm $(APP_SERVICE) cargo test
+	$(DOCKER_COMPOSE) run --rm $(APP_SERVICE) cargo test --workspace
 
 # キャッシュのクリーンアップなど
 clean: ## ボリュームの削除, target ディレクトリの削除

@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use serde::{Deserialize, Serialize};
 
 use crate::user::UserDomainError;
@@ -22,21 +20,22 @@ impl RawPassword {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    derive_more::Display,
+    derive_more::Into,
+    derive_more::AsRef,
+)]
 pub struct HashedPassword(String);
 
+// TODO: #60 で正しくハッシュ化されているかの検証機構を追加する必要あり
 impl HashedPassword {
     pub fn from_raw_str(hash: &str) -> Self {
         Self(hash.to_string())
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl Display for HashedPassword {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
     }
 }
