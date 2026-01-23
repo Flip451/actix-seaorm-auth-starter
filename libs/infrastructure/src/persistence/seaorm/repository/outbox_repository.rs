@@ -1,5 +1,3 @@
-use std::fmt;
-
 use async_trait::async_trait;
 use domain::shared::{
     domain_event::DomainEvent,
@@ -24,24 +22,13 @@ where
     _marker: std::marker::PhantomData<T>,
 }
 
-struct EventTypeFormatter<'a>(&'a DomainEvent);
-
-impl fmt::Display for EventTypeFormatter<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let event_type = match self.0 {
-            DomainEvent::UserEvent(user_event) => user_event.as_ref(),
-        };
-        write!(f, "{}", event_type)
-    }
-}
-
 fn get_active_model_from_event(
     event: OutboxEvent,
 ) -> Result<outbox_entity::ActiveModel, OutboxRepositoryError> {
     let payload = serde_json::to_value(event.domain_event())
         .map_err(|e| OutboxRepositoryError::Persistence(e.into()))?;
 
-    let event_type = EventTypeFormatter(event.domain_event()).to_string();
+    let event_type = event.domain_event().to_string();
 
     Ok(outbox_entity::ActiveModel {
         id: Set(event.id().into()),

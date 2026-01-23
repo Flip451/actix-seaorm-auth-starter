@@ -51,6 +51,7 @@ sea-orm = { version = "1.1.19", features = [
 actix-web = "4.12.1"
 tokio = "1.49.0"
 tokio-util = "0.7.18"
+rstest = "0.26.1"
 
 [dependencies]
 infrastructure = { workspace = true }

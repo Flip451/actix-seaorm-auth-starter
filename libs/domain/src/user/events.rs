@@ -1,10 +1,9 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use strum::AsRefStr;
 
 use crate::user::{UnverifiedEmail, UserId};
 
-#[derive(Deserialize, Serialize, Debug, Clone, AsRefStr)]
+#[derive(Deserialize, Serialize, Debug, Clone, strum::Display)]
 #[strum(prefix = "UserEvent::")]
 pub enum UserEvent {
     Created(UserCreatedEvent),
