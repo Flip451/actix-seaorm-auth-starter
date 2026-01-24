@@ -1,5 +1,3 @@
-use std::fmt;
-
 use super::super::error::UserDomainError;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -20,11 +18,11 @@ impl Email {
 }
 
 // メールアドレス（検証済み）
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, derive_more::Display)]
 pub struct VerifiedEmail(String);
 
 // メールアドレス（未検証）
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, derive_more::Display)]
 pub struct UnverifiedEmail(String);
 
 // 検証済みメールアドレスを未検証メールアドレスに変換する
@@ -38,23 +36,26 @@ impl VerifiedEmail {
 pub trait EmailTrait: Sized {
     fn new(value: &str) -> Result<Self, UserDomainError>;
 
-    fn as_str(&self) -> &str;
-}
-
-// EmailTraitの実装
-impl EmailTrait for VerifiedEmail {
-    fn new(value: &str) -> Result<Self, UserDomainError> {
+    fn check_format(value: &str) -> Result<(), UserDomainError> {
         #[derive(Validate)]
         struct EmailCheck<'a> {
             #[validate(email)]
             email: &'a str,
         }
         let check = EmailCheck { email: value };
-        if check.validate().is_ok() {
-            Ok(Self(value.to_string()))
-        } else {
-            Err(UserDomainError::InvalidEmail(value.to_string()))
-        }
+        check
+            .validate()
+            .map_err(|_| UserDomainError::InvalidEmail(value.to_string()))
+    }
+
+    fn as_str(&self) -> &str;
+}
+
+// EmailTraitの実装
+impl EmailTrait for VerifiedEmail {
+    fn new(value: &str) -> Result<Self, UserDomainError> {
+        Self::check_format(value)?;
+        Ok(Self(value.to_string()))
     }
 
     fn as_str(&self) -> &str {
@@ -64,17 +65,8 @@ impl EmailTrait for VerifiedEmail {
 
 impl EmailTrait for UnverifiedEmail {
     fn new(value: &str) -> Result<Self, UserDomainError> {
-        #[derive(Validate)]
-        struct EmailCheck<'a> {
-            #[validate(email)]
-            email: &'a str,
-        }
-        let check = EmailCheck { email: value };
-        if check.validate().is_ok() {
-            Ok(Self(value.to_string()))
-        } else {
-            Err(UserDomainError::InvalidEmail(value.to_string()))
-        }
+        Self::check_format(value)?;
+        Ok(Self(value.to_string()))
     }
 
     fn as_str(&self) -> &str {
@@ -82,14 +74,25 @@ impl EmailTrait for UnverifiedEmail {
     }
 }
 
-impl fmt::Display for VerifiedEmail {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
+#[cfg(test)]
+mod tests {
+    use rstest::rstest;
 
-impl fmt::Display for UnverifiedEmail {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
+    use super::*;
+
+    #[rstest]
+    #[case("user@example.com", true)]
+    #[case("invalid-email", false)]
+    fn test_verified_email_valid_or_invalid(#[case] email: &str, #[case] is_valid: bool) {
+        let verified_email = VerifiedEmail::new(email);
+        assert_eq!(verified_email.is_ok(), is_valid);
+    }
+
+    #[rstest]
+    #[case("user@example.com", true)]
+    #[case("invalid-email", false)]
+    fn test_unverified_email_valid_or_invalid(#[case] email: &str, #[case] is_valid: bool) {
+        let unverified_email = UnverifiedEmail::new(email);
+        assert_eq!(unverified_email.is_ok(), is_valid);
     }
 }
