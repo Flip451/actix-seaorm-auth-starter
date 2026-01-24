@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use super::EmailVerificationError;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum UserDomainError {
     #[error("無効なメールアドレス形式です: {0}")]
     InvalidEmail(String),
@@ -20,7 +20,7 @@ pub enum UserDomainError {
     StateTransitionError(#[from] UserStateTransitionError),
 }
 
-#[derive(Debug, derive_more::Display)]
+#[derive(Debug, derive_more::Display, PartialEq, Eq)]
 pub enum UserUniqueConstraint {
     Username(String),
     Email(String),
@@ -32,7 +32,7 @@ impl From<UserUniqueConstraint> for UserDomainError {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum UserStateTransitionError {
     #[error("ユーザーは既に退会しています: {from:?} からの遷移は許可されていません")]
     AlreadyDeactivated { from: super::UserState },

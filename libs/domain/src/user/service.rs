@@ -20,7 +20,7 @@ pub trait PasswordHasher: Send + Sync {
     fn verify(&self, raw: &RawPassword, hashed: &HashedPassword) -> bool;
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum EmailVerificationError {
     // TODO: #35 でエラーの詳細を追加する
 }
