@@ -46,7 +46,7 @@ fn check_email_format(value: &str) -> Result<(), UserDomainError> {
 }
 
 // メールアドレスの共通トレイト
-pub trait EmailTrait: Sized {
+pub trait EmailTrait: Sized + std::fmt::Debug {
     fn new(value: &str) -> Result<Self, UserDomainError>;
 
     fn as_str(&self) -> &str;
@@ -82,18 +82,36 @@ mod tests {
     use super::*;
 
     #[rstest]
-    #[case("user@example.com", true)]
-    #[case("invalid-email", false)]
-    fn test_verified_email_valid_or_invalid(#[case] email: &str, #[case] is_valid: bool) {
-        let verified_email = VerifiedEmail::new(email);
-        assert_eq!(verified_email.is_ok(), is_valid);
+    #[case(VerifiedEmail::new("user@example.com"), "user@example.com")]
+    #[case(UnverifiedEmail::new("user@example.com"), "user@example.com")]
+    fn test_valid_email_as_str(
+        #[case] email: Result<impl EmailTrait, UserDomainError>,
+        #[case] email_str: &str,
+    ) {
+        assert_eq!(email.unwrap().as_str(), email_str);
+    }
+
+    #[test]
+    fn test_verified_email_to_string() {
+        let email_str = "user@example.com";
+        let valid_verified_email = VerifiedEmail::new(email_str).unwrap();
+        assert_eq!(valid_verified_email.to_string(), email_str);
+    }
+
+    #[test]
+    fn test_unverified_email_to_string() {
+        let email_str = "user@example.com";
+        let valid_unverified_email = UnverifiedEmail::new(email_str).unwrap();
+        assert_eq!(valid_unverified_email.to_string(), email_str);
     }
 
     #[rstest]
-    #[case("user@example.com", true)]
-    #[case("invalid-email", false)]
-    fn test_unverified_email_valid_or_invalid(#[case] email: &str, #[case] is_valid: bool) {
-        let unverified_email = UnverifiedEmail::new(email);
-        assert_eq!(unverified_email.is_ok(), is_valid);
+    #[case(VerifiedEmail::new("invalid-email"), UserDomainError::InvalidEmail("invalid-email".to_string()))]
+    #[case(UnverifiedEmail::new("invalid-email"), UserDomainError::InvalidEmail("invalid-email".to_string()))]
+    fn test_invalid_email_error(
+        #[case] email: Result<impl EmailTrait, UserDomainError>,
+        #[case] error: UserDomainError,
+    ) {
+        assert_eq!(email.unwrap_err(), error);
     }
 }
