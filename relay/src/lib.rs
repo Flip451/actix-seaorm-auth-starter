@@ -2,7 +2,7 @@ pub mod config;
 pub use config::RelayConfig;
 
 use std::sync::Arc;
-use tokio::task::JoinHandle;
+use tokio::{task::JoinHandle, time::Interval};
 use tokio_util::sync::CancellationToken;
 use usecase::relay::service::OutboxRelayService;
 
@@ -14,72 +14,101 @@ enum RelayState {
     Busy,
 }
 
-pub fn spawn_relay(
+pub struct RelayWorker {
+    state: RelayState,
+    interval: Interval,
+    batch_size: u64,
     relay: Arc<dyn OutboxRelayService>,
     token: CancellationToken,
-    config: RelayConfig,
-) -> JoinHandle<()> {
-    tokio::spawn(async move {
+}
+
+impl RelayWorker {
+    pub fn new(
+        config: RelayConfig,
+        relay: Arc<dyn OutboxRelayService>,
+        token: CancellationToken,
+    ) -> Self {
         // interval_secs 秒ごとにポーリングを実行する設定
-        let mut interval = config.interval_secs();
+        let interval = config.interval_secs();
         let batch_size = config.batch_size();
 
         // 初期状態は Idle
-        let mut state = RelayState::Idle;
+        let state = RelayState::Idle;
 
-        loop {
-            match state {
-                // [Idle 状態] interval 秒待機
-                RelayState::Idle => {
-                    tokio::select! {
-                        _ = interval.tick() => {
-                            // 時間が来たら Busy 状態に遷移
-                            state = RelayState::Busy;
-                        }
-                        _ = token.cancelled() => {
-                            // 待機中にシャットダウン信号が来たら終了
-                            tracing::info!("Relay worker received stop signal during idle...");
-                            break;
-                        }
-                    }
-                }
+        Self {
+            state,
+            interval,
+            batch_size,
+            relay,
+            token,
+        }
+    }
 
-                // [Busy 状態] 即座に次のバッチを処理
-                RelayState::Busy => {
-                    tokio::select! {
-                        process_result = relay.process_batch(batch_size) => {
-                            match process_result {
-                                Ok(count) => {
-                                    if count > 0 {
-                                        tracing::info!("Processed {} events", count);
-                                    }
+    fn transition_to_idle(&mut self) {
+        self.state = RelayState::Idle;
+        self.interval.reset();
+    }
 
-                                    // 取得件数が上限未満なら「空になった」とみなして Idle へ戻る
-                                    // 上限いっぱいなら、まだ残っているとみなして Busy を維持（連続実行）
-                                    if count < batch_size as usize {
-                                        state = RelayState::Idle;
-                                    } else {
-                                        tracing::debug!("Batch full, remaining busy");
-                                    }
-                                }
-                                Err(e) => {
-                                    tracing::error!("Failed to process batch: {:?}", e);
-                                    // エラー発生時は Idle 状態に戻る
-                                    // ※将来的にここで RelayState::Backoff などへ遷移させることも可能
-                                    state = RelayState::Idle;
-                                }
+    fn transition_to_busy(&mut self) {
+        self.state = RelayState::Busy;
+    }
+
+    pub fn spawn(mut self) -> JoinHandle<()> {
+        tokio::spawn(async move {
+            loop {
+                match self.state {
+                    // [Idle 状態] interval 秒待機
+                    RelayState::Idle => {
+                        tokio::select! {
+                            _ = self.interval.tick() => {
+                                // 時間が来たら Busy 状態に遷移
+                                self.transition_to_busy();
+                            }
+                            _ = self.token.cancelled() => {
+                                // 待機中にシャットダウン信号が来たら終了
+                                tracing::info!("Relay worker received stop signal during idle...");
+                                break;
                             }
                         }
-                        _ = token.cancelled() => {
-                            // 処理中にシャットダウン信号が来たら終了
-                            tracing::info!("Relay worker received stop signal during busy...");
-                            break;
+                    }
+
+                    // [Busy 状態] 即座に次のバッチを処理
+                    RelayState::Busy => {
+                        tokio::select! {
+                            process_result = self.relay.process_batch(self.batch_size) => {
+                                match process_result {
+                                    Ok(count) => {
+                                        if count > 0 {
+                                            tracing::info!("Processed {} events", count);
+                                        }
+
+                                        // 取得件数が上限未満なら「空になった」とみなして Idle へ戻る
+                                        // 上限いっぱいなら、まだ残っているとみなして Busy を維持（連続実行）
+                                        if count < self.batch_size as usize {
+                                            self.transition_to_idle();
+                                        } else {
+                                            tracing::debug!("Batch full, remaining busy");
+                                        }
+                                    }
+                                    Err(e) => {
+                                        tracing::error!("Failed to process batch: {:?}", e);
+                                        // エラー発生時は Idle 状態に戻る
+                                        // ※将来的にここで RelayState::Backoff などへ遷移させることも可能
+                                        self.transition_to_idle();
+                                    }
+                                }
+                            }
+                            _ = self.token.cancelled() => {
+                                // 処理中にシャットダウン信号が来たら終了
+                                tracing::info!("Relay worker received stop signal during busy...");
+                                break;
+                            }
                         }
                     }
                 }
             }
-        }
 
-        tracing::info!("Relay worker stopped gracefully.");
-    })
+            tracing::info!("Relay worker stopped gracefully.");
+        })
+    }
 }

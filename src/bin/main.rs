@@ -3,7 +3,7 @@ use std::sync::Arc;
 use actix_web::{App, HttpServer, web};
 use app::telemetry;
 use dotenvy::dotenv;
-use relay::RelayConfig;
+use relay::{RelayConfig, RelayWorker};
 use sea_orm::Database;
 use tokio_util::sync::CancellationToken;
 use tracing_actix_web::TracingLogger;
@@ -57,11 +57,12 @@ async fn main() -> std::io::Result<()> {
     println!("Starting outbox relay worker... ");
 
     // Relayワーカーの起動
-    let relay_handle = relay::spawn_relay(
+    let relay_worker = RelayWorker::new(
+        relay_config,
         registry.outbox_relay_service.clone(),
         cancel_token.clone(),
-        relay_config,
     );
+    let relay_handle = relay_worker.spawn();
 
     println!("Starting server at http://0.0.0.0:8080");
 
