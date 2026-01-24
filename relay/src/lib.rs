@@ -75,7 +75,6 @@ pub fn spawn_relay(
                             tracing::info!("Relay worker received stop signal during busy...");
                             break;
                         }
-
                     }
                 }
             }
