@@ -28,11 +28,6 @@ pub fn spawn_relay(
         let mut state = RelayState::Idle;
 
         loop {
-            if token.is_cancelled() {
-                tracing::info!("Relay worker received stop signal...");
-                break;
-            }
-
             match state {
                 // [Idle 状態] interval 秒待機
                 RelayState::Idle => {
@@ -51,26 +46,36 @@ pub fn spawn_relay(
 
                 // [Busy 状態] 即座に次のバッチを処理
                 RelayState::Busy => {
-                    match relay.process_batch(batch_size).await {
-                        Ok(count) => {
-                            if count > 0 {
-                                tracing::info!("Processed {} events", count);
-                            }
+                    tokio::select! {
+                        process_result = relay.process_batch(batch_size) => {
+                            match process_result {
+                                Ok(count) => {
+                                    if count > 0 {
+                                        tracing::info!("Processed {} events", count);
+                                    }
 
-                            // 取得件数が上限未満なら「空になった」とみなして Idle へ戻る
-                            // 上限いっぱいなら、まだ残っているとみなして Busy を維持（連続実行）
-                            if count < batch_size as usize {
-                                state = RelayState::Idle;
-                            } else {
-                                tracing::debug!("Batch full, remaining busy");
+                                    // 取得件数が上限未満なら「空になった」とみなして Idle へ戻る
+                                    // 上限いっぱいなら、まだ残っているとみなして Busy を維持（連続実行）
+                                    if count < batch_size as usize {
+                                        state = RelayState::Idle;
+                                    } else {
+                                        tracing::debug!("Batch full, remaining busy");
+                                    }
+                                }
+                                Err(e) => {
+                                    tracing::error!("Failed to process batch: {:?}", e);
+                                    // エラー発生時は Idle 状態に戻る
+                                    // ※将来的にここで RelayState::Backoff などへ遷移させることも可能
+                                    state = RelayState::Idle;
+                                }
                             }
                         }
-                        Err(e) => {
-                            tracing::error!("Failed to process batch: {:?}", e);
-                            // エラー発生時は Idle 状態に戻る
-                            // ※将来的にここで RelayState::Backoff などへ遷移させることも可能
-                            state = RelayState::Idle;
+                        _ = token.cancelled() => {
+                            // 処理中にシャットダウン信号が来たら終了
+                            tracing::info!("Relay worker received stop signal during busy...");
+                            break;
                         }
+
                     }
                 }
             }
