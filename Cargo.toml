@@ -17,7 +17,6 @@ members = [
     "migration",
     "relay",
 ]
-resolver = "2"
 
 [workspace.dependencies]
 # 内部クレート
