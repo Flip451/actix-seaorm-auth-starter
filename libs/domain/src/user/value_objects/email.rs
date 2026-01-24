@@ -82,13 +82,10 @@ mod tests {
     use super::*;
 
     #[rstest]
-    #[case(VerifiedEmail::new("user@example.com"), "user@example.com")]
-    #[case(UnverifiedEmail::new("user@example.com"), "user@example.com")]
-    fn test_valid_email_as_str(
-        #[case] email: Result<impl EmailTrait, UserDomainError>,
-        #[case] email_str: &str,
-    ) {
-        assert_eq!(email.unwrap().as_str(), email_str);
+    #[case(VerifiedEmail::new("user@example.com").unwrap(), "user@example.com")]
+    #[case(UnverifiedEmail::new("user@example.com").unwrap(), "user@example.com")]
+    fn test_valid_email_as_str(#[case] email: impl EmailTrait, #[case] email_str: &str) {
+        assert_eq!(email.as_str(), email_str);
     }
 
     #[test]
@@ -106,12 +103,12 @@ mod tests {
     }
 
     #[rstest]
-    #[case(VerifiedEmail::new("invalid-email"), UserDomainError::InvalidEmail("invalid-email".to_string()))]
-    #[case(UnverifiedEmail::new("invalid-email"), UserDomainError::InvalidEmail("invalid-email".to_string()))]
+    #[case(VerifiedEmail::new("invalid-email").unwrap_err(), UserDomainError::InvalidEmail("invalid-email".to_string()))]
+    #[case(UnverifiedEmail::new("invalid-email").unwrap_err(), UserDomainError::InvalidEmail("invalid-email".to_string()))]
     fn test_invalid_email_error(
-        #[case] email: Result<impl EmailTrait, UserDomainError>,
-        #[case] error: UserDomainError,
+        #[case] email_creation_error: UserDomainError,
+        #[case] expected: UserDomainError,
     ) {
-        assert_eq!(email.unwrap_err(), error);
+        assert_eq!(email_creation_error, expected);
     }
 }
