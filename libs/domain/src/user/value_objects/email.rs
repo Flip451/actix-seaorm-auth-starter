@@ -32,21 +32,22 @@ impl VerifiedEmail {
     }
 }
 
+fn check_email_format(value: &str) -> Result<(), UserDomainError> {
+    #[derive(Validate)]
+    struct EmailFormat<'a> {
+        #[validate(email)]
+        email: &'a str,
+    }
+
+    let email_format = EmailFormat { email: value };
+    email_format
+        .validate()
+        .map_err(|_| UserDomainError::InvalidEmail(value.to_string()))
+}
+
 // メールアドレスの共通トレイト
 pub trait EmailTrait: Sized {
     fn new(value: &str) -> Result<Self, UserDomainError>;
-
-    fn check_format(value: &str) -> Result<(), UserDomainError> {
-        #[derive(Validate)]
-        struct EmailCheck<'a> {
-            #[validate(email)]
-            email: &'a str,
-        }
-        let check = EmailCheck { email: value };
-        check
-            .validate()
-            .map_err(|_| UserDomainError::InvalidEmail(value.to_string()))
-    }
 
     fn as_str(&self) -> &str;
 }
@@ -54,7 +55,7 @@ pub trait EmailTrait: Sized {
 // EmailTraitの実装
 impl EmailTrait for VerifiedEmail {
     fn new(value: &str) -> Result<Self, UserDomainError> {
-        Self::check_format(value)?;
+        check_email_format(value)?;
         Ok(Self(value.to_string()))
     }
 
@@ -65,7 +66,7 @@ impl EmailTrait for VerifiedEmail {
 
 impl EmailTrait for UnverifiedEmail {
     fn new(value: &str) -> Result<Self, UserDomainError> {
-        Self::check_format(value)?;
+        check_email_format(value)?;
         Ok(Self(value.to_string()))
     }
 
