@@ -63,7 +63,6 @@ pub fn spawn_relay(
                                 state = RelayState::Idle;
                             } else {
                                 tracing::debug!("Batch full, remaining busy");
-                                // state = RelayState::Busy; // 維持
                             }
                         }
                         Err(e) => {
