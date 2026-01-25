@@ -2808,7 +2808,6 @@ name = "relay"
 version = "0.1.0"
 dependencies = [
  "derive_more",
- "sea-orm",
  "thiserror 2.0.17",
  "tokio",
  "tokio-util",
