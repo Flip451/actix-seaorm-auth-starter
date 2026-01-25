@@ -6,11 +6,10 @@ pub mod user;
 use std::sync::Arc;
 
 use crate::auth::argon2::password_service::Argon2PasswordHasher;
-use crate::persistence::seaorm::repository::user_repository::SeaOrmUserRepository;
-use crate::persistence::seaorm::transaction::{EntityTracker, SeaOrmTransactionManager};
+use crate::persistence::seaorm::transaction::SeaOrmTransactionManager;
 use crate::user::uuid_generator::UuidUserIdGenerator;
 use domain::transaction::TransactionManager;
-use domain::user::{UserFactory, UserRepository};
+use domain::user::UserFactory;
 use usecase::auth::interactor::AuthInteractor;
 use usecase::auth::service::AuthService;
 use usecase::auth::token_interactor::TokenInteractor;
@@ -24,7 +23,6 @@ use usecase::user::service::UserService;
 
 pub struct RepoRegistry<TM: TransactionManager> {
     transaction_manager: Arc<TM>,
-    user_repository: Arc<dyn UserRepository>, // TODO: Remove this at #34
 }
 
 impl RepoRegistry<SeaOrmTransactionManager> {
@@ -33,10 +31,6 @@ impl RepoRegistry<SeaOrmTransactionManager> {
         let transaction_manager = Arc::new(SeaOrmTransactionManager::new(db.clone()));
         Self {
             transaction_manager,
-            user_repository: Arc::new(SeaOrmUserRepository::new(
-                db,
-                Arc::new(EntityTracker::new()),
-            )), // TODO: Remove this at #34
         }
     }
 }
@@ -74,10 +68,7 @@ impl AppRegistry {
 
         let outbox_relay_service = Arc::new(RelayInteractor::new(
             repos.transaction_manager.clone(),
-            Arc::new(EventMapper::new(
-                email_service,
-                repos.user_repository.clone(), // TODO: Remove this at #34 (EventMapper should not depend on UserRepository)
-            )),
+            Arc::new(EventMapper::new(email_service)),
         ));
 
         Self {

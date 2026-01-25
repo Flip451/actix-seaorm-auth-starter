@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use crate::{
     shared::outbox_event::{EntityWithEvents, OutboxEvent},
     user::{
-        Email, UserEvent, UserId, UserStateTransitionError,
+        Email, EmailTrait, UserEvent, UserId, UserStateTransitionError,
         events::{
             UserCreatedEvent, UserDeactivatedEvent, UserEmailChangedEvent, UserEmailVerifiedEvent,
             UserReactivatedEvent, UserSuspendedEvent, UserUnlockedEvent, UsernameChangedEvent,
@@ -37,7 +37,7 @@ impl User {
         let now = Utc::now();
         Ok(Self {
             id,
-            username,
+            username: username.clone(),
             password,
             role: UserRole::User,
             state: UserState::PendingVerification {
@@ -46,8 +46,8 @@ impl User {
             created_at: now,
             updated_at: now,
             events: vec![UserEvent::Created(UserCreatedEvent {
-                user_id: id,
                 email,
+                username,
                 registered_at: now,
             })],
         })
@@ -135,15 +135,18 @@ pub enum UserState {
 }
 
 impl User {
+    // TODO: #70 で username を変更可能な State を定義する
     pub fn change_username(
         &mut self,
         UniqueUsername(new_username): UniqueUsername,
     ) -> Result<(), UserDomainError> {
+        let old_username = self.username.clone();
         self.username = new_username;
 
         self.record_event(UserEvent::UsernameChanged(UsernameChangedEvent {
-            user_id: self.id,
+            old_username,
             new_username: self.username.clone(),
+            email: self.email(),
             changed_at: Utc::now(),
         }));
         Ok(())
@@ -153,8 +156,8 @@ impl User {
 // ユーザーの状態遷移に関するメソッド群
 impl User {
     pub fn verify_email<V: EmailVerifier>(&mut self, verifier: &V) -> Result<(), UserDomainError> {
-        match self.state {
-            UserState::Active { .. } => {} // すでにアクティブなので何もしない
+        let email = match self.state {
+            UserState::Active { .. } => return Ok(()), // すでに検証済みなので何もしない
             UserState::SuspendedByAdmin { .. } => {
                 Err(UserStateTransitionError::AlreadySuspended {
                     from: self.state.clone(),
@@ -166,19 +169,24 @@ impl User {
                 })?
             }
             UserState::PendingVerification { ref email } => {
+                let email = verifier.verify(email)?;
                 self.state = UserState::Active {
-                    email: verifier.verify(email)?,
+                    email: email.clone(),
                 };
+                email
             }
             UserState::ActiveWithUnverifiedEmail { ref email } => {
+                let email = verifier.verify(email)?;
                 self.state = UserState::Active {
-                    email: verifier.verify(email)?,
+                    email: email.clone(),
                 };
+                email
             }
-        }
+        };
 
         self.record_event(UserEvent::EmailVerified(UserEmailVerifiedEvent {
-            user_id: self.id,
+            email,
+            username: self.username.clone(),
             verified_at: Utc::now(),
         }));
 
@@ -189,6 +197,11 @@ impl User {
         &mut self,
         UniqueEmail(new_email): UniqueEmail,
     ) -> Result<(), UserDomainError> {
+        if new_email.as_str() == self.email().as_str() {
+            // 新しいメールアドレスが現在のものと同じ場合、何もしない
+            return Ok(());
+        }
+
         match self.state {
             UserState::Active { .. } => {
                 self.state = UserState::ActiveWithUnverifiedEmail {
@@ -218,40 +231,49 @@ impl User {
         }
 
         self.record_event(UserEvent::EmailChanged(UserEmailChangedEvent {
-            user_id: self.id,
             new_email,
+            username: self.username.clone(),
             changed_at: Utc::now(),
         }));
         Ok(())
     }
 
     pub fn suspend(&mut self, reason: String) -> Result<(), UserDomainError> {
-        match self.state {
+        let email = match self.state {
             UserState::Active { ref email } => {
-                self.state = UserState::SuspendedByAdmin {
-                    email: email.unverify(),
-                };
-            }
-            UserState::SuspendedByAdmin { .. } => {} // すでに停止中なので何もしない
-            UserState::DeactivatedByUser { ref email } => {
+                let email = email.unverify();
                 self.state = UserState::SuspendedByAdmin {
                     email: email.clone(),
                 };
+                email
+            }
+            UserState::SuspendedByAdmin { .. } => return Ok(()), // すでに停止中なので何もしない
+            UserState::DeactivatedByUser { ref email } => {
+                let email = email.clone();
+                self.state = UserState::SuspendedByAdmin {
+                    email: email.clone(),
+                };
+                email
             }
             UserState::PendingVerification { ref email } => {
+                let email = email.clone();
                 self.state = UserState::SuspendedByAdmin {
                     email: email.clone(),
                 };
+                email
             }
             UserState::ActiveWithUnverifiedEmail { ref email } => {
+                let email = email.clone();
                 self.state = UserState::SuspendedByAdmin {
                     email: email.clone(),
                 };
+                email
             }
-        }
+        };
 
         self.record_event(UserEvent::Suspended(UserSuspendedEvent {
-            user_id: self.id,
+            username: self.username.clone(),
+            email,
             reason,
             suspended_at: Utc::now(),
         }));
@@ -260,18 +282,20 @@ impl User {
     }
 
     pub fn deactivate(&mut self) -> Result<(), UserDomainError> {
-        match self.state {
+        let email = match self.state {
             UserState::Active { ref email } => {
+                let email = email.unverify();
                 self.state = UserState::DeactivatedByUser {
-                    email: email.unverify(),
+                    email: email.clone(),
                 };
+                email
             }
             UserState::SuspendedByAdmin { .. } => {
                 Err(UserStateTransitionError::AlreadySuspended {
                     from: self.state.clone(),
                 })?
             }
-            UserState::DeactivatedByUser { .. } => {} // すでに退会済みなので何もしない
+            UserState::DeactivatedByUser { .. } => return Ok(()), // すでに退会済みなので何もしない
             UserState::PendingVerification { .. } => Err(UserStateTransitionError::NotVerified {
                 from: self.state.clone(),
             })?,
@@ -280,10 +304,11 @@ impl User {
                     from: self.state.clone(),
                 })?
             }
-        }
+        };
 
         self.record_event(UserEvent::Deactivated(UserDeactivatedEvent {
-            user_id: self.id,
+            username: self.username.clone(),
+            email,
             deactivated_at: Utc::now(),
         }));
 
@@ -291,17 +316,19 @@ impl User {
     }
 
     pub fn activate<V: EmailVerifier>(&mut self) -> Result<(), UserDomainError> {
-        match self.state {
-            UserState::Active { .. } => {} // すでにアクティブなので何もしない
+        let email = match self.state {
+            UserState::Active { .. } => return Ok(()), // すでにアクティブなので何もしない
             UserState::SuspendedByAdmin { .. } => {
                 Err(UserStateTransitionError::AlreadySuspended {
                     from: self.state.clone(),
                 })?
             }
             UserState::DeactivatedByUser { ref email } => {
+                let email = email.clone();
                 self.state = UserState::ActiveWithUnverifiedEmail {
                     email: email.clone(),
                 };
+                email
             }
             UserState::PendingVerification { .. } => Err(UserStateTransitionError::NotVerified {
                 from: self.state.clone(),
@@ -311,10 +338,11 @@ impl User {
                     from: self.state.clone(),
                 })?
             }
-        }
+        };
 
         self.record_event(UserEvent::Reactivated(UserReactivatedEvent {
-            user_id: self.id,
+            username: self.username.clone(),
+            email,
             reactivated_at: Utc::now(),
         }));
 
@@ -322,7 +350,7 @@ impl User {
     }
 
     pub fn unlock_suspension(&mut self) -> Result<(), UserDomainError> {
-        match self.state {
+        let email = match self.state {
             UserState::Active { .. }
             | UserState::DeactivatedByUser { .. }
             | UserState::PendingVerification { .. }
@@ -332,14 +360,17 @@ impl User {
                 })?
             }
             UserState::SuspendedByAdmin { ref email } => {
+                let email = email.clone();
                 self.state = UserState::ActiveWithUnverifiedEmail {
                     email: email.clone(),
                 };
+                email
             }
-        }
+        };
 
         self.record_event(UserEvent::Unlocked(UserUnlockedEvent {
-            user_id: self.id,
+            username: self.username.clone(),
+            email,
             unlocked_at: Utc::now(),
         }));
 

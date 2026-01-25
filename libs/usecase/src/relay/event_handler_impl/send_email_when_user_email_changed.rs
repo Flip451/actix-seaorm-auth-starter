@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use domain::{
     shared::outbox_event::OutboxEventId,
-    user::{EmailTrait, UserEmailChangedEvent, UserRepository},
+    user::{EmailTrait, UserEmailChangedEvent},
 };
 use opentelemetry::trace::TraceId;
 
@@ -16,7 +16,6 @@ pub struct SendEmailWhenUserEmailChanged {
     trace_id: Option<TraceId>,
     event: UserEmailChangedEvent,
     email_service: Arc<dyn EmailService>,
-    user_repository: Arc<dyn UserRepository>,
 }
 
 impl SendEmailWhenUserEmailChanged {
@@ -25,14 +24,12 @@ impl SendEmailWhenUserEmailChanged {
         trace_id: Option<TraceId>,
         event: UserEmailChangedEvent,
         email_service: Arc<dyn EmailService>,
-        user_repository: Arc<dyn UserRepository>,
     ) -> Self {
         Self {
             outbox_event_id,
             trace_id,
             event,
             email_service,
-            user_repository,
         }
     }
 }
@@ -53,20 +50,10 @@ impl EventHandler for SendEmailWhenUserEmailChanged {
 
     async fn handle_event_raw(&self) -> Result<(), RelayError> {
         let UserEmailChangedEvent {
-            user_id,
             new_email,
+            username,
             changed_at: _,
         } = &self.event;
-
-        // ここでメール送信のロジックを実装します
-        let user = self
-            .user_repository
-            .find_by_id(*user_id)
-            .await
-            .map_err(RelayError::UserRepositoryError)?
-            .ok_or_else(|| RelayError::UserNotFound(*user_id))?;
-
-        let username = user.username();
 
         let to = new_email.as_str().to_string();
         let subject = "Your email has been changed".to_string();

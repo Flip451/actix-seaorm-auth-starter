@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use domain::{
-    shared::{domain_event::DomainEvent, outbox_event::OutboxEvent},
-    user::UserRepository,
-};
+use domain::shared::{domain_event::DomainEvent, outbox_event::OutboxEvent};
 
 use crate::shared::email_service::EmailService;
 
@@ -17,18 +14,11 @@ use super::event_handler_impl::{
 
 pub struct EventMapper {
     email_service: Arc<dyn EmailService>,
-    user_repository: Arc<dyn UserRepository>,
 }
 
 impl EventMapper {
-    pub fn new(
-        email_service: Arc<dyn EmailService>,
-        user_repository: Arc<dyn UserRepository>,
-    ) -> Self {
-        Self {
-            email_service,
-            user_repository,
-        }
+    pub fn new(email_service: Arc<dyn EmailService>) -> Self {
+        Self { email_service }
     }
 }
 
@@ -46,7 +36,6 @@ impl EventMapper {
                         trace_id,
                         user_created_event.clone(),
                         self.email_service.clone(),
-                        self.user_repository.clone(),
                     ))]
                 }
                 domain::user::UserEvent::Suspended(user_suspended_event) => {
@@ -55,7 +44,6 @@ impl EventMapper {
                         trace_id,
                         user_suspended_event.clone(),
                         self.email_service.clone(),
-                        self.user_repository.clone(),
                     ))]
                 }
                 domain::user::UserEvent::Unlocked(user_unlocked_event) => {
@@ -64,7 +52,6 @@ impl EventMapper {
                         trace_id,
                         user_unlocked_event.clone(),
                         self.email_service.clone(),
-                        self.user_repository.clone(),
                     ))]
                 }
                 domain::user::UserEvent::Deactivated(user_deactivated_event) => {
@@ -73,7 +60,6 @@ impl EventMapper {
                         trace_id,
                         user_deactivated_event.clone(),
                         self.email_service.clone(),
-                        self.user_repository.clone(),
                     ))]
                 }
                 domain::user::UserEvent::Reactivated(user_reactivated_event) => {
@@ -82,7 +68,6 @@ impl EventMapper {
                         trace_id,
                         user_reactivated_event.clone(),
                         self.email_service.clone(),
-                        self.user_repository.clone(),
                     ))]
                 }
                 domain::user::UserEvent::PromotedToAdmin(_user_promoted_to_admin_event) => {
@@ -94,7 +79,6 @@ impl EventMapper {
                         trace_id,
                         username_changed_event.clone(),
                         self.email_service.clone(),
-                        self.user_repository.clone(),
                     ))]
                 }
                 domain::user::UserEvent::EmailChanged(user_email_changed_event) => {
@@ -103,7 +87,6 @@ impl EventMapper {
                         trace_id,
                         user_email_changed_event.clone(),
                         self.email_service.clone(),
-                        self.user_repository.clone(),
                     ))]
                 }
                 domain::user::UserEvent::EmailVerified(_user_email_verified_event) => {

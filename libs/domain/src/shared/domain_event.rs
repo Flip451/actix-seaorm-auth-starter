@@ -19,7 +19,6 @@ mod tests {
     use rstest::rstest;
 
     use chrono::Utc;
-    use uuid::Uuid;
 
     use crate::user::{self, EmailTrait, UnverifiedEmail, UserCreatedEvent};
 
@@ -28,15 +27,16 @@ mod tests {
     #[rstest]
     #[case(
         UserEvent::Created(UserCreatedEvent {
-            user_id: Uuid::new_v4().into(),
             email: UnverifiedEmail::new("user@example.com").unwrap(),
-            registered_at: Utc::now(),
+            username: "user123".to_string(),
+            registered_at: Utc::now()
         }),
         "UserEvent::Created"
     )]
     #[case(
         UserEvent::Suspended(user::UserSuspendedEvent {
-            user_id: Uuid::new_v4().into(),
+            email: UnverifiedEmail::new("user@example.com").unwrap(),
+            username: "user123".to_string(),
             reason: "Violation of terms".to_string(),
             suspended_at: Utc::now(),
         }),
@@ -44,14 +44,16 @@ mod tests {
     )]
     #[case(
         UserEvent::Unlocked(user::UserUnlockedEvent {
-            user_id: Uuid::new_v4().into(),
+            username: "user123".to_string(),
+            email: UnverifiedEmail::new("user@example.com").unwrap(),
             unlocked_at: Utc::now(),
         }),
         "UserEvent::Unlocked"
     )]
     #[case(
         UserEvent::Deactivated(user::UserDeactivatedEvent {
-            user_id: Uuid::new_v4().into(),
+            username: "user123".to_string(),
+            email: UnverifiedEmail::new("user@example.com").unwrap(),
             deactivated_at: Utc::now(),
         }),
         "UserEvent::Deactivated"
