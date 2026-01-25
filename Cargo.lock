@@ -322,15 +322,11 @@ dependencies = [
 name = "app"
 version = "0.1.0"
 dependencies = [
- "api",
- "domain",
- "infrastructure",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
  "tracing-opentelemetry",
  "tracing-subscriber",
- "usecase",
 ]
 
 [[package]]
