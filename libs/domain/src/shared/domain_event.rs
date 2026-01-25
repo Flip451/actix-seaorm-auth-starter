@@ -29,7 +29,7 @@ mod tests {
         UserEvent::Created(UserCreatedEvent {
             email: UnverifiedEmail::new("user@example.com").unwrap(),
             username: "user123".to_string(),
-            registered_at:Utc::now()
+            registered_at: Utc::now()
         }),
         "UserEvent::Created"
     )]
