@@ -1,10 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use domain::{
-    shared::outbox_event::OutboxEventId,
-    user::{UserRepository, UsernameChangedEvent},
-};
+use domain::{shared::outbox_event::OutboxEventId, user::UsernameChangedEvent};
 use opentelemetry::trace::TraceId;
 
 use crate::shared::email_service::{EmailMessage, EmailService};
@@ -16,7 +13,6 @@ pub struct SendEmailWhenUsernameChanged {
     trace_id: Option<TraceId>,
     event: UsernameChangedEvent,
     email_service: Arc<dyn EmailService>,
-    user_repository: Arc<dyn UserRepository>,
 }
 
 impl SendEmailWhenUsernameChanged {
@@ -25,14 +21,12 @@ impl SendEmailWhenUsernameChanged {
         trace_id: Option<TraceId>,
         event: UsernameChangedEvent,
         email_service: Arc<dyn EmailService>,
-        user_repository: Arc<dyn UserRepository>,
     ) -> Self {
         Self {
             outbox_event_id,
             trace_id,
             event,
             email_service,
-            user_repository,
         }
     }
 }
@@ -53,23 +47,16 @@ impl EventHandler for SendEmailWhenUsernameChanged {
 
     async fn handle_event_raw(&self) -> Result<(), RelayError> {
         let UsernameChangedEvent {
-            user_id,
+            old_username,
             new_username,
+            email,
             changed_at: _,
         } = &self.event;
 
-        // ここでメール送信のロジックを実装します
-        let user = self
-            .user_repository
-            .find_by_id(*user_id)
-            .await
-            .map_err(RelayError::UserRepositoryError)?
-            .ok_or_else(|| RelayError::UserNotFound(*user_id))?;
-
-        let to = user.email().as_str().to_string();
+        let to = email.as_str().to_string();
         let subject = "Your username has been changed".to_string();
         let body = format!(
-            "Dear {new_username},\n\nYour username has been changed to: {new_username}\n\nBest regards,\nThe Team",
+            "Dear {new_username},\n\nYour username has been changed from {old_username} to {new_username}\n\nBest regards,\nThe Team",
         );
 
         let email_message = EmailMessage { to, subject, body };

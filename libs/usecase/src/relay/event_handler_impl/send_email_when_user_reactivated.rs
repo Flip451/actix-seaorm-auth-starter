@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use domain::{
     shared::outbox_event::OutboxEventId,
-    user::{UserReactivatedEvent, UserRepository},
+    user::{EmailTrait, UserReactivatedEvent},
 };
 use opentelemetry::trace::TraceId;
 
@@ -16,7 +16,6 @@ pub struct SendEmailWhenUserReactivated {
     trace_id: Option<TraceId>,
     event: UserReactivatedEvent,
     email_service: Arc<dyn EmailService>,
-    user_repository: Arc<dyn UserRepository>,
 }
 
 impl SendEmailWhenUserReactivated {
@@ -25,14 +24,12 @@ impl SendEmailWhenUserReactivated {
         trace_id: Option<TraceId>,
         event: UserReactivatedEvent,
         email_service: Arc<dyn EmailService>,
-        user_repository: Arc<dyn UserRepository>,
     ) -> Self {
         Self {
             outbox_event_id,
             trace_id,
             event,
             email_service,
-            user_repository,
         }
     }
 }
@@ -53,25 +50,17 @@ impl EventHandler for SendEmailWhenUserReactivated {
 
     async fn handle_event_raw(&self) -> Result<(), RelayError> {
         let UserReactivatedEvent {
-            user_id,
+            username,
+            email,
             reactivated_at: _,
         } = &self.event;
 
-        // ここでメール送信のロジックを実装します
-        let user = self
-            .user_repository
-            .find_by_id(*user_id)
-            .await
-            .map_err(RelayError::UserRepositoryError)?
-            .ok_or_else(|| RelayError::UserNotFound(*user_id))?;
-
-        let username = user.username();
-        let email = user.email().as_str().to_string();
+        let email = email.as_str().to_string();
 
         let to = email;
         let subject = "Your Account Has Been Reactivated".to_string();
         let body = format!(
-            "Hello {username},\n\nYour account with user ID: {user_id} has been successfully reactivated.\n\nBest regards,\nThe Team",
+            "Hello {username},\n\nYour account has been successfully reactivated.\n\nBest regards,\nThe Team",
         );
 
         let email_message = EmailMessage { to, subject, body };

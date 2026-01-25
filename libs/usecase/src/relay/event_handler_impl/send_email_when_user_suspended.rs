@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use domain::{
     shared::outbox_event::OutboxEventId,
-    user::{UserRepository, UserSuspendedEvent},
+    user::{EmailTrait, UserSuspendedEvent},
 };
 use opentelemetry::trace::TraceId;
 use tracing::{Level, Span};
@@ -17,7 +17,6 @@ pub struct SendEmailWhenUserSuspendedHandler {
     trace_id: Option<TraceId>,
     event: UserSuspendedEvent,
     email_service: Arc<dyn EmailService>,
-    user_repository: Arc<dyn UserRepository>,
 }
 
 impl SendEmailWhenUserSuspendedHandler {
@@ -26,14 +25,12 @@ impl SendEmailWhenUserSuspendedHandler {
         trace_id: Option<TraceId>,
         event: UserSuspendedEvent,
         email_service: Arc<dyn EmailService>,
-        user_repository: Arc<dyn UserRepository>,
     ) -> Self {
         Self {
             outbox_event_id,
             trace_id,
             event,
             email_service,
-            user_repository,
         }
     }
 }
@@ -54,21 +51,13 @@ impl EventHandler for SendEmailWhenUserSuspendedHandler {
 
     async fn handle_event_raw(&self) -> Result<(), RelayError> {
         let UserSuspendedEvent {
-            user_id,
+            username,
             suspended_at: _,
             reason,
+            email,
         } = &self.event;
 
-        let user = self
-            .user_repository
-            .find_by_id(*user_id)
-            .await
-            .map_err(RelayError::UserRepositoryError)?
-            .ok_or_else(|| RelayError::UserNotFound(*user_id))?;
-
-        let username = user.username();
-
-        let to = user.email().as_str().to_string();
+        let to = email.as_str().to_string();
         let subject = "Your Account Has Been Suspended".to_string();
         let body = format!(
             "Dear {username},\n\nYour account has been suspended for the following reason:\n{reason}\n\nIf you believe this is a mistake, please contact support.",
