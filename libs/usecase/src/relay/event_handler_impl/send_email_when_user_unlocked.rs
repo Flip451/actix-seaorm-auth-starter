@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use domain::{
     shared::outbox_event::OutboxEventId,
-    user::{UserRepository, UserUnlockedEvent},
+    user::{EmailTrait, UserUnlockedEvent},
 };
 use opentelemetry::trace::TraceId;
 use tracing::{Level, Span};
@@ -17,7 +17,6 @@ pub struct SendEmailWhenUserUnlockedHandler {
     trace_id: Option<TraceId>,
     event: UserUnlockedEvent,
     email_service: Arc<dyn EmailService>,
-    user_repository: Arc<dyn UserRepository>,
 }
 
 impl SendEmailWhenUserUnlockedHandler {
@@ -26,14 +25,12 @@ impl SendEmailWhenUserUnlockedHandler {
         trace_id: Option<TraceId>,
         event: UserUnlockedEvent,
         email_service: Arc<dyn EmailService>,
-        user_repository: Arc<dyn UserRepository>,
     ) -> Self {
         Self {
             outbox_event_id,
             trace_id,
             event,
             email_service,
-            user_repository,
         }
     }
 }
@@ -54,20 +51,12 @@ impl EventHandler for SendEmailWhenUserUnlockedHandler {
 
     async fn handle_event_raw(&self) -> Result<(), RelayError> {
         let UserUnlockedEvent {
-            user_id,
+            username,
+            email,
             unlocked_at: _,
         } = &self.event;
 
-        let user = self
-            .user_repository
-            .find_by_id(*user_id)
-            .await
-            .map_err(RelayError::UserRepositoryError)?
-            .ok_or_else(|| RelayError::UserNotFound(*user_id))?;
-
-        let username = user.username();
-
-        let to = user.email().as_str().to_string();
+        let to = email.as_str().to_string();
         let subject = "Your Account Has Been Unlocked".to_string();
         let body = format!(
             "Dear {username},\n\nYour account has been successfully unlocked. You can now log in and access our services.\n\nBest regards,\nThe Team"
