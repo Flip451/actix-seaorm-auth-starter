@@ -322,15 +322,11 @@ dependencies = [
 name = "app"
 version = "0.1.0"
 dependencies = [
- "api",
- "domain",
- "infrastructure",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
  "tracing-opentelemetry",
  "tracing-subscriber",
- "usecase",
 ]
 
 [[package]]
@@ -2812,7 +2808,6 @@ name = "relay"
 version = "0.1.0"
 dependencies = [
  "derive_more",
- "sea-orm",
  "thiserror 2.0.17",
  "tokio",
  "tokio-util",

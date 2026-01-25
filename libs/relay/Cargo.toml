@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 usecase = { workspace = true }
 tracing = { workspace = true }
-sea-orm = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true }
 thiserror = { workspace = true }

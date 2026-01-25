@@ -13,9 +13,9 @@ members = [
     "libs/usecase",
     "libs/infrastructure",
     "libs/api",
+    "libs/relay",
     "app",
     "migration",
-    "relay",
 ]
 
 [workspace.dependencies]
@@ -24,8 +24,8 @@ domain = { path = "libs/domain" }
 usecase = { path = "libs/usecase" }
 infrastructure = { path = "libs/infrastructure" }
 api = { path = "libs/api" }
+relay = { path = "libs/relay" }
 app = { path = "app" }
-relay = { path = "relay" }
 migration = { path = "migration" }
 # 外部ライブラリ (バージョンの一元管理)
 serde = { version = "1.0.228", features = ["derive"] }
