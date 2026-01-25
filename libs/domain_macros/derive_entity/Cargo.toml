@@ -1,5 +1,5 @@
 [package]
-name = "domain_macros"
+name = "derive_entity"
 version = "0.1.0"
 edition = "2024"
 

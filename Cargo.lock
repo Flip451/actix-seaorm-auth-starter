@@ -1029,6 +1029,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "derive_entity"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.114",
+ "trybuild",
+]
+
+[[package]]
 name = "derive_more"
 version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1093,16 +1103,6 @@ dependencies = [
  "tracing-opentelemetry",
  "uuid",
  "validator",
-]
-
-[[package]]
-name = "domain_macros"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.114",
- "trybuild",
 ]
 
 [[package]]

@@ -1,4 +1,4 @@
-use domain_macros::Entity;
+use derive_entity::Entity;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct UserId(i32);

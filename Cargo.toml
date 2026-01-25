@@ -26,7 +26,7 @@ usecase = { path = "libs/usecase" }
 infrastructure = { path = "libs/infrastructure" }
 api = { path = "libs/api" }
 relay = { path = "libs/relay" }
-domain_macros = { path = "libs/domain_macros/derive_entity" }
+derive_entity = { path = "libs/domain_macros/derive_entity" }
 app = { path = "app" }
 migration = { path = "migration" }
 # 外部ライブラリ (バージョンの一元管理)
