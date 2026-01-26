@@ -1,0 +1,9 @@
+[package]
+name = "domain_objects"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+
+[dev-dependencies]
+derive_entity = { workspace = true }
