@@ -1032,6 +1032,7 @@ dependencies = [
 name = "derive_entity"
 version = "0.1.0"
 dependencies = [
+ "domain_objects",
  "proc-macro2",
  "quote",
  "syn 2.0.114",
@@ -1104,6 +1105,10 @@ dependencies = [
  "uuid",
  "validator",
 ]
+
+[[package]]
+name = "domain_objects"
+version = "0.1.0"
 
 [[package]]
 name = "dotenvy"

@@ -9,7 +9,9 @@ fn test_entity_equality_single_id() {
     struct User {
         #[entity_id]
         id: UserId,
+        #[allow(dead_code)]
         name: String,
+        #[allow(dead_code)]
         age: i32,
     }
 
@@ -48,6 +50,7 @@ fn test_entity_equality_composite_id() {
         order_id: i32,
         #[entity_id]
         item_id: i32,
+        #[allow(dead_code)]
         quantity: i32,
     }
 
@@ -71,5 +74,47 @@ fn test_entity_equality_composite_id() {
     assert_ne!(
         item1, item3,
         "Partial match of composite ID should imply inequality"
+    );
+}
+
+#[test]
+fn test_generic_entity() {
+    #[derive(Entity, Debug)]
+    struct GenericEntity<'a, T, U, const N: usize>
+    where
+        T: Eq,
+        U: Eq,
+    {
+        #[entity_id]
+        id_part1: T,
+        #[entity_id]
+        id_part2: U,
+        #[allow(dead_code)]
+        data: &'a str,
+    }
+
+    let entity1: GenericEntity<'_, i32, String, 100> = GenericEntity {
+        id_part1: 42_i32,
+        id_part2: "key".to_string(),
+        data: "Some data",
+    };
+    let entity2 = GenericEntity {
+        id_part1: 42,
+        id_part2: "key".to_string(),
+        data: "Different data",
+    };
+    let entity3 = GenericEntity {
+        id_part1: 43,
+        id_part2: "key".to_string(),
+        data: "Some data",
+    };
+
+    assert_eq!(
+        entity1, entity2,
+        "Entities with same generic IDs should be equal"
+    );
+    assert_ne!(
+        entity1, entity3,
+        "Entities with different generic IDs should not be equal"
     );
 }

@@ -14,6 +14,7 @@ members = [
     "libs/infrastructure",
     "libs/api",
     "libs/relay",
+    "libs/domain_macros/domain_objects",
     "libs/domain_macros/derive_entity",
     "app",
     "migration",
@@ -26,6 +27,7 @@ usecase = { path = "libs/usecase" }
 infrastructure = { path = "libs/infrastructure" }
 api = { path = "libs/api" }
 relay = { path = "libs/relay" }
+domain_objects = { path = "libs/domain_macros/domain_objects" }
 derive_entity = { path = "libs/domain_macros/derive_entity" }
 app = { path = "app" }
 migration = { path = "migration" }
