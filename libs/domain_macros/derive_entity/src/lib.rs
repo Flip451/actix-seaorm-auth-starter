@@ -31,6 +31,55 @@ fn generate_unique_lifetime(generics: &Generics, base_name: &str) -> Lifetime {
     Lifetime::new(&candidate_name, Span::call_site())
 }
 
+/// `#[derive(Entity)]` 用の派生マクロです。
+///
+/// このマクロは「エンティティ」を表す構造体に対して、ドメイン層で利用するための
+/// 各種実装を自動生成します。エンティティは 1 つ以上の「識別子フィールド」を持つ
+/// 前提で設計されており、そのフィールドに `#[entity_id]` 属性を付与します。
+///
+/// # 使い方
+///
+/// 単一の識別子を持つエンティティ:
+///
+/// ```rust
+/// use your_crate::Entity;
+///
+/// #[derive(Entity)]
+/// struct User {
+///     /// エンティティを一意に識別する ID
+///     #[entity_id]
+///     id: UserId,
+///     name: String,
+/// }
+/// ```
+///
+/// 複合主キー（複数フィールドによる識別子）を持つエンティティ:
+///
+/// ```rust
+/// use your_crate::Entity;
+///
+/// #[derive(Entity)]
+/// struct Enrollment {
+///     /// 複合 ID の一部として扱われるフィールド
+///     #[entity_id]
+///     student_id: StudentId,
+///
+///     /// 複合 ID の一部として扱われるフィールド
+///     #[entity_id]
+///     course_id: CourseId,
+///
+///     enrolled_at: chrono::NaiveDate,
+/// }
+/// ```
+///
+/// 上記のように、`#[entity_id]` が付与された 1 つ以上のフィールドが「エンティティ ID」
+/// として扱われます。1 つだけ付与した場合は単一 ID、複数に付与した場合はそれらの
+/// 組み合わせがエンティティの識別子（複合 ID）として解釈されます。
+///
+/// このマクロは **名前付きフィールドを持つ構造体** に対してのみ有効です。
+/// タプル構造体や列挙型に対して使用した場合はコンパイルエラーになります。
+///
+/// また、`#[entity_id]` が 1 つも指定されていない場合もコンパイルエラーになります。
 #[proc_macro_derive(Entity, attributes(entity_id))]
 pub fn derive_entity(input: TokenStream) -> TokenStream {
     let DeriveInput {
