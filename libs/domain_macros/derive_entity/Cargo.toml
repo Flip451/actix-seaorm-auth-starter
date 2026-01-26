@@ -14,4 +14,3 @@ proc-macro2 = { workspace = true }
 [dev-dependencies]
 trybuild = { workspace = true }
 domain_objects = { workspace = true }
-chrono = { workspace = true }

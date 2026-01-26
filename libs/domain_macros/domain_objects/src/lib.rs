@@ -13,13 +13,32 @@
 /// # Derive マクロによる利用
 ///
 /// `#[derive(Entity)]` を使用することで、このトレイトの実装と、それに伴う `PartialEq`, `Eq` の実装を自動生成できます。
-/// このとき、`PartialEq` や `Eq` を構造体側で別途 `derive` しないでください。`Entity` の派生マクロがこれらを実装するため、
-/// 重複した実装指定はコンパイルエラーや意図しない動作の原因となります。識別子となるフィールドには `#[entity_id]` 属性を付与してください。
+/// 識別子となるフィールドには `#[entity_id]` 属性を付与してください。
+///
+/// # ⚠️ 注意: PartialEq と Eq の自動実装について
+///
+/// **このマクロは `PartialEq` と `Eq` を自動的に実装します。**
+///
+/// そのため、以下のように `PartialEq` や `Eq` を手動で derive すると、実装が競合してコンパイルエラーになります。
+///
+/// ```rust,compile_fail
+/// use derive_entity::Entity;
+///
+/// // コンパイルエラーになります（conflicting implementation）
+/// #[derive(Entity, PartialEq, Eq)]
+/// struct User {
+///     #[entity_id]
+///     id: u64,
+///     name: String,
+///     email: String,
+/// }
+/// ```
+///
+/// 正しくは以下の例のように `Entity` のみを指定してください。これだけで等価性比較（`==`）が可能になります。
 ///
 /// ## 例: 単一の識別子を持つエンティティ
 ///
 /// ```rust
-/// use domain_objects::EntityTrait; // 適切なパスに変更してください
 /// use derive_entity::Entity;
 ///
 /// #[derive(Debug, Entity)]
