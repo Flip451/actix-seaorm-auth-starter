@@ -76,7 +76,7 @@ fn generate_unique_lifetime(generics: &Generics, base_name: &str) -> Lifetime {
 ///     #[entity_id]
 ///     course_id: CourseId,
 ///
-///     enrolled_at: chrono::NaiveDate,
+///     enrolled_at: std::time::SystemTime,
 /// }
 /// ```
 ///
