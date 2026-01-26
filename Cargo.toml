@@ -13,9 +13,11 @@ members = [
     "libs/usecase",
     "libs/infrastructure",
     "libs/api",
+    "libs/relay",
+    "libs/domain_macros/domain_objects",
+    "libs/domain_macros/derive_entity",
     "app",
     "migration",
-    "relay",
 ]
 
 [workspace.dependencies]
@@ -24,8 +26,10 @@ domain = { path = "libs/domain" }
 usecase = { path = "libs/usecase" }
 infrastructure = { path = "libs/infrastructure" }
 api = { path = "libs/api" }
+relay = { path = "libs/relay" }
+domain_objects = { path = "libs/domain_macros/domain_objects" }
+derive_entity = { path = "libs/domain_macros/derive_entity" }
 app = { path = "app" }
-relay = { path = "relay" }
 migration = { path = "migration" }
 # 外部ライブラリ (バージョンの一元管理)
 serde = { version = "1.0.228", features = ["derive"] }
@@ -51,6 +55,10 @@ actix-web = "4.12.1"
 tokio = "1.49.0"
 tokio-util = "0.7.18"
 rstest = "0.26.1"
+syn = { version = "2.0.114", features = ["extra-traits"] }
+quote = "1.0.44"
+proc-macro2 = "1.0.106"
+trybuild = "1.0.114"
 
 [dependencies]
 infrastructure = { workspace = true }
