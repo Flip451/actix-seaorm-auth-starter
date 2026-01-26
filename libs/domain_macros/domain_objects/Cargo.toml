@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 
 [dev-dependencies]
+derive_entity = { workspace = true }

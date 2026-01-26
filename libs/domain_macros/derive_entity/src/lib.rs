@@ -42,7 +42,10 @@ fn generate_unique_lifetime(generics: &Generics, base_name: &str) -> Lifetime {
 /// 単一の識別子を持つエンティティ:
 ///
 /// ```rust
-/// use your_crate::Entity;
+/// use derive_entity::Entity;
+///
+/// #[derive(PartialEq, Eq)]
+/// struct UserId(u64);
 ///
 /// #[derive(Entity)]
 /// struct User {
@@ -56,7 +59,12 @@ fn generate_unique_lifetime(generics: &Generics, base_name: &str) -> Lifetime {
 /// 複合主キー（複数フィールドによる識別子）を持つエンティティ:
 ///
 /// ```rust
-/// use your_crate::Entity;
+/// use derive_entity::Entity;
+///
+/// #[derive(PartialEq, Eq)]
+/// struct StudentId(u64);
+/// #[derive(PartialEq, Eq)]
+/// struct CourseId(u64);
 ///
 /// #[derive(Entity)]
 /// struct Enrollment {
@@ -92,7 +100,7 @@ pub fn derive_entity(input: TokenStream) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let unique_lifetime = generate_unique_lifetime(&generics, "identity_scope");
 
-    let variants = match data {
+    let fields = match data {
         syn::Data::Struct(DataStruct {
             fields: Fields::Named(FieldsNamed { named, .. }),
             ..
@@ -105,7 +113,7 @@ pub fn derive_entity(input: TokenStream) -> TokenStream {
         }
     };
 
-    let ident_ids = variants.iter().filter(|field| {
+    let ident_ids = fields.iter().filter(|field| {
         let Field { attrs, .. } = field;
 
         attrs.iter().any(|attr| attr.path().is_ident("entity_id"))
@@ -122,7 +130,7 @@ pub fn derive_entity(input: TokenStream) -> TokenStream {
         let ident = one_of_ids
             .ident
             .as_ref()
-            .expect("expected named field to have an identifier when deriving Entity");
+            .expect("internal error in derive(Entity): expected named field to have an identifier; this is a bug in the macro, please report it");
         quote! {
             self.#ident
         }
@@ -144,11 +152,14 @@ pub fn derive_entity(input: TokenStream) -> TokenStream {
             let lifetime = &l.lifetime;
             quote! { #lifetime: #unique_lifetime }
         }
-        syn::GenericParam::Const(_) => quote! {},
+        syn::GenericParam::Const(_) => {
+            // 定数ジェネリックパラメータにはライフタイム境界を指定できないため、ここでは意図的に境界を生成しない
+            quote! {}
+        }
     });
 
     let expanded = quote! {
-        impl #impl_generics domain_objects::EntityTrait for #ident #ty_generics
+        impl #impl_generics ::domain_objects::EntityTrait for #ident #ty_generics
         #where_clause
         {
             type Identity<#unique_lifetime>
@@ -165,7 +176,7 @@ pub fn derive_entity(input: TokenStream) -> TokenStream {
         #where_clause
         {
             fn eq(&self, other: &Self) -> bool {
-                <#ident #ty_generics as domain_objects::EntityTrait>::eq(self, other)
+                <#ident #ty_generics as ::domain_objects::EntityTrait>::eq(self, other)
             }
         }
 
