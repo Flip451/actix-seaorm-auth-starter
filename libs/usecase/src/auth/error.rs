@@ -51,6 +51,9 @@ impl From<UserRepositoryError> for AuthError {
     fn from(error: UserRepositoryError) -> Self {
         match error {
             UserRepositoryError::DomainError(source) => AuthError::from(source),
+            UserRepositoryError::ReconstructionError(user_reconstruction_error) => {
+                AuthError::PersistenceError(user_reconstruction_error.into())
+            }
             UserRepositoryError::Persistence(source) => AuthError::PersistenceError(source),
         }
     }

@@ -6,8 +6,10 @@ mod repository;
 mod service;
 mod value_objects;
 
-pub use entity::{User, UserState};
-pub use error::{UserDomainError, UserStateTransitionError, UserUniqueConstraint};
+pub use entity::{User, UserState, UserStateRaw};
+pub use error::{
+    UserDomainError, UserReconstructionError, UserStateTransitionError, UserUniqueConstraint,
+};
 pub use events::*;
 pub use factory::UserFactory;
 pub use repository::{UserRepository, UserRepositoryError};
