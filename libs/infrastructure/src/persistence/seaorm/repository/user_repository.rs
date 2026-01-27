@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use chrono::Utc;
@@ -11,7 +11,7 @@ use crate::persistence::{
     seaorm::{connect::Connectable, transaction::EntityTracker},
 };
 use domain::user::{
-    HashedPassword, User, UserId, UserRepository, UserRepositoryError, UserRole, UserStateRaw,
+    HashedPassword, User, UserId, UserRepository, UserRepositoryError, UserStateRaw,
     UserUniqueConstraint,
 };
 
@@ -40,7 +40,7 @@ impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmUserRepository<C, T> 
             model.id.into(),
             model.username,
             HashedPassword::from_raw_str(&model.password_hash),
-            UserRole::from_str(&model.role).unwrap_or(UserRole::User),
+            &model.role,
             UserStateRaw {
                 status: model.status,
                 email: model.email,

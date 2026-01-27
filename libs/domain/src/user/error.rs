@@ -53,4 +53,6 @@ pub enum UserReconstructionError {
     InvalidEmail(String),
     #[error("不正な形式のステータスが保存されています: {0}")]
     InvalidStatus(String),
+    #[error("不正な形式のロールが保存されています: {0}")]
+    InvalidRole(String),
 }

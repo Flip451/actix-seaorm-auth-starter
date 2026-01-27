@@ -59,12 +59,13 @@ impl User {
         id: UserId,
         username: String,
         password: HashedPassword,
-        role: UserRole,
+        role: &str,
         state_source: UserStateRaw,
         created_at: DateTime<Utc>,
         updated_at: DateTime<Utc>,
     ) -> Result<Self, UserReconstructionError> {
         let state = state_source.try_into()?;
+        let role = role.try_into()?;
 
         Ok(Self {
             id,
