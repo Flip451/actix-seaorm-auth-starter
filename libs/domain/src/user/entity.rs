@@ -438,7 +438,7 @@ enum UserStatusKind {
 }
 
 impl UserState {
-    pub fn kind(&self) -> &str {
+    pub fn kind(&self) -> &'static str {
         match self {
             UserState::Active { .. } => UserStatusKind::Active,
             UserState::SuspendedByAdmin { .. } => UserStatusKind::SuspendedByAdmin,
