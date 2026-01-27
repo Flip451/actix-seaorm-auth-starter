@@ -83,7 +83,7 @@ trait StateStr {
 
 impl StateStr for User {
     fn state_str(&self) -> &str {
-        self.state().kind().into()
+        self.state().kind()
     }
 }
 

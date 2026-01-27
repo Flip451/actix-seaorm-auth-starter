@@ -1,5 +1,3 @@
-use core::str;
-
 use chrono::{DateTime, Utc};
 use strum::EnumString;
 
@@ -431,7 +429,7 @@ impl TryFrom<UserStateRaw> for UserState {
 
 #[derive(Debug, PartialEq, Eq, strum::Display, EnumString, strum::IntoStaticStr)]
 #[strum(serialize_all = "snake_case")]
-pub enum UserStatusKind {
+enum UserStatusKind {
     Active,
     SuspendedByAdmin,
     DeactivatedByUser,
@@ -440,7 +438,7 @@ pub enum UserStatusKind {
 }
 
 impl UserState {
-    pub fn kind(&self) -> UserStatusKind {
+    pub fn kind(&self) -> &str {
         match self {
             UserState::Active { .. } => UserStatusKind::Active,
             UserState::SuspendedByAdmin { .. } => UserStatusKind::SuspendedByAdmin,
@@ -450,5 +448,6 @@ impl UserState {
                 UserStatusKind::ActiveWithUnverifiedEmail
             }
         }
+        .into()
     }
 }
