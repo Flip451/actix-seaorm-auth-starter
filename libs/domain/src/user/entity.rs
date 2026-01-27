@@ -397,32 +397,33 @@ impl TryFrom<UserStateRaw> for UserState {
     type Error = UserReconstructionError;
 
     fn try_from(raw: UserStateRaw) -> Result<Self, Self::Error> {
-        let kind = raw
-            .status
+        let UserStateRaw { status, email } = raw;
+
+        let kind = status
             .parse::<UserStatusKind>()
-            .map_err(|_| UserReconstructionError::InvalidStatus(raw.status.clone()))?;
+            .map_err(|_| UserReconstructionError::InvalidStatus(status.clone()))?;
 
         match kind {
             UserStatusKind::Active => Ok(UserState::Active {
                 // ドメイン層なので VerifiedEmail::new を呼ぶのは責務の範囲内
-                email: VerifiedEmail::new(&raw.email)
-                    .map_err(|_| UserReconstructionError::InvalidEmail(raw.email))?,
+                email: VerifiedEmail::new(&email)
+                    .map_err(|_| UserReconstructionError::InvalidEmail(email.clone()))?,
             }),
             UserStatusKind::SuspendedByAdmin => Ok(UserState::SuspendedByAdmin {
-                email: UnverifiedEmail::new(&raw.email)
-                    .map_err(|_| UserReconstructionError::InvalidEmail(raw.email))?,
+                email: UnverifiedEmail::new(&email)
+                    .map_err(|_| UserReconstructionError::InvalidEmail(email.clone()))?,
             }),
             UserStatusKind::DeactivatedByUser => Ok(UserState::DeactivatedByUser {
-                email: UnverifiedEmail::new(&raw.email)
-                    .map_err(|_| UserReconstructionError::InvalidEmail(raw.email))?,
+                email: UnverifiedEmail::new(&email)
+                    .map_err(|_| UserReconstructionError::InvalidEmail(email.clone()))?,
             }),
             UserStatusKind::PendingVerification => Ok(UserState::PendingVerification {
-                email: UnverifiedEmail::new(&raw.email)
-                    .map_err(|_| UserReconstructionError::InvalidEmail(raw.email))?,
+                email: UnverifiedEmail::new(&email)
+                    .map_err(|_| UserReconstructionError::InvalidEmail(email.clone()))?,
             }),
             UserStatusKind::ActiveWithUnverifiedEmail => Ok(UserState::ActiveWithUnverifiedEmail {
-                email: UnverifiedEmail::new(&raw.email)
-                    .map_err(|_| UserReconstructionError::InvalidEmail(raw.email))?,
+                email: UnverifiedEmail::new(&email)
+                    .map_err(|_| UserReconstructionError::InvalidEmail(email.clone()))?,
             }),
         }
     }
