@@ -451,3 +451,51 @@ impl UserState {
         .into()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use rstest::rstest;
+
+    use super::*;
+
+    #[rstest]
+    #[case("active", "valid@email.com", UserState::Active { email: VerifiedEmail::new("valid@email.com").unwrap() })]
+    #[case("suspended_by_admin", "valid@email.com", UserState::SuspendedByAdmin { email: UnverifiedEmail::new("valid@email.com").unwrap() })]
+    #[case("deactivated_by_user", "valid@email.com", UserState::DeactivatedByUser { email: UnverifiedEmail::new("valid@email.com").unwrap() })]
+    #[case("pending_verification", "valid@email.com", UserState::PendingVerification { email: UnverifiedEmail::new("valid@email.com").unwrap() })]
+    #[case("active_with_unverified_email", "valid@email.com", UserState::ActiveWithUnverifiedEmail { email: UnverifiedEmail::new("valid@email.com").unwrap() })]
+    fn test_try_from_user_state_raw_to_user_state(
+        #[case] status: &'static str,
+        #[case] email: &'static str,
+        #[case] expected: UserState,
+    ) {
+        let raw = UserStateRaw {
+            status: status.to_string(),
+            email: email.to_string(),
+        };
+
+        let state: UserState = raw.try_into().unwrap();
+        assert_eq!(state, expected);
+    }
+
+    #[rstest]
+    #[case("invalid_status", "valid@email.com", UserReconstructionError::InvalidStatus("invalid_status".to_string()))]
+    #[case("active", "invalid_email", UserReconstructionError::InvalidEmail("invalid_email".to_string()))]
+    #[case("suspended_by_admin", "invalid_email", UserReconstructionError::InvalidEmail("invalid_email".to_string()))]
+    #[case("deactivated_by_user", "invalid_email", UserReconstructionError::InvalidEmail("invalid_email".to_string()))]
+    #[case("pending_verification", "invalid_email", UserReconstructionError::InvalidEmail("invalid_email".to_string()))]
+    #[case("active_with_unverified_email", "invalid_email", UserReconstructionError::InvalidEmail("invalid_email".to_string()))]
+    fn test_try_from_user_state_raw_to_user_state_error(
+        #[case] status: &'static str,
+        #[case] email: &'static str,
+        #[case] expected_error: UserReconstructionError,
+    ) {
+        let raw = UserStateRaw {
+            status: status.to_string(),
+            email: email.to_string(),
+        };
+
+        let result: Result<UserState, UserReconstructionError> = raw.try_into();
+        assert_eq!(result.unwrap_err(), expected_error);
+    }
+}

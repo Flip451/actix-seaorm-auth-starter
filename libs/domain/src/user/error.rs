@@ -47,7 +47,7 @@ pub enum UserStateTransitionError {
     NotSuspended { from: super::UserState },
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum UserReconstructionError {
     #[error("不正な形式のメールアドレスが保存されています: {0}")]
     InvalidEmail(String),
