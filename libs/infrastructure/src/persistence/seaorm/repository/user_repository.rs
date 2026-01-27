@@ -11,8 +11,8 @@ use crate::persistence::{
     seaorm::{connect::Connectable, transaction::EntityTracker},
 };
 use domain::user::{
-    EmailTrait, HashedPassword, UnverifiedEmail, User, UserId, UserRepository, UserRepositoryError,
-    UserRole, UserState, UserUniqueConstraint, VerifiedEmail,
+    HashedPassword, User, UserId, UserRepository, UserRepositoryError, UserRole, UserStateRaw,
+    UserUniqueConstraint,
 };
 
 pub struct SeaOrmUserRepository<C, T>
@@ -36,36 +36,15 @@ impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmUserRepository<C, T> 
 
     /// DBモデルからドメインモデルへの変換
     fn map_to_domain(&self, model: user_entity::Model) -> Result<User, UserRepositoryError> {
-        let state = match model.status.as_str() {
-            "active" => UserState::Active {
-                email: VerifiedEmail::new(&model.email)?,
-            },
-            "suspended_by_admin" => UserState::SuspendedByAdmin {
-                email: UnverifiedEmail::new(&model.email)?,
-            },
-            "deactivated_by_user" => UserState::DeactivatedByUser {
-                email: UnverifiedEmail::new(&model.email)?,
-            },
-            "pending_verification" => UserState::PendingVerification {
-                email: UnverifiedEmail::new(&model.email)?,
-            },
-            "active_with_unverified_email" => UserState::ActiveWithUnverifiedEmail {
-                email: UnverifiedEmail::new(&model.email)?,
-            },
-            other => {
-                return Err(UserRepositoryError::Persistence(anyhow::anyhow!(
-                    "不明なユーザーステータス: {}",
-                    other
-                )));
-            }
-        };
-
         let user = User::reconstruct(
             model.id.into(),
             model.username,
             HashedPassword::from_raw_str(&model.password_hash),
             UserRole::from_str(&model.role).unwrap_or(UserRole::User),
-            state,
+            UserStateRaw {
+                status: model.status,
+                email: model.email,
+            },
             model.created_at.into(),
             model.updated_at.into(),
         )?;
@@ -104,13 +83,7 @@ trait StateStr {
 
 impl StateStr for User {
     fn state_str(&self) -> &str {
-        match &self.state() {
-            UserState::Active { .. } => "active",
-            UserState::SuspendedByAdmin { .. } => "suspended_by_admin",
-            UserState::DeactivatedByUser { .. } => "deactivated_by_user",
-            UserState::PendingVerification { .. } => "pending_verification",
-            UserState::ActiveWithUnverifiedEmail { .. } => "active_with_unverified_email",
-        }
+        self.state().kind().into()
     }
 }
 

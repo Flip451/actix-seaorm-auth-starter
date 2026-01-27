@@ -1,9 +1,12 @@
+use core::str;
+
 use chrono::{DateTime, Utc};
+use strum::EnumString;
 
 use crate::{
     shared::outbox_event::{EntityWithEvents, OutboxEvent},
     user::{
-        Email, EmailTrait, UserEvent, UserId, UserStateTransitionError,
+        Email, EmailTrait, UserEvent, UserId, UserReconstructionError, UserStateTransitionError,
         events::{
             UserCreatedEvent, UserDeactivatedEvent, UserEmailChangedEvent, UserEmailVerifiedEvent,
             UserReactivatedEvent, UserSuspendedEvent, UserUnlockedEvent, UsernameChangedEvent,
@@ -59,10 +62,12 @@ impl User {
         username: String,
         password: HashedPassword,
         role: UserRole,
-        state: UserState,
+        state_source: UserStateRaw,
         created_at: DateTime<Utc>,
         updated_at: DateTime<Utc>,
-    ) -> Result<Self, UserDomainError> {
+    ) -> Result<Self, UserReconstructionError> {
+        let state = state_source.try_into()?;
+
         Ok(Self {
             id,
             username,
@@ -381,5 +386,69 @@ impl User {
 impl EntityWithEvents for User {
     fn pull_events(&mut self) -> Vec<OutboxEvent> {
         self.pull_outbox_events()
+    }
+}
+
+pub struct UserStateRaw {
+    pub status: String,
+    pub email: String,
+}
+
+impl TryFrom<UserStateRaw> for UserState {
+    type Error = UserReconstructionError;
+
+    fn try_from(raw: UserStateRaw) -> Result<Self, Self::Error> {
+        let kind = raw
+            .status
+            .parse::<UserStatusKind>()
+            .map_err(|_| UserReconstructionError::InvalidStatus(raw.status.clone()))?;
+
+        match kind {
+            UserStatusKind::Active => Ok(UserState::Active {
+                // ドメイン層なので VerifiedEmail::new を呼ぶのは責務の範囲内
+                email: VerifiedEmail::new(&raw.email)
+                    .map_err(|_| UserReconstructionError::InvalidEmail(raw.email))?,
+            }),
+            UserStatusKind::SuspendedByAdmin => Ok(UserState::SuspendedByAdmin {
+                email: UnverifiedEmail::new(&raw.email)
+                    .map_err(|_| UserReconstructionError::InvalidEmail(raw.email))?,
+            }),
+            UserStatusKind::DeactivatedByUser => Ok(UserState::DeactivatedByUser {
+                email: UnverifiedEmail::new(&raw.email)
+                    .map_err(|_| UserReconstructionError::InvalidEmail(raw.email))?,
+            }),
+            UserStatusKind::PendingVerification => Ok(UserState::PendingVerification {
+                email: UnverifiedEmail::new(&raw.email)
+                    .map_err(|_| UserReconstructionError::InvalidEmail(raw.email))?,
+            }),
+            UserStatusKind::ActiveWithUnverifiedEmail => Ok(UserState::ActiveWithUnverifiedEmail {
+                email: UnverifiedEmail::new(&raw.email)
+                    .map_err(|_| UserReconstructionError::InvalidEmail(raw.email))?,
+            }),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, strum::Display, EnumString, strum::IntoStaticStr)]
+#[strum(serialize_all = "snake_case")]
+pub enum UserStatusKind {
+    Active,
+    SuspendedByAdmin,
+    DeactivatedByUser,
+    PendingVerification,
+    ActiveWithUnverifiedEmail,
+}
+
+impl UserState {
+    pub fn kind(&self) -> UserStatusKind {
+        match self {
+            UserState::Active { .. } => UserStatusKind::Active,
+            UserState::SuspendedByAdmin { .. } => UserStatusKind::SuspendedByAdmin,
+            UserState::DeactivatedByUser { .. } => UserStatusKind::DeactivatedByUser,
+            UserState::PendingVerification { .. } => UserStatusKind::PendingVerification,
+            UserState::ActiveWithUnverifiedEmail { .. } => {
+                UserStatusKind::ActiveWithUnverifiedEmail
+            }
+        }
     }
 }
