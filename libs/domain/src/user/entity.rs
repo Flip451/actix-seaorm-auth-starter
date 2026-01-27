@@ -401,29 +401,29 @@ impl TryFrom<UserStateRaw> for UserState {
 
         let kind = status
             .parse::<UserStatusKind>()
-            .map_err(|_| UserReconstructionError::InvalidStatus(status.clone()))?;
+            .map_err(|_| UserReconstructionError::InvalidStatus(status))?;
 
         match kind {
             UserStatusKind::Active => Ok(UserState::Active {
                 // ドメイン層なので VerifiedEmail::new を呼ぶのは責務の範囲内
                 email: VerifiedEmail::new(&email)
-                    .map_err(|_| UserReconstructionError::InvalidEmail(email.clone()))?,
+                    .map_err(|_| UserReconstructionError::InvalidEmail(email))?,
             }),
             UserStatusKind::SuspendedByAdmin => Ok(UserState::SuspendedByAdmin {
                 email: UnverifiedEmail::new(&email)
-                    .map_err(|_| UserReconstructionError::InvalidEmail(email.clone()))?,
+                    .map_err(|_| UserReconstructionError::InvalidEmail(email))?,
             }),
             UserStatusKind::DeactivatedByUser => Ok(UserState::DeactivatedByUser {
                 email: UnverifiedEmail::new(&email)
-                    .map_err(|_| UserReconstructionError::InvalidEmail(email.clone()))?,
+                    .map_err(|_| UserReconstructionError::InvalidEmail(email))?,
             }),
             UserStatusKind::PendingVerification => Ok(UserState::PendingVerification {
                 email: UnverifiedEmail::new(&email)
-                    .map_err(|_| UserReconstructionError::InvalidEmail(email.clone()))?,
+                    .map_err(|_| UserReconstructionError::InvalidEmail(email))?,
             }),
             UserStatusKind::ActiveWithUnverifiedEmail => Ok(UserState::ActiveWithUnverifiedEmail {
                 email: UnverifiedEmail::new(&email)
-                    .map_err(|_| UserReconstructionError::InvalidEmail(email.clone()))?,
+                    .map_err(|_| UserReconstructionError::InvalidEmail(email))?,
             }),
         }
     }
