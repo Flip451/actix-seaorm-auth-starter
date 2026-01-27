@@ -36,17 +36,25 @@ impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmUserRepository<C, T> 
 
     /// DBモデルからドメインモデルへの変換
     fn map_to_domain(&self, model: user_entity::Model) -> Result<User, UserRepositoryError> {
+        let user_entity::Model {
+            id,
+            username,
+            email,
+            password_hash,
+            created_at,
+            updated_at,
+            role,
+            status,
+        } = model;
+
         let user = User::reconstruct(
-            model.id.into(),
-            model.username,
-            HashedPassword::from_raw_str(&model.password_hash),
-            &model.role,
-            UserStateRaw {
-                status: model.status,
-                email: model.email,
-            },
-            model.created_at.into(),
-            model.updated_at.into(),
+            id.into(),
+            username,
+            HashedPassword::from_raw_str(&password_hash),
+            &role,
+            UserStateRaw { status, email },
+            created_at.into(),
+            updated_at.into(),
         )?;
         Ok(user)
     }
