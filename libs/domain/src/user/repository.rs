@@ -1,4 +1,4 @@
-use crate::user::{UserDomainError, UserId, UserUniqueConstraint};
+use crate::user::{UserDomainError, UserId, UserReconstructionError, UserUniqueConstraint};
 use async_trait::async_trait;
 use thiserror::Error;
 
@@ -8,6 +8,9 @@ use super::entity::User;
 pub enum UserRepositoryError {
     #[error(transparent)]
     DomainError(#[from] UserDomainError),
+
+    #[error(transparent)]
+    ReconstructionError(#[from] UserReconstructionError),
 
     #[error("データの保存または取得に失敗しました: {0}")]
     Persistence(#[source] anyhow::Error),

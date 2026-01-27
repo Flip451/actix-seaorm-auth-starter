@@ -46,3 +46,13 @@ pub enum UserStateTransitionError {
     #[error("指定のユーザーは停止されていません： {from:?} からの遷移は許可されていません")]
     NotSuspended { from: super::UserState },
 }
+
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum UserReconstructionError {
+    #[error("不正な形式のメールアドレスが保存されています: {0}")]
+    InvalidEmail(String),
+    #[error("不正な形式のステータスが保存されています: {0}")]
+    InvalidStatus(String),
+    #[error("不正な形式のロールが保存されています: {0}")]
+    InvalidRole(String),
+}

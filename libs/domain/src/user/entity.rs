@@ -1,9 +1,10 @@
 use chrono::{DateTime, Utc};
+use strum::EnumString;
 
 use crate::{
     shared::outbox_event::{EntityWithEvents, OutboxEvent},
     user::{
-        Email, EmailTrait, UserEvent, UserId, UserStateTransitionError,
+        Email, EmailTrait, UserEvent, UserId, UserReconstructionError, UserStateTransitionError,
         events::{
             UserCreatedEvent, UserDeactivatedEvent, UserEmailChangedEvent, UserEmailVerifiedEvent,
             UserReactivatedEvent, UserSuspendedEvent, UserUnlockedEvent, UsernameChangedEvent,
@@ -58,11 +59,14 @@ impl User {
         id: UserId,
         username: String,
         password: HashedPassword,
-        role: UserRole,
-        state: UserState,
+        role: &str,
+        state_source: UserStateRaw,
         created_at: DateTime<Utc>,
         updated_at: DateTime<Utc>,
-    ) -> Result<Self, UserDomainError> {
+    ) -> Result<Self, UserReconstructionError> {
+        let state = state_source.try_into()?;
+        let role = role.try_into()?;
+
         Ok(Self {
             id,
             username,
@@ -381,5 +385,119 @@ impl User {
 impl EntityWithEvents for User {
     fn pull_events(&mut self) -> Vec<OutboxEvent> {
         self.pull_outbox_events()
+    }
+}
+
+pub struct UserStateRaw {
+    pub status: String,
+    pub email: String,
+}
+
+impl TryFrom<UserStateRaw> for UserState {
+    type Error = UserReconstructionError;
+
+    fn try_from(raw: UserStateRaw) -> Result<Self, Self::Error> {
+        let UserStateRaw { status, email } = raw;
+
+        let kind = status
+            .parse::<UserStatusKind>()
+            .map_err(|_| UserReconstructionError::InvalidStatus(status))?;
+
+        match kind {
+            UserStatusKind::Active => Ok(UserState::Active {
+                // ドメイン層なので VerifiedEmail::new を呼ぶのは責務の範囲内
+                email: VerifiedEmail::new(&email)
+                    .map_err(|_| UserReconstructionError::InvalidEmail(email))?,
+            }),
+            UserStatusKind::SuspendedByAdmin => Ok(UserState::SuspendedByAdmin {
+                email: UnverifiedEmail::new(&email)
+                    .map_err(|_| UserReconstructionError::InvalidEmail(email))?,
+            }),
+            UserStatusKind::DeactivatedByUser => Ok(UserState::DeactivatedByUser {
+                email: UnverifiedEmail::new(&email)
+                    .map_err(|_| UserReconstructionError::InvalidEmail(email))?,
+            }),
+            UserStatusKind::PendingVerification => Ok(UserState::PendingVerification {
+                email: UnverifiedEmail::new(&email)
+                    .map_err(|_| UserReconstructionError::InvalidEmail(email))?,
+            }),
+            UserStatusKind::ActiveWithUnverifiedEmail => Ok(UserState::ActiveWithUnverifiedEmail {
+                email: UnverifiedEmail::new(&email)
+                    .map_err(|_| UserReconstructionError::InvalidEmail(email))?,
+            }),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, strum::Display, EnumString, strum::IntoStaticStr)]
+#[strum(serialize_all = "snake_case")]
+enum UserStatusKind {
+    Active,
+    SuspendedByAdmin,
+    DeactivatedByUser,
+    PendingVerification,
+    ActiveWithUnverifiedEmail,
+}
+
+impl UserState {
+    pub fn kind(&self) -> &'static str {
+        match self {
+            UserState::Active { .. } => UserStatusKind::Active,
+            UserState::SuspendedByAdmin { .. } => UserStatusKind::SuspendedByAdmin,
+            UserState::DeactivatedByUser { .. } => UserStatusKind::DeactivatedByUser,
+            UserState::PendingVerification { .. } => UserStatusKind::PendingVerification,
+            UserState::ActiveWithUnverifiedEmail { .. } => {
+                UserStatusKind::ActiveWithUnverifiedEmail
+            }
+        }
+        .into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rstest::rstest;
+
+    use super::*;
+
+    #[rstest]
+    #[case("active", "valid@email.com", UserState::Active { email: VerifiedEmail::new("valid@email.com").unwrap() })]
+    #[case("suspended_by_admin", "valid@email.com", UserState::SuspendedByAdmin { email: UnverifiedEmail::new("valid@email.com").unwrap() })]
+    #[case("deactivated_by_user", "valid@email.com", UserState::DeactivatedByUser { email: UnverifiedEmail::new("valid@email.com").unwrap() })]
+    #[case("pending_verification", "valid@email.com", UserState::PendingVerification { email: UnverifiedEmail::new("valid@email.com").unwrap() })]
+    #[case("active_with_unverified_email", "valid@email.com", UserState::ActiveWithUnverifiedEmail { email: UnverifiedEmail::new("valid@email.com").unwrap() })]
+    fn test_try_from_user_state_raw_to_user_state(
+        #[case] status: &'static str,
+        #[case] email: &'static str,
+        #[case] expected: UserState,
+    ) {
+        let raw = UserStateRaw {
+            status: status.to_string(),
+            email: email.to_string(),
+        };
+
+        let state: UserState = raw.try_into().unwrap();
+        assert_eq!(state, expected);
+    }
+
+    #[rstest]
+    #[case("invalid_status", "valid@email.com", UserReconstructionError::InvalidStatus("invalid_status".to_string()))]
+    #[case("active", "invalid_email", UserReconstructionError::InvalidEmail("invalid_email".to_string()))]
+    #[case("suspended_by_admin", "invalid_email", UserReconstructionError::InvalidEmail("invalid_email".to_string()))]
+    #[case("deactivated_by_user", "invalid_email", UserReconstructionError::InvalidEmail("invalid_email".to_string()))]
+    #[case("pending_verification", "invalid_email", UserReconstructionError::InvalidEmail("invalid_email".to_string()))]
+    #[case("active_with_unverified_email", "invalid_email", UserReconstructionError::InvalidEmail("invalid_email".to_string()))]
+    fn test_try_from_user_state_raw_to_user_state_error(
+        #[case] status: &'static str,
+        #[case] email: &'static str,
+        #[case] expected_error: UserReconstructionError,
+    ) {
+        let raw = UserStateRaw {
+            status: status.to_string(),
+            email: email.to_string(),
+        };
+
+        let result: Result<UserState, UserReconstructionError> = raw.try_into();
+        assert_eq!(result.unwrap_err(), expected_error);
     }
 }
