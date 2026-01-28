@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use derive_entity::Entity;
 use opentelemetry::trace::{TraceContextExt, TraceId};
 use tracing::Span;
 use tracing_opentelemetry::OpenTelemetrySpanExt;
@@ -11,7 +12,9 @@ use crate::shared::{
 
 use super::OutboxEventId;
 
+#[derive(Entity)]
 pub struct OutboxEvent {
+    #[entity_id]
     id: OutboxEventId,
     event: DomainEvent,
     status: OutboxEventStatus,

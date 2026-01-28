@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use derive_entity::Entity;
 use strum::EnumString;
 
 use crate::{
@@ -17,7 +18,9 @@ use super::{
     EmailVerifier, HashedPassword, UnverifiedEmail, UserDomainError, UserRole, VerifiedEmail,
 };
 
+#[derive(Entity)]
 pub struct User {
+    #[entity_id]
     id: UserId,
     username: String,
     password: HashedPassword,

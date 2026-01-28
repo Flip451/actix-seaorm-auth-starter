@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+domain_objects = { workspace = true }
+derive_entity = { workspace = true }
 # 共通ライブラリを Workspace から取得
 serde = { workspace = true }
 serde_json = { workspace = true }
