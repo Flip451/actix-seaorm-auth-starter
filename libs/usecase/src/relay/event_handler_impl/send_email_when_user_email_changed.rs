@@ -10,13 +10,13 @@ use crate::{
 
 use super::super::{error::RelayError, event_handler::EventHandler};
 
-pub struct SendEmailWhenUserEmailChanged {
+pub struct SendEmailWhenUserEmailChangedHandler {
     context: HandlerContext,
     event: UserEmailChangedEvent,
     email_service: Arc<dyn EmailService>,
 }
 
-impl SendEmailWhenUserEmailChanged {
+impl SendEmailWhenUserEmailChangedHandler {
     pub fn new(
         context: HandlerContext,
         event: UserEmailChangedEvent,
@@ -31,7 +31,7 @@ impl SendEmailWhenUserEmailChanged {
 }
 
 #[async_trait]
-impl EventHandler for SendEmailWhenUserEmailChanged {
+impl EventHandler for SendEmailWhenUserEmailChangedHandler {
     fn context(&self) -> &HandlerContext {
         &self.context
     }

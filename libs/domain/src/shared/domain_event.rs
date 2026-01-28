@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::user::{UserEvent, UserEventKind};
 
-#[derive(Deserialize, Serialize, derive_more::Display)]
+#[derive(Debug, Deserialize, Serialize, derive_more::Display)]
 pub enum DomainEvent {
     #[display("UserEvent::{_0}")]
     UserEvent(UserEvent),

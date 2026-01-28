@@ -14,7 +14,16 @@ use usecase::auth::interactor::AuthInteractor;
 use usecase::auth::service::AuthService;
 use usecase::auth::token_interactor::TokenInteractor;
 use usecase::auth::token_service::TokenService;
-use usecase::relay::event_mapper::EventMapper;
+use usecase::relay::event_mapper::{EventFactories, EventMapper};
+use usecase::relay::handler_factory_impl::user_created_factory::UserCreatedFactory;
+use usecase::relay::handler_factory_impl::user_deactivated_factory::UserDeactivatedFactory;
+use usecase::relay::handler_factory_impl::user_email_changed_factory::UserEmailChangedFactory;
+use usecase::relay::handler_factory_impl::user_email_verified_factory::UserEmailVerifiedFactory;
+use usecase::relay::handler_factory_impl::user_promoted_to_admin_factory::UserPromotedToAdminFactory;
+use usecase::relay::handler_factory_impl::user_reactivated_factory::UserReactivatedFactory;
+use usecase::relay::handler_factory_impl::user_suspended_factory::UserSuspendedFactory;
+use usecase::relay::handler_factory_impl::user_unlocked_factory::UserUnlockedFactory;
+use usecase::relay::handler_factory_impl::username_changed_factory::UsernameChangedFactory;
 use usecase::relay::interactor::RelayInteractor;
 use usecase::relay::service::OutboxRelayService;
 use usecase::shared::email_service::EmailService;
@@ -66,9 +75,31 @@ impl AppRegistry {
 
         let user_service = Arc::new(UserInteractor::new(repos.transaction_manager.clone()));
 
+        let user_created_factory = UserCreatedFactory::new(email_service.clone());
+        let user_suspended_factory = UserSuspendedFactory::new(email_service.clone());
+        let user_unlocked_factory = UserUnlockedFactory::new(email_service.clone());
+        let user_deactivated_factory = UserDeactivatedFactory::new(email_service.clone());
+        let user_reactivated_factory = UserReactivatedFactory::new(email_service.clone());
+        let user_promoted_to_admin_factory = UserPromotedToAdminFactory::new();
+        let user_username_changed_factory = UsernameChangedFactory::new(email_service.clone());
+        let user_email_changed_factory = UserEmailChangedFactory::new(email_service.clone());
+        let user_email_verified_factory = UserEmailVerifiedFactory::new();
+
+        let event_mapper = EventMapper::new(EventFactories {
+            user_created: Box::new(user_created_factory),
+            user_suspended: Box::new(user_suspended_factory),
+            user_unlocked: Box::new(user_unlocked_factory),
+            user_deactivated: Box::new(user_deactivated_factory),
+            user_reactivated: Box::new(user_reactivated_factory),
+            user_promoted_to_admin: Box::new(user_promoted_to_admin_factory),
+            user_username_changed: Box::new(user_username_changed_factory),
+            user_email_changed: Box::new(user_email_changed_factory),
+            user_email_verified: Box::new(user_email_verified_factory),
+        });
+
         let outbox_relay_service = Arc::new(RelayInteractor::new(
             repos.transaction_manager.clone(),
-            Arc::new(EventMapper::new(email_service)),
+            Arc::new(event_mapper),
         ));
 
         Self {

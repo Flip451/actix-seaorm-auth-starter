@@ -8,8 +8,8 @@ pub mod send_email_when_user_username_changed;
 
 pub use send_email_when_user_created::SendEmailWhenUserCreatedHandler;
 pub use send_email_when_user_deactivated::SendEmailWhenUserDeactivatedHandler;
-pub use send_email_when_user_email_changed::SendEmailWhenUserEmailChanged;
-pub use send_email_when_user_reactivated::SendEmailWhenUserReactivated;
+pub use send_email_when_user_email_changed::SendEmailWhenUserEmailChangedHandler;
+pub use send_email_when_user_reactivated::SendEmailWhenUserReactivatedHandler;
 pub use send_email_when_user_suspended::SendEmailWhenUserSuspendedHandler;
 pub use send_email_when_user_unlocked::SendEmailWhenUserUnlockedHandler;
-pub use send_email_when_user_username_changed::SendEmailWhenUsernameChanged;
+pub use send_email_when_user_username_changed::SendEmailWhenUsernameChangedHandler;
