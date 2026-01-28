@@ -6,16 +6,41 @@ use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 use super::error::RelayError;
 
+// 共通のメタデータ保持用構造体
+pub struct HandlerContext {
+    pub outbox_event_id: OutboxEventId,
+    pub trace_id: Option<TraceId>,
+}
+
 #[async_trait]
 pub trait EventHandler: Send + Sync {
-    fn outbox_event_id(&self) -> OutboxEventId;
+    fn context(&self) -> &HandlerContext;
 
-    fn trace_id(&self) -> Option<TraceId>;
+    fn outbox_event_id(&self) -> OutboxEventId {
+        self.context().outbox_event_id
+    }
+
+    fn trace_id(&self) -> Option<TraceId> {
+        self.context().trace_id
+    }
 
     async fn handle_event_raw(&self) -> Result<(), RelayError>;
 
-    /// tracing::span!(Level::INFO, "example_event_name") と実装する
-    fn construct_span(&self) -> Span;
+    /// トレーシング用のSpanを構築する（デフォルト実装）
+    ///
+    /// 実装構造体の型名（例: "SendEmailWhenUserCreatedHandler"）を自動的に取得して
+    /// "event_handler" というSpan名の `handler` フィールドとして記録します。
+    fn construct_span(&self) -> Span {
+        // フルパス（libs::usecase::...::HandlerName）から最後の型名だけを取得
+        let full_name = std::any::type_name::<Self>();
+        let short_name = full_name.split("::").last().unwrap_or(full_name);
+
+        tracing::span!(
+            tracing::Level::INFO,
+            "handle_event",       // Span名
+            handler = short_name  // 属性: handler="SendEmailWhenUserCreatedHandler"
+        )
+    }
 
     /// 指定されたイベントを処理する
     async fn handle_event(&self) -> Result<(), RelayError> {
