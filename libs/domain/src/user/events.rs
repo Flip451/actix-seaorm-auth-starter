@@ -16,35 +16,6 @@ pub enum UserEvent {
     EmailVerified(UserEmailVerifiedEvent),
 }
 
-#[derive(Hash)]
-pub enum UserEventKind {
-    Created,
-    Suspended,
-    Unlocked,
-    Deactivated,
-    Reactivated,
-    PromotedToAdmin,
-    UsernameChanged,
-    EmailChanged,
-    EmailVerified,
-}
-
-impl From<UserEvent> for UserEventKind {
-    fn from(event: UserEvent) -> Self {
-        match event {
-            UserEvent::Created(_) => UserEventKind::Created,
-            UserEvent::Suspended(_) => UserEventKind::Suspended,
-            UserEvent::Unlocked(_) => UserEventKind::Unlocked,
-            UserEvent::Deactivated(_) => UserEventKind::Deactivated,
-            UserEvent::Reactivated(_) => UserEventKind::Reactivated,
-            UserEvent::PromotedToAdmin(_) => UserEventKind::PromotedToAdmin,
-            UserEvent::UsernameChanged(_) => UserEventKind::UsernameChanged,
-            UserEvent::EmailChanged(_) => UserEventKind::EmailChanged,
-            UserEvent::EmailVerified(_) => UserEventKind::EmailVerified,
-        }
-    }
-}
-
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct UserCreatedEvent {
     pub email: UnverifiedEmail,
