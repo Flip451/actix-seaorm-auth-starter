@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use crate::user::{Email, UnverifiedEmail, VerifiedEmail};
 
 #[derive(Deserialize, Serialize, Debug, Clone, strum::Display)]
-#[strum(prefix = "UserEvent::")]
 pub enum UserEvent {
     Created(UserCreatedEvent),
     Suspended(UserSuspendedEvent),

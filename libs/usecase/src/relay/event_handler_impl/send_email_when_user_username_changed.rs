@@ -1,30 +1,29 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use domain::{shared::outbox_event::OutboxEventId, user::UsernameChangedEvent};
-use opentelemetry::trace::TraceId;
+use domain::user::UsernameChangedEvent;
 
-use crate::shared::email_service::{EmailMessage, EmailService};
+use crate::{
+    relay::event_handler::HandlerContext,
+    shared::email_service::{EmailMessage, EmailService},
+};
 
 use super::super::{error::RelayError, event_handler::EventHandler};
 
-pub struct SendEmailWhenUsernameChanged {
-    outbox_event_id: OutboxEventId,
-    trace_id: Option<TraceId>,
+pub struct SendEmailWhenUsernameChangedHandler {
+    context: HandlerContext,
     event: UsernameChangedEvent,
     email_service: Arc<dyn EmailService>,
 }
 
-impl SendEmailWhenUsernameChanged {
+impl SendEmailWhenUsernameChangedHandler {
     pub fn new(
-        outbox_event_id: OutboxEventId,
-        trace_id: Option<TraceId>,
+        context: HandlerContext,
         event: UsernameChangedEvent,
         email_service: Arc<dyn EmailService>,
     ) -> Self {
         Self {
-            outbox_event_id,
-            trace_id,
+            context,
             event,
             email_service,
         }
@@ -32,17 +31,9 @@ impl SendEmailWhenUsernameChanged {
 }
 
 #[async_trait]
-impl EventHandler for SendEmailWhenUsernameChanged {
-    fn outbox_event_id(&self) -> OutboxEventId {
-        self.outbox_event_id
-    }
-
-    fn trace_id(&self) -> Option<TraceId> {
-        self.trace_id
-    }
-
-    fn construct_span(&self) -> tracing::Span {
-        tracing::span!(tracing::Level::INFO, "SendEmailWhenUsernameChanged")
+impl EventHandler for SendEmailWhenUsernameChangedHandler {
+    fn context(&self) -> &HandlerContext {
+        &self.context
     }
 
     async fn handle_event_raw(&self) -> Result<(), RelayError> {

@@ -1,0 +1,9 @@
+pub mod user_created_factory;
+pub mod user_deactivated_factory;
+pub mod user_email_changed_factory;
+pub mod user_email_verified_factory;
+pub mod user_promoted_to_admin_factory;
+pub mod user_reactivated_factory;
+pub mod user_suspended_factory;
+pub mod user_unlocked_factory;
+pub mod username_changed_factory;

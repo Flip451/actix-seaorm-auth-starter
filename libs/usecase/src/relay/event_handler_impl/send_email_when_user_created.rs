@@ -1,34 +1,29 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use domain::{
-    shared::outbox_event::OutboxEventId,
-    user::{EmailTrait, UserCreatedEvent},
-};
-use opentelemetry::trace::TraceId;
-use tracing::{Level, Span};
+use domain::user::{EmailTrait, UserCreatedEvent};
 
-use crate::shared::email_service::{EmailMessage, EmailService};
+use crate::{
+    relay::event_handler::HandlerContext,
+    shared::email_service::{EmailMessage, EmailService},
+};
 
 use super::super::{error::RelayError, event_handler::EventHandler};
 
 pub struct SendEmailWhenUserCreatedHandler {
-    outbox_event_id: OutboxEventId,
-    trace_id: Option<TraceId>,
+    context: HandlerContext,
     event: UserCreatedEvent,
     email_service: Arc<dyn EmailService>,
 }
 
 impl SendEmailWhenUserCreatedHandler {
     pub fn new(
-        outbox_event_id: OutboxEventId,
-        trace_id: Option<TraceId>,
+        context: HandlerContext,
         event: UserCreatedEvent,
         email_service: Arc<dyn EmailService>,
     ) -> Self {
         Self {
-            outbox_event_id,
-            trace_id,
+            context,
             event,
             email_service,
         }
@@ -37,16 +32,8 @@ impl SendEmailWhenUserCreatedHandler {
 
 #[async_trait]
 impl EventHandler for SendEmailWhenUserCreatedHandler {
-    fn outbox_event_id(&self) -> OutboxEventId {
-        self.outbox_event_id
-    }
-
-    fn trace_id(&self) -> Option<TraceId> {
-        self.trace_id
-    }
-
-    fn construct_span(&self) -> Span {
-        tracing::span!(Level::INFO, "SendEmailWhenUserCreated")
+    fn context(&self) -> &HandlerContext {
+        &self.context
     }
 
     async fn handle_event_raw(&self) -> Result<(), RelayError> {
