@@ -1,11 +1,25 @@
 use serde::{Deserialize, Serialize};
 
-use crate::user::UserEvent;
+use crate::user::{UserEvent, UserEventKind};
 
 #[derive(Deserialize, Serialize, derive_more::Display)]
 pub enum DomainEvent {
+    #[display("UserEvent::{_0}")]
     UserEvent(UserEvent),
     // 将来的に他のイベントタイプも追加可能
+}
+
+#[derive(Hash)]
+pub enum DomainEventKind {
+    UserEvent(UserEventKind),
+}
+
+impl From<DomainEvent> for DomainEventKind {
+    fn from(event: DomainEvent) -> Self {
+        match event {
+            DomainEvent::UserEvent(e) => DomainEventKind::UserEvent(e.into()),
+        }
+    }
 }
 
 impl From<UserEvent> for DomainEvent {

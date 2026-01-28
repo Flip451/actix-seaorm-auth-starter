@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use domain::shared::{domain_event::DomainEvent, outbox_event::OutboxEvent};
 
+use crate::relay::event_handler::HandlerContext;
 use crate::shared::email_service::EmailService;
 
 use super::event_handler::EventHandler;
@@ -24,48 +25,48 @@ impl EventMapper {
 
 impl EventMapper {
     pub fn map_event_to_handler(&self, outbox_event: &OutboxEvent) -> Vec<Box<dyn EventHandler>> {
-        let id = outbox_event.id();
+        let outbox_event_id = outbox_event.id();
         let trace_id = outbox_event.trace_id();
+
+        let context = HandlerContext {
+            outbox_event_id,
+            trace_id,
+        };
         let event = outbox_event.domain_event();
 
         match event {
             DomainEvent::UserEvent(user_event) => match user_event {
                 domain::user::UserEvent::Created(user_created_event) => {
                     vec![Box::new(SendEmailWhenUserCreatedHandler::new(
-                        id,
-                        trace_id,
+                        context,
                         user_created_event.clone(),
                         self.email_service.clone(),
                     ))]
                 }
                 domain::user::UserEvent::Suspended(user_suspended_event) => {
                     vec![Box::new(SendEmailWhenUserSuspendedHandler::new(
-                        id,
-                        trace_id,
+                        context,
                         user_suspended_event.clone(),
                         self.email_service.clone(),
                     ))]
                 }
                 domain::user::UserEvent::Unlocked(user_unlocked_event) => {
                     vec![Box::new(SendEmailWhenUserUnlockedHandler::new(
-                        id,
-                        trace_id,
+                        context,
                         user_unlocked_event.clone(),
                         self.email_service.clone(),
                     ))]
                 }
                 domain::user::UserEvent::Deactivated(user_deactivated_event) => {
                     vec![Box::new(SendEmailWhenUserDeactivatedHandler::new(
-                        id,
-                        trace_id,
+                        context,
                         user_deactivated_event.clone(),
                         self.email_service.clone(),
                     ))]
                 }
                 domain::user::UserEvent::Reactivated(user_reactivated_event) => {
                     vec![Box::new(SendEmailWhenUserReactivated::new(
-                        id,
-                        trace_id,
+                        context,
                         user_reactivated_event.clone(),
                         self.email_service.clone(),
                     ))]
@@ -75,16 +76,14 @@ impl EventMapper {
                 }
                 domain::user::UserEvent::UsernameChanged(username_changed_event) => {
                     vec![Box::new(SendEmailWhenUsernameChanged::new(
-                        id,
-                        trace_id,
+                        context,
                         username_changed_event.clone(),
                         self.email_service.clone(),
                     ))]
                 }
                 domain::user::UserEvent::EmailChanged(user_email_changed_event) => {
                     vec![Box::new(SendEmailWhenUserEmailChanged::new(
-                        id,
-                        trace_id,
+                        context,
                         user_email_changed_event.clone(),
                         self.email_service.clone(),
                     ))]

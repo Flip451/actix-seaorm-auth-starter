@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use crate::user::{Email, UnverifiedEmail, VerifiedEmail};
 
 #[derive(Deserialize, Serialize, Debug, Clone, strum::Display)]
-#[strum(prefix = "UserEvent::")]
 pub enum UserEvent {
     Created(UserCreatedEvent),
     Suspended(UserSuspendedEvent),
@@ -15,6 +14,35 @@ pub enum UserEvent {
     UsernameChanged(UsernameChangedEvent),
     EmailChanged(UserEmailChangedEvent),
     EmailVerified(UserEmailVerifiedEvent),
+}
+
+#[derive(Hash)]
+pub enum UserEventKind {
+    Created,
+    Suspended,
+    Unlocked,
+    Deactivated,
+    Reactivated,
+    PromotedToAdmin,
+    UsernameChanged,
+    EmailChanged,
+    EmailVerified,
+}
+
+impl From<UserEvent> for UserEventKind {
+    fn from(event: UserEvent) -> Self {
+        match event {
+            UserEvent::Created(_) => UserEventKind::Created,
+            UserEvent::Suspended(_) => UserEventKind::Suspended,
+            UserEvent::Unlocked(_) => UserEventKind::Unlocked,
+            UserEvent::Deactivated(_) => UserEventKind::Deactivated,
+            UserEvent::Reactivated(_) => UserEventKind::Reactivated,
+            UserEvent::PromotedToAdmin(_) => UserEventKind::PromotedToAdmin,
+            UserEvent::UsernameChanged(_) => UserEventKind::UsernameChanged,
+            UserEvent::EmailChanged(_) => UserEventKind::EmailChanged,
+            UserEvent::EmailVerified(_) => UserEventKind::EmailVerified,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
