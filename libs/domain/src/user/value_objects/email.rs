@@ -119,7 +119,7 @@ mod tests {
     #[case(UnverifiedEmail::new("invalid-email"), "invalid-email")]
     fn test_invalid_email_error(
         #[case] new_email_result: Result<impl EmailTrait, EmailFormatError>,
-        #[case] expected_invalid_email_in_error: String,
+        #[case] expected_invalid_email_in_error: &str,
     ) {
         if let Err(EmailFormatError::InvalidFormat {
             invalid_email,
