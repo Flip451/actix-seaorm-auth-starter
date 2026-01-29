@@ -119,7 +119,7 @@ impl From<UserStateTransitionError> for UseCaseError {
                 "ユーザーのメールアドレスが未検証です".to_string()
             }
             UserStateTransitionError::NotSuspended { from: _ } => {
-                "指定のユーザーは停止されていません：".to_string()
+                "指定のユーザーは停止されていません".to_string()
             }
         };
 
