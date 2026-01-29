@@ -41,8 +41,11 @@ impl IntoTxError for UseCaseError {
 
 impl From<AuthorizationError> for UseCaseError {
     fn from(authz_error: AuthorizationError) -> Self {
-        UseCaseError::Conflict {
-            message: authz_error.message_for_client().to_string(),
+        match authz_error {
+            AuthorizationError::Forbidden => UseCaseError::Forbidden,
+            other => UseCaseError::Conflict {
+                message: other.message_for_client().to_string(),
+            },
         }
     }
 }
