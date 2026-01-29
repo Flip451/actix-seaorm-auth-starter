@@ -7,7 +7,7 @@ pub enum UseCaseError {
     #[error("不正な入力を受け取りました: {0:?}")]
     InvalidInput(Vec<ValidationError>),
     #[error("認証が必要です")]
-    UnAuthorized,
+    Unauthorized,
     #[error("権限が足りていません")]
     Forbidden,
     #[error("リソースが見つかりませんでした")]
