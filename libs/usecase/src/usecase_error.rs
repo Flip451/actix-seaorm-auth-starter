@@ -8,8 +8,8 @@ pub enum UseCaseError {
     InvalidInput(Vec<ValidationError>),
     #[error("認証が必要です")]
     Unauthorized,
-    #[error("権限が足りていません")]
-    Forbidden,
+    #[error("許可されていない操作です: {message}")]
+    Forbidden { message: String },
     #[error("リソースが見つかりませんでした")]
     NotFound,
     #[error("リソースの競合が検知されました: {message}")]
@@ -41,11 +41,8 @@ impl IntoTxError for UseCaseError {
 
 impl From<AuthorizationError> for UseCaseError {
     fn from(authz_error: AuthorizationError) -> Self {
-        match authz_error {
-            AuthorizationError::Forbidden => UseCaseError::Forbidden,
-            other => UseCaseError::Conflict {
-                message: other.message_for_client().to_string(),
-            },
+        UseCaseError::Forbidden {
+            message: authz_error.message_for_client().to_string(),
         }
     }
 }

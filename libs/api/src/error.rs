@@ -9,6 +9,12 @@ pub enum ApiError {
     #[error("入力の形式が不正です: {0}")]
     InvalidInput(#[from] ValidationErrors),
 
+    #[error("認証が必要です")]
+    Unauthorized,
+
+    #[error("権限が足りていません")]
+    Forbidden,
+
     #[error(transparent)]
     UseCaseError(#[from] UseCaseError),
 }
@@ -17,10 +23,12 @@ impl ResponseError for ApiError {
     fn status_code(&self) -> StatusCode {
         match self {
             ApiError::InvalidInput(_) => StatusCode::BAD_REQUEST,
+            ApiError::Unauthorized => StatusCode::UNAUTHORIZED,
+            ApiError::Forbidden => StatusCode::FORBIDDEN,
             ApiError::UseCaseError(usecase_error) => match usecase_error {
                 UseCaseError::InvalidInput(_validation_errors) => StatusCode::BAD_REQUEST,
                 UseCaseError::Unauthorized => StatusCode::UNAUTHORIZED,
-                UseCaseError::Forbidden => StatusCode::FORBIDDEN,
+                UseCaseError::Forbidden { message: _ } => StatusCode::FORBIDDEN,
                 UseCaseError::NotFound => StatusCode::NOT_FOUND,
                 UseCaseError::Conflict { message: _ } => StatusCode::CONFLICT,
                 UseCaseError::Internal(_error) => StatusCode::INTERNAL_SERVER_ERROR,

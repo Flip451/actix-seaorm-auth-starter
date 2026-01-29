@@ -4,7 +4,6 @@ use domain::user::{UserId, UserRole};
 use futures_util::future::{Ready, ready};
 use usecase::auth::token_service::TokenService;
 use usecase::shared::identity::Identity;
-use usecase::usecase_error::UseCaseError;
 
 #[derive(Clone, Copy)]
 pub struct AdminContext {
@@ -38,7 +37,7 @@ impl FromRequest for AdminContext {
 
         let token = match auth_header {
             Some(t) => t,
-            None => return ready(Err(ApiError::UseCaseError(UseCaseError::Unauthorized))),
+            None => return ready(Err(ApiError::Unauthorized)),
         };
 
         match token_service.verify_token(token) {
@@ -47,7 +46,7 @@ impl FromRequest for AdminContext {
                 user_id: claims.sub,
             })),
             // Admin でない場合は Forbidden を返す
-            Ok(_) => ready(Err(ApiError::UseCaseError(UseCaseError::Forbidden))),
+            Ok(_) => ready(Err(ApiError::Forbidden)),
             Err(e) => ready(Err(ApiError::UseCaseError(e))),
         }
     }
@@ -86,7 +85,7 @@ impl FromRequest for AuthenticatedUserContext {
 
         let token = match auth_header {
             Some(t) => t,
-            None => return ready(Err(ApiError::UseCaseError(UseCaseError::Unauthorized))),
+            None => return ready(Err(ApiError::Unauthorized)),
         };
 
         // ロールにかかわらず検証を行う
