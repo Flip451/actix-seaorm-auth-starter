@@ -15,7 +15,7 @@ pub enum UseCaseError {
     #[error("リソースの競合が検知されました: {message}")]
     Conflict { message: String },
     #[error("サーバー内部でエラーが発生しました: {0}")]
-    Internal(anyhow::Error),
+    Internal(#[source] anyhow::Error),
 }
 
 #[derive(Debug, Serialize)]
