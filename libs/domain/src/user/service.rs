@@ -4,7 +4,7 @@ use thiserror::Error;
 
 use crate::user::{
     EmailTrait, UnverifiedEmail, UserDomainError, UserId, UserRepository, UserRepositoryError,
-    UserUniqueConstraint, VerifiedEmail,
+    UserUniqueConstraintViolation, VerifiedEmail,
 };
 
 use super::{HashedPassword, RawPassword};
@@ -20,7 +20,7 @@ pub trait PasswordHasher: Send + Sync {
     fn verify(&self, raw: &RawPassword, hashed: &HashedPassword) -> bool;
 }
 
-#[derive(Debug, Error, PartialEq, Eq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum EmailVerificationError {
     // TODO: #35 でエラーの詳細を追加する
 }
@@ -67,9 +67,11 @@ impl<'a> UserUniquenessService<'a> {
         email: &str,
     ) -> Result<UniqueEmail, UserRepositoryError> {
         if self.user_repo.find_by_email(email).await?.is_some() {
-            Err(UserDomainError::AlreadyExists(UserUniqueConstraint::Email(
-                email.to_string(),
-            )))?;
+            Err(UserDomainError::AlreadyExists(
+                UserUniqueConstraintViolation::Email {
+                    duplicated_email: email.to_string(),
+                },
+            ))?;
         }
 
         Ok(UniqueEmail(UnverifiedEmail::new(email)?))
@@ -80,9 +82,11 @@ impl<'a> UserUniquenessService<'a> {
         username: &str,
     ) -> Result<UniqueUsername, UserRepositoryError> {
         if self.user_repo.find_by_username(username).await?.is_some() {
-            Err(UserDomainError::AlreadyExists(UserUniqueConstraint::Email(
-                username.to_string(),
-            )))?;
+            Err(UserDomainError::AlreadyExists(
+                UserUniqueConstraintViolation::Email {
+                    duplicated_email: username.to_string(),
+                },
+            ))?;
         }
 
         Ok(UniqueUsername(username.to_string()))

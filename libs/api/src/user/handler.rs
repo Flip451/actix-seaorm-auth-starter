@@ -1,5 +1,5 @@
+use crate::error::ApiError;
 use crate::middleware::{AdminContext, AuthenticatedUserContext};
-use crate::{error::AppError, user::error::ApiUserError};
 use actix_web::{HttpResponse, Responder, web};
 use domain::user::UserId;
 use serde::Deserialize;
@@ -28,13 +28,13 @@ pub async fn suspend_user_handler(
     path: web::Path<UserId>,
     service: web::Data<dyn UserService>,
     body: web::Json<SuspendUserRequest>,
-) -> Result<impl Responder, AppError> {
+) -> Result<impl Responder, ApiError> {
     let target_id = path.into_inner();
 
     service
         .suspend_user(Box::new(admin), target_id, body.reason.clone())
         .await
-        .map_err(ApiUserError::from)?;
+        .map_err(ApiError::from)?;
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -43,11 +43,11 @@ pub async fn suspend_user_handler(
 pub async fn list_users_handler(
     admin: AdminContext,
     service: web::Data<dyn UserService>,
-) -> Result<impl Responder, AppError> {
+) -> Result<impl Responder, ApiError> {
     let users = service
         .list_users(Box::new(admin))
         .await
-        .map_err(ApiUserError::from)?;
+        .map_err(ApiError::from)?;
     Ok(HttpResponse::Ok().json(users))
 }
 
@@ -55,11 +55,11 @@ pub async fn list_users_handler(
 pub async fn get_user_handler(
     user: AuthenticatedUserContext,
     service: web::Data<dyn UserService>,
-) -> Result<impl Responder, AppError> {
+) -> Result<impl Responder, ApiError> {
     let user = service
         .get_user_by_id(Box::new(user), user.user_id)
         .await
-        .map_err(ApiUserError::from)?;
+        .map_err(ApiError::from)?;
     Ok(HttpResponse::Ok().json(user))
 }
 
@@ -68,8 +68,8 @@ pub async fn update_user_handler(
     user: AuthenticatedUserContext,
     service: web::Data<dyn UserService>,
     body: web::Json<UpdateUserRequest>,
-) -> Result<impl Responder, AppError> {
-    body.validate().map_err(ApiUserError::InvalidInput)?;
+) -> Result<impl Responder, ApiError> {
+    body.validate().map_err(ApiError::InvalidInput)?;
 
     let input = UpdateUserInput {
         username: body.username.clone(),
@@ -79,7 +79,7 @@ pub async fn update_user_handler(
     let updated_user = service
         .update_user(Box::new(user), user.user_id, input)
         .await
-        .map_err(ApiUserError::from)?;
+        .map_err(ApiError::from)?;
     Ok(HttpResponse::Ok().json(updated_user))
 }
 

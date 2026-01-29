@@ -1,6 +1,8 @@
-use crate::auth::token_service::{Claims, TokenService};
+use crate::{
+    auth::token_service::{Claims, TokenService},
+    usecase_error::UseCaseError,
+};
 
-use super::error::AuthError;
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use domain::user::{UserId, UserRole};
@@ -20,7 +22,7 @@ impl TokenInteractor {
 #[async_trait]
 impl TokenService for TokenInteractor {
     /// トークンの発行 (Login時に使用)
-    fn issue_token(&self, user_id: UserId, role: UserRole) -> Result<String, AuthError> {
+    fn issue_token(&self, user_id: UserId, role: UserRole) -> Result<String, UseCaseError> {
         let expiration = Utc::now()
             .checked_add_signed(Duration::hours(24))
             .expect("valid timestamp")
@@ -38,14 +40,14 @@ impl TokenService for TokenInteractor {
             &claims,
             &EncodingKey::from_secret(self.jwt_secret.as_ref()),
         )
-        .map_err(|e| AuthError::TokenIssuanceFailed(e.into()))
+        .map_err(|e| UseCaseError::Internal(e.into()))
     }
 
     /// トークンの検証 (Middlewareで使用)
-    fn verify_token(&self, token: &str) -> Result<Claims, AuthError> {
+    fn verify_token(&self, token: &str) -> Result<Claims, UseCaseError> {
         let decoding_key = DecodingKey::from_secret(self.jwt_secret.as_ref());
         let token_data = decode::<Claims>(token, &decoding_key, &Validation::default())
-            .map_err(|_| AuthError::InvalidCredentials)?;
+            .map_err(|_| UseCaseError::UnAuthorized)?;
 
         Ok(token_data.claims)
     }

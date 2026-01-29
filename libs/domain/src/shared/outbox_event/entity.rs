@@ -109,11 +109,11 @@ impl OutboxEvent {
                 self.processed_at = Some(Utc::now());
             }
             OutboxEventStatus::Completed => Err(OutboxStatusTransitionError::AlreadyCompleted {
-                from: OutboxEventStatus::Completed,
+                to: OutboxEventStatus::Completed,
             })?,
             OutboxEventStatus::PermanentlyFailed => {
                 Err(OutboxStatusTransitionError::AlreadyPermanentlyFailed {
-                    from: OutboxEventStatus::PermanentlyFailed,
+                    to: OutboxEventStatus::Completed,
                 })?
             }
         }
@@ -127,7 +127,7 @@ impl OutboxEvent {
                 self.status = OutboxEventStatus::Failed;
             }
             OutboxEventStatus::Completed => Err(OutboxStatusTransitionError::AlreadyCompleted {
-                from: OutboxEventStatus::Completed,
+                to: OutboxEventStatus::Failed,
             })?,
             OutboxEventStatus::Failed => {
                 // TODO: #47 でリトライカウントを+1するロジックを追加する
@@ -135,7 +135,7 @@ impl OutboxEvent {
             }
             OutboxEventStatus::PermanentlyFailed => {
                 Err(OutboxStatusTransitionError::AlreadyPermanentlyFailed {
-                    from: OutboxEventStatus::PermanentlyFailed,
+                    to: OutboxEventStatus::Failed,
                 })?
             }
         }

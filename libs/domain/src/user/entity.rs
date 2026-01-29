@@ -6,6 +6,7 @@ use crate::{
     shared::outbox_event::{EntityWithEvents, OutboxEvent},
     user::{
         Email, EmailTrait, UserEvent, UserId, UserReconstructionError, UserStateTransitionError,
+        error::ModificationWithInvalidStateError,
         events::{
             UserCreatedEvent, UserDeactivatedEvent, UserEmailChangedEvent, UserEmailVerifiedEvent,
             UserReactivatedEvent, UserSuspendedEvent, UserUnlockedEvent, UsernameChangedEvent,
@@ -146,7 +147,7 @@ impl User {
     pub fn change_username(
         &mut self,
         UniqueUsername(new_username): UniqueUsername,
-    ) -> Result<(), UserDomainError> {
+    ) -> Result<(), ModificationWithInvalidStateError> {
         let old_username = self.username.clone();
         self.username = new_username;
 
@@ -167,12 +168,12 @@ impl User {
             UserState::Active { .. } => return Ok(()), // すでに検証済みなので何もしない
             UserState::SuspendedByAdmin { .. } => {
                 Err(UserStateTransitionError::AlreadySuspended {
-                    from: self.state.clone(),
+                    to: UserStateKind::Active,
                 })?
             }
             UserState::DeactivatedByUser { .. } => {
                 Err(UserStateTransitionError::AlreadyDeactivated {
-                    from: self.state.clone(),
+                    to: UserStateKind::Active,
                 })?
             }
             UserState::PendingVerification { ref email } => {
@@ -203,7 +204,7 @@ impl User {
     pub fn change_email(
         &mut self,
         UniqueEmail(new_email): UniqueEmail,
-    ) -> Result<(), UserDomainError> {
+    ) -> Result<(), ModificationWithInvalidStateError> {
         if new_email.as_str() == self.email().as_str() {
             // 新しいメールアドレスが現在のものと同じ場合、何もしない
             return Ok(());
@@ -216,13 +217,13 @@ impl User {
                 };
             }
             UserState::SuspendedByAdmin { .. } => {
-                Err(UserStateTransitionError::AlreadySuspended {
-                    from: self.state.clone(),
+                Err(ModificationWithInvalidStateError::EmailModification {
+                    state: self.state.kind_raw(),
                 })?
             }
             UserState::DeactivatedByUser { .. } => {
-                Err(UserStateTransitionError::AlreadyDeactivated {
-                    from: self.state.clone(),
+                Err(ModificationWithInvalidStateError::EmailModification {
+                    state: self.state.kind_raw(),
                 })?
             }
             UserState::PendingVerification { .. } => {
@@ -299,7 +300,7 @@ impl User {
             }
             UserState::SuspendedByAdmin { .. } => {
                 Err(UserStateTransitionError::AlreadySuspended {
-                    from: self.state.clone(),
+                    to: UserStateKind::DeactivatedByUser,
                 })?
             }
             UserState::DeactivatedByUser { .. } => return Ok(()), // すでに退会済みなので何もしない
@@ -327,7 +328,7 @@ impl User {
             UserState::Active { .. } => return Ok(()), // すでにアクティブなので何もしない
             UserState::SuspendedByAdmin { .. } => {
                 Err(UserStateTransitionError::AlreadySuspended {
-                    from: self.state.clone(),
+                    to: UserStateKind::Active,
                 })?
             }
             UserState::DeactivatedByUser { ref email } => {
@@ -402,31 +403,27 @@ impl TryFrom<UserStateRaw> for UserState {
     fn try_from(raw: UserStateRaw) -> Result<Self, Self::Error> {
         let UserStateRaw { status, email } = raw;
 
-        let kind = status
-            .parse::<UserStatusKind>()
-            .map_err(|_| UserReconstructionError::InvalidStatus(status))?;
+        let kind = status.parse::<UserStateKind>().map_err(|_| {
+            UserReconstructionError::InvalidStatus {
+                invalid_status: status,
+            }
+        })?;
 
         match kind {
-            UserStatusKind::Active => Ok(UserState::Active {
-                // ドメイン層なので VerifiedEmail::new を呼ぶのは責務の範囲内
-                email: VerifiedEmail::new(&email)
-                    .map_err(|_| UserReconstructionError::InvalidEmail(email))?,
+            UserStateKind::Active => Ok(UserState::Active {
+                email: VerifiedEmail::new(&email)?,
             }),
-            UserStatusKind::SuspendedByAdmin => Ok(UserState::SuspendedByAdmin {
-                email: UnverifiedEmail::new(&email)
-                    .map_err(|_| UserReconstructionError::InvalidEmail(email))?,
+            UserStateKind::SuspendedByAdmin => Ok(UserState::SuspendedByAdmin {
+                email: UnverifiedEmail::new(&email)?,
             }),
-            UserStatusKind::DeactivatedByUser => Ok(UserState::DeactivatedByUser {
-                email: UnverifiedEmail::new(&email)
-                    .map_err(|_| UserReconstructionError::InvalidEmail(email))?,
+            UserStateKind::DeactivatedByUser => Ok(UserState::DeactivatedByUser {
+                email: UnverifiedEmail::new(&email)?,
             }),
-            UserStatusKind::PendingVerification => Ok(UserState::PendingVerification {
-                email: UnverifiedEmail::new(&email)
-                    .map_err(|_| UserReconstructionError::InvalidEmail(email))?,
+            UserStateKind::PendingVerification => Ok(UserState::PendingVerification {
+                email: UnverifiedEmail::new(&email)?,
             }),
-            UserStatusKind::ActiveWithUnverifiedEmail => Ok(UserState::ActiveWithUnverifiedEmail {
-                email: UnverifiedEmail::new(&email)
-                    .map_err(|_| UserReconstructionError::InvalidEmail(email))?,
+            UserStateKind::ActiveWithUnverifiedEmail => Ok(UserState::ActiveWithUnverifiedEmail {
+                email: UnverifiedEmail::new(&email)?,
             }),
         }
     }
@@ -434,7 +431,7 @@ impl TryFrom<UserStateRaw> for UserState {
 
 #[derive(Debug, PartialEq, Eq, strum::Display, EnumString, strum::IntoStaticStr)]
 #[strum(serialize_all = "snake_case")]
-enum UserStatusKind {
+pub enum UserStateKind {
     Active,
     SuspendedByAdmin,
     DeactivatedByUser,
@@ -444,22 +441,25 @@ enum UserStatusKind {
 
 impl UserState {
     pub fn kind(&self) -> &'static str {
+        self.kind_raw().into()
+    }
+
+    pub(crate) fn kind_raw(&self) -> UserStateKind {
         match self {
-            UserState::Active { .. } => UserStatusKind::Active,
-            UserState::SuspendedByAdmin { .. } => UserStatusKind::SuspendedByAdmin,
-            UserState::DeactivatedByUser { .. } => UserStatusKind::DeactivatedByUser,
-            UserState::PendingVerification { .. } => UserStatusKind::PendingVerification,
-            UserState::ActiveWithUnverifiedEmail { .. } => {
-                UserStatusKind::ActiveWithUnverifiedEmail
-            }
+            UserState::Active { .. } => UserStateKind::Active,
+            UserState::SuspendedByAdmin { .. } => UserStateKind::SuspendedByAdmin,
+            UserState::DeactivatedByUser { .. } => UserStateKind::DeactivatedByUser,
+            UserState::PendingVerification { .. } => UserStateKind::PendingVerification,
+            UserState::ActiveWithUnverifiedEmail { .. } => UserStateKind::ActiveWithUnverifiedEmail,
         }
-        .into()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
+
+    use crate::user::EmailFormatError;
 
     use super::*;
 
@@ -484,13 +484,9 @@ mod tests {
     }
 
     #[rstest]
-    #[case("invalid_status", "valid@email.com", UserReconstructionError::InvalidStatus("invalid_status".to_string()))]
-    #[case("active", "invalid_email", UserReconstructionError::InvalidEmail("invalid_email".to_string()))]
-    #[case("suspended_by_admin", "invalid_email", UserReconstructionError::InvalidEmail("invalid_email".to_string()))]
-    #[case("deactivated_by_user", "invalid_email", UserReconstructionError::InvalidEmail("invalid_email".to_string()))]
-    #[case("pending_verification", "invalid_email", UserReconstructionError::InvalidEmail("invalid_email".to_string()))]
-    #[case("active_with_unverified_email", "invalid_email", UserReconstructionError::InvalidEmail("invalid_email".to_string()))]
-    fn test_try_from_user_state_raw_to_user_state_error(
+    #[case("invalid_status", "valid@email.com", UserReconstructionError::InvalidStatus{ invalid_status: "invalid_status".to_string() })]
+    #[case("", "valid@email.com", UserReconstructionError::InvalidStatus{ invalid_status: "".to_string() })]
+    fn test_try_from_invalid_user_state(
         #[case] status: &'static str,
         #[case] email: &'static str,
         #[case] expected_error: UserReconstructionError,
@@ -502,5 +498,34 @@ mod tests {
 
         let result: Result<UserState, UserReconstructionError> = raw.try_into();
         assert_eq!(result.unwrap_err(), expected_error);
+    }
+
+    #[rstest]
+    #[case("active", "invalid_email", "invalid_email")]
+    #[case("suspended_by_admin", "invalid_email", "invalid_email")]
+    #[case("deactivated_by_user", "invalid_email", "invalid_email")]
+    #[case("pending_verification", "invalid_email", "invalid_email")]
+    #[case("active_with_unverified_email", "invalid_email", "invalid_email")]
+    fn test_try_from_invalid_user_email(
+        #[case] status: &'static str,
+        #[case] email: &'static str,
+        #[case] expected_email_in_error: &'static str,
+    ) {
+        let raw = UserStateRaw {
+            status: status.to_string(),
+            email: email.to_string(),
+        };
+
+        let result: Result<UserState, UserReconstructionError> = raw.try_into();
+
+        if let Err(UserReconstructionError::InvalidEmail(EmailFormatError::InvalidFormat {
+            invalid_email,
+            error: _,
+        })) = result
+        {
+            assert_eq!(invalid_email, expected_email_in_error)
+        } else {
+            panic!()
+        }
     }
 }

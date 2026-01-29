@@ -1,5 +1,4 @@
-use crate::auth::error::ApiAuthError;
-use crate::error::AppError;
+use crate::error::ApiError;
 use actix_web::{HttpResponse, Responder, web};
 use serde::Deserialize;
 use usecase::auth::dto::{LoginInput, SignupInput};
@@ -28,8 +27,8 @@ pub struct LoginRequest {
 pub async fn signup_handler(
     service: web::Data<dyn AuthService>,
     body: web::Json<SignupRequest>,
-) -> Result<impl Responder, AppError> {
-    body.validate().map_err(ApiAuthError::InvalidInput)?;
+) -> Result<impl Responder, ApiError> {
+    body.validate().map_err(ApiError::InvalidInput)?;
 
     let input = SignupInput {
         username: body.username.clone(),
@@ -37,7 +36,7 @@ pub async fn signup_handler(
         password: body.password.clone(),
     };
 
-    service.signup(input).await.map_err(ApiAuthError::from)?;
+    service.signup(input).await.map_err(ApiError::from)?;
 
     Ok(HttpResponse::Created().finish())
 }
@@ -46,15 +45,15 @@ pub async fn signup_handler(
 pub async fn login_handler(
     service: web::Data<dyn AuthService>,
     body: web::Json<LoginRequest>,
-) -> Result<impl Responder, AppError> {
-    body.validate().map_err(ApiAuthError::InvalidInput)?;
+) -> Result<impl Responder, ApiError> {
+    body.validate().map_err(ApiError::InvalidInput)?;
 
     let input = LoginInput {
         email: body.email.clone(),
         password: body.password.clone(),
     };
 
-    let token = service.login(input).await.map_err(ApiAuthError::from)?;
+    let token = service.login(input).await.map_err(ApiError::from)?;
 
     Ok(HttpResponse::Ok().json(serde_json::json!({ "token": token })))
 }

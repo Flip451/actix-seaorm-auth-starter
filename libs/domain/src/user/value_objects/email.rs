@@ -1,6 +1,6 @@
-use super::super::error::UserDomainError;
 use serde::{Deserialize, Serialize};
-use validator::Validate;
+use thiserror::Error;
+use validator::{Validate, ValidationErrors};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Email {
@@ -32,7 +32,16 @@ impl VerifiedEmail {
     }
 }
 
-fn check_email_format(value: &str) -> Result<(), UserDomainError> {
+#[derive(Debug, Error, PartialEq)]
+pub enum EmailFormatError {
+    #[error("以下のメールアドレスは形式が正しくありません: {invalid_email}")]
+    InvalidFormat {
+        invalid_email: String,
+        error: ValidationErrors,
+    },
+}
+
+fn check_email_format(value: &str) -> Result<(), EmailFormatError> {
     #[derive(Validate)]
     struct EmailFormat<'a> {
         #[validate(email)]
@@ -42,19 +51,22 @@ fn check_email_format(value: &str) -> Result<(), UserDomainError> {
     let email_format = EmailFormat { email: value };
     email_format
         .validate()
-        .map_err(|_| UserDomainError::InvalidEmail(value.to_string()))
+        .map_err(|error| EmailFormatError::InvalidFormat {
+            invalid_email: value.to_string(),
+            error,
+        })
 }
 
 // メールアドレスの共通トレイト
 pub trait EmailTrait: Sized + std::fmt::Debug {
-    fn new(value: &str) -> Result<Self, UserDomainError>;
+    fn new(value: &str) -> Result<Self, EmailFormatError>;
 
     fn as_str(&self) -> &str;
 }
 
 // EmailTraitの実装
 impl EmailTrait for VerifiedEmail {
-    fn new(value: &str) -> Result<Self, UserDomainError> {
+    fn new(value: &str) -> Result<Self, EmailFormatError> {
         check_email_format(value)?;
         Ok(Self(value.to_string()))
     }
@@ -65,7 +77,7 @@ impl EmailTrait for VerifiedEmail {
 }
 
 impl EmailTrait for UnverifiedEmail {
-    fn new(value: &str) -> Result<Self, UserDomainError> {
+    fn new(value: &str) -> Result<Self, EmailFormatError> {
         check_email_format(value)?;
         Ok(Self(value.to_string()))
     }
@@ -103,12 +115,20 @@ mod tests {
     }
 
     #[rstest]
-    #[case(VerifiedEmail::new("invalid-email").unwrap_err(), UserDomainError::InvalidEmail("invalid-email".to_string()))]
-    #[case(UnverifiedEmail::new("invalid-email").unwrap_err(), UserDomainError::InvalidEmail("invalid-email".to_string()))]
+    #[case(VerifiedEmail::new("invalid-email"), "invalid-email")]
+    #[case(UnverifiedEmail::new("invalid-email"), "invalid-email")]
     fn test_invalid_email_error(
-        #[case] email_creation_error: UserDomainError,
-        #[case] expected: UserDomainError,
+        #[case] new_email_result: Result<impl EmailTrait, EmailFormatError>,
+        #[case] expected_invalid_email_in_error: String,
     ) {
-        assert_eq!(email_creation_error, expected);
+        if let Err(EmailFormatError::InvalidFormat {
+            invalid_email,
+            error: _,
+        }) = new_email_result
+        {
+            assert_eq!(invalid_email, expected_invalid_email_in_error)
+        } else {
+            panic!()
+        }
     }
 }

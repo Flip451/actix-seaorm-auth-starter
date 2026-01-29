@@ -1,17 +1,22 @@
 use serde::{Deserialize, Serialize};
-
-use crate::user::UserDomainError;
+use thiserror::Error;
 
 #[derive(Debug, Clone)]
 pub struct RawPassword(String);
 
+#[derive(Debug, Error, PartialEq)]
+pub enum PasswordPolicyViolation {
+    #[error("パスワードは8文字以上である必要があります")]
+    TooShort,
+}
+
 impl RawPassword {
-    pub fn new(value: &str) -> Result<Self, UserDomainError> {
+    pub fn new(value: &str) -> Result<Self, PasswordPolicyViolation> {
         // TODO: #54 でパスワードポリシーを強化する
         if value.len() >= 8 {
             Ok(Self(value.to_string()))
         } else {
-            Err(UserDomainError::PasswordTooShort)
+            Err(PasswordPolicyViolation::TooShort)
         }
     }
 

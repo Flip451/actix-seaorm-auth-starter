@@ -10,11 +10,11 @@ pub enum OutboxEventDomainError {
 #[derive(Debug, Error)]
 pub enum OutboxStatusTransitionError {
     #[error(
-        "すでに完了済みのイベントのステータス変更を試みました: {from:?} からの遷移は許可されていません"
+        "すでに完了済みのイベントのステータス変更を試みました: 以下のステータスへの遷移は許可されていません: {to:?}"
     )]
-    AlreadyCompleted { from: OutboxEventStatus },
+    AlreadyCompleted { to: OutboxEventStatus },
     #[error(
-        "恒久的に失敗したイベントのステータス変更を試みました: {from:?} からの遷移は許可されていません"
+        "恒久的に失敗したイベントのステータス変更を試みました: 以下のステータスへの遷移は許可されていません: {to:?}"
     )]
-    AlreadyPermanentlyFailed { from: OutboxEventStatus },
+    AlreadyPermanentlyFailed { to: OutboxEventStatus },
 }
