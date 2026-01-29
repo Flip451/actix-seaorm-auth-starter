@@ -37,6 +37,7 @@ pub enum EmailFormatError {
     #[error("以下のメールアドレスは形式が正しくありません: {invalid_email}")]
     InvalidFormat {
         invalid_email: String,
+        #[source]
         error: ValidationErrors,
     },
 }
