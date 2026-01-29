@@ -67,10 +67,7 @@ impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmPostgresOutboxReposit
         Ok(OutboxEvent::reconstruct(
             model.id.into(),
             event,
-            model
-                .status
-                .parse()
-                .map_err(OutboxReconstructionError::InvalidOutboxEventStatus)?,
+            model.status.parse()?,
             trace_id,
             model.created_at.into(),
             model.processed_at.map(|dt| dt.into()),

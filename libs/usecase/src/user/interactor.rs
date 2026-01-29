@@ -15,7 +15,7 @@ use super::dto::UserResponse;
 use domain::auth::policy::{AuthorizationService, UserAction};
 use domain::transaction::TransactionManager;
 use domain::tx;
-use domain::user::{UserDomainError, UserId, UserUniquenessService};
+use domain::user::{UserId, UserUniquenessService};
 
 pub struct UserInteractor<TM: TransactionManager> {
     transaction_manager: Arc<TM>,
@@ -143,8 +143,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                     .await?;
 
                 // ドメインロジックの実行
-                user.change_username(username)
-                    .map_err(UserDomainError::from)?;
+                user.change_username(username)?;
             }
             if let Some(email) = input.email {
                 // ポリシーチェック
@@ -158,7 +157,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                 let email = user_uniqueness_service.ensure_unique_email(&email).await?;
 
                 // ドメインロジックの実行
-                user.change_email(email).map_err(UserDomainError::from)?;
+                user.change_email(email)?;
             }
 
             // 変更の保存

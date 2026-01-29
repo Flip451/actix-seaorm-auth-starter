@@ -33,8 +33,7 @@ pub async fn suspend_user_handler(
 
     service
         .suspend_user(Box::new(admin), target_id, body.reason.clone())
-        .await
-        .map_err(ApiError::from)?;
+        .await?;
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -44,10 +43,7 @@ pub async fn list_users_handler(
     admin: AdminContext,
     service: web::Data<dyn UserService>,
 ) -> Result<impl Responder, ApiError> {
-    let users = service
-        .list_users(Box::new(admin))
-        .await
-        .map_err(ApiError::from)?;
+    let users = service.list_users(Box::new(admin)).await?;
     Ok(HttpResponse::Ok().json(users))
 }
 
@@ -56,10 +52,7 @@ pub async fn get_user_handler(
     user: AuthenticatedUserContext,
     service: web::Data<dyn UserService>,
 ) -> Result<impl Responder, ApiError> {
-    let user = service
-        .get_user_by_id(Box::new(user), user.user_id)
-        .await
-        .map_err(ApiError::from)?;
+    let user = service.get_user_by_id(Box::new(user), user.user_id).await?;
     Ok(HttpResponse::Ok().json(user))
 }
 
@@ -78,8 +71,7 @@ pub async fn update_user_handler(
 
     let updated_user = service
         .update_user(Box::new(user), user.user_id, input)
-        .await
-        .map_err(ApiError::from)?;
+        .await?;
     Ok(HttpResponse::Ok().json(updated_user))
 }
 

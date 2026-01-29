@@ -12,7 +12,7 @@ use domain::{
     tx,
     user::{
         EmailTrait, HashedPassword, PasswordHasher, RawPassword, UnverifiedEmail, User,
-        UserDomainError, UserFactory, UserUniquenessService,
+        UserFactory, UserUniquenessService,
     },
 };
 use std::sync::Arc;
@@ -59,7 +59,7 @@ impl<TM: TransactionManager> AuthService for AuthInteractor<TM> {
         // ここでDTOからValueObjectへの変換を行う
         let username = input.username;
         let email = input.email;
-        let password = RawPassword::new(&input.password).map_err(UserDomainError::from)?;
+        let password = RawPassword::new(&input.password)?;
 
         // パスワードのハッシュ化
         let hashed_password = self.password_hasher.hash(&password)?;
@@ -90,8 +90,8 @@ impl<TM: TransactionManager> AuthService for AuthInteractor<TM> {
     )]
     async fn login(&self, input: LoginInput) -> Result<String, UseCaseError> {
         // ここでDTOからValueObjectへの変換を行う
-        let email = UnverifiedEmail::new(&input.email).map_err(UserDomainError::from)?;
-        let password = RawPassword::new(&input.password).map_err(UserDomainError::from)?;
+        let email = UnverifiedEmail::new(&input.email)?;
+        let password = RawPassword::new(&input.password)?;
         // 1. ユーザーを検索
         let user_opt: Option<User> = tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();

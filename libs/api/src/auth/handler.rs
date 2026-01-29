@@ -36,7 +36,7 @@ pub async fn signup_handler(
         password: body.password.clone(),
     };
 
-    service.signup(input).await.map_err(ApiError::from)?;
+    service.signup(input).await?;
 
     Ok(HttpResponse::Created().finish())
 }
@@ -53,7 +53,7 @@ pub async fn login_handler(
         password: body.password.clone(),
     };
 
-    let token = service.login(input).await.map_err(ApiError::from)?;
+    let token = service.login(input).await?;
 
     Ok(HttpResponse::Ok().json(serde_json::json!({ "token": token })))
 }
