@@ -103,17 +103,17 @@ pub enum OutboxEventStatus {
 // TODO: #52 で completed_at と processed_at を分ける際に修正する
 impl OutboxEvent {
     pub fn complete(&mut self) -> Result<(), OutboxEventDomainError> {
-        match self.status {
+        match &self.status {
             OutboxEventStatus::Pending | OutboxEventStatus::Failed => {
                 self.status = OutboxEventStatus::Completed;
                 self.processed_at = Some(Utc::now());
             }
             OutboxEventStatus::Completed => Err(OutboxStatusTransitionError::AlreadyCompleted {
-                from: OutboxEventStatus::Completed,
+                to: OutboxEventStatus::Completed,
             })?,
             OutboxEventStatus::PermanentlyFailed => {
                 Err(OutboxStatusTransitionError::AlreadyPermanentlyFailed {
-                    from: OutboxEventStatus::PermanentlyFailed,
+                    to: OutboxEventStatus::Completed,
                 })?
             }
         }
@@ -122,12 +122,12 @@ impl OutboxEvent {
     }
 
     pub fn fail(&mut self) -> Result<(), OutboxEventDomainError> {
-        match self.status {
+        match &self.status {
             OutboxEventStatus::Pending => {
                 self.status = OutboxEventStatus::Failed;
             }
             OutboxEventStatus::Completed => Err(OutboxStatusTransitionError::AlreadyCompleted {
-                from: OutboxEventStatus::Completed,
+                to: OutboxEventStatus::Failed,
             })?,
             OutboxEventStatus::Failed => {
                 // TODO: #47 でリトライカウントを+1するロジックを追加する
@@ -135,7 +135,7 @@ impl OutboxEvent {
             }
             OutboxEventStatus::PermanentlyFailed => {
                 Err(OutboxStatusTransitionError::AlreadyPermanentlyFailed {
-                    from: OutboxEventStatus::PermanentlyFailed,
+                    to: OutboxEventStatus::Failed,
                 })?
             }
         }

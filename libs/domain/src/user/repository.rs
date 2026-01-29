@@ -1,4 +1,7 @@
-use crate::user::{UserDomainError, UserId, UserReconstructionError, UserUniqueConstraint};
+use crate::user::{
+    UserDomainError, UserId, UserReconstructionError, UserUniqueConstraintViolation,
+    value_objects::email::EmailFormatError,
+};
 use async_trait::async_trait;
 use thiserror::Error;
 
@@ -25,8 +28,14 @@ pub trait UserRepository: Send + Sync {
     async fn find_all(&self) -> Result<Vec<User>, UserRepositoryError>;
 }
 
-impl From<UserUniqueConstraint> for UserRepositoryError {
-    fn from(value: UserUniqueConstraint) -> Self {
+impl From<UserUniqueConstraintViolation> for UserRepositoryError {
+    fn from(value: UserUniqueConstraintViolation) -> Self {
+        UserRepositoryError::from(UserDomainError::from(value))
+    }
+}
+
+impl From<EmailFormatError> for UserRepositoryError {
+    fn from(value: EmailFormatError) -> Self {
         UserRepositoryError::from(UserDomainError::from(value))
     }
 }

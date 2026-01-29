@@ -6,9 +6,10 @@ mod repository;
 mod service;
 mod value_objects;
 
-pub use entity::{User, UserState, UserStateRaw};
+pub use entity::{User, UserState, UserStateKind, UserStateRaw};
 pub use error::{
-    UserDomainError, UserReconstructionError, UserStateTransitionError, UserUniqueConstraint,
+    ModificationWithInvalidStateError, UserDomainError, UserReconstructionError,
+    UserStateTransitionError, UserUniqueConstraintViolation,
 };
 pub use events::*;
 pub use factory::UserFactory;
@@ -18,8 +19,8 @@ pub use service::{
     UserUniquenessService,
 };
 pub use value_objects::{
-    email::{Email, EmailTrait, UnverifiedEmail, VerifiedEmail},
-    password::{HashedPassword, RawPassword},
+    email::{Email, EmailFormatError, EmailTrait, UnverifiedEmail, VerifiedEmail},
+    password::{HashedPassword, PasswordPolicyViolation, RawPassword},
     role::UserRole,
     user_id::UserId,
 };

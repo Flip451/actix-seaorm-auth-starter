@@ -1,8 +1,7 @@
-use crate::auth::error::ApiAuthError;
+use crate::error::ApiError;
 use actix_web::{FromRequest, HttpRequest, dev::Payload, web};
 use domain::user::{UserId, UserRole};
 use futures_util::future::{Ready, ready};
-use usecase::auth::error::AuthError;
 use usecase::auth::token_service::TokenService;
 use usecase::shared::identity::Identity;
 
@@ -22,7 +21,7 @@ impl Identity for AdminContext {
 }
 
 impl FromRequest for AdminContext {
-    type Error = ApiAuthError;
+    type Error = ApiError;
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
@@ -38,7 +37,7 @@ impl FromRequest for AdminContext {
 
         let token = match auth_header {
             Some(t) => t,
-            None => return ready(Err(ApiAuthError::AuthError(AuthError::InvalidCredentials))),
+            None => return ready(Err(ApiError::Unauthorized)),
         };
 
         match token_service.verify_token(token) {
@@ -47,8 +46,8 @@ impl FromRequest for AdminContext {
                 user_id: claims.sub,
             })),
             // Admin でない場合は Forbidden を返す
-            Ok(_) => ready(Err(ApiAuthError::AuthError(AuthError::Forbidden))),
-            Err(e) => ready(Err(ApiAuthError::AuthError(e))),
+            Ok(_) => ready(Err(ApiError::Forbidden)),
+            Err(e) => ready(Err(ApiError::UseCaseError(e))),
         }
     }
 }
@@ -70,7 +69,7 @@ impl Identity for AuthenticatedUserContext {
 }
 
 impl FromRequest for AuthenticatedUserContext {
-    type Error = ApiAuthError;
+    type Error = ApiError;
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
@@ -86,7 +85,7 @@ impl FromRequest for AuthenticatedUserContext {
 
         let token = match auth_header {
             Some(t) => t,
-            None => return ready(Err(ApiAuthError::AuthError(AuthError::InvalidCredentials))),
+            None => return ready(Err(ApiError::Unauthorized)),
         };
 
         // ロールにかかわらず検証を行う
@@ -95,7 +94,7 @@ impl FromRequest for AuthenticatedUserContext {
                 user_id: claims.sub,
                 user_role: claims.role,
             })),
-            Err(e) => ready(Err(ApiAuthError::AuthError(e))),
+            Err(e) => ready(Err(ApiError::UseCaseError(e))),
         }
     }
 }

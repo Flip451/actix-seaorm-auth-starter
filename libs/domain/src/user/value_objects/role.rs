@@ -26,7 +26,9 @@ impl FromStr for UserRole {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let kind = s
             .parse::<UserRoleKind>()
-            .map_err(|_| UserReconstructionError::InvalidRole(s.to_string()))?;
+            .map_err(|_| UserReconstructionError::InvalidRole {
+                invalid_role: s.to_string(),
+            })?;
 
         match kind {
             UserRoleKind::Admin => Ok(UserRole::Admin),
@@ -58,8 +60,8 @@ mod tests {
     }
 
     #[rstest]
-    #[case("invalid_role", UserReconstructionError::InvalidRole("invalid_role".to_string()))]
-    #[case("", UserReconstructionError::InvalidRole("".to_string()))]
+    #[case("invalid_role", UserReconstructionError::InvalidRole { invalid_role:"invalid_role".to_string() })]
+    #[case("", UserReconstructionError::InvalidRole { invalid_role:"".to_string() })]
     fn test_user_role_from_str_failure(
         #[case] input: &str,
         #[case] expected: UserReconstructionError,

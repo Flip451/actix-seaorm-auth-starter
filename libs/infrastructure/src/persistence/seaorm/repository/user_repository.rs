@@ -12,7 +12,7 @@ use crate::persistence::{
 };
 use domain::user::{
     HashedPassword, User, UserId, UserRepository, UserRepositoryError, UserStateRaw,
-    UserUniqueConstraint,
+    UserUniqueConstraintViolation,
 };
 
 pub struct SeaOrmUserRepository<C, T>
@@ -66,9 +66,15 @@ impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmUserRepository<C, T> 
             let username_unique_key = UniqueConstraints::UserUsernameKey.to_string();
 
             if constraint == email_unique_key {
-                return UserUniqueConstraint::Email(email.to_string()).into();
+                return UserUniqueConstraintViolation::Email {
+                    duplicated_email: email.to_string(),
+                }
+                .into();
             } else if constraint == username_unique_key {
-                return UserUniqueConstraint::Username(username.to_string()).into();
+                return UserUniqueConstraintViolation::Username {
+                    duplicated_name: username.to_string(),
+                }
+                .into();
             }
 
             // 既知の一意制約名以外で一意制約違反が発生した場合は、デバッグしやすいように詳細なエラーを返す
