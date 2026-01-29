@@ -47,7 +47,7 @@ impl TokenService for TokenInteractor {
     fn verify_token(&self, token: &str) -> Result<Claims, UseCaseError> {
         let decoding_key = DecodingKey::from_secret(self.jwt_secret.as_ref());
         let token_data = decode::<Claims>(token, &decoding_key, &Validation::default())
-            .map_err(|_| UseCaseError::UnAuthorized)?;
+            .map_err(|_| UseCaseError::Unauthorized)?;
 
         Ok(token_data.claims)
     }

@@ -19,7 +19,7 @@ impl ResponseError for ApiError {
             ApiError::InvalidInput(_) => StatusCode::BAD_REQUEST,
             ApiError::UseCaseError(usecase_error) => match usecase_error {
                 UseCaseError::InvalidInput(_validation_errors) => StatusCode::BAD_REQUEST,
-                UseCaseError::UnAuthorized => StatusCode::UNAUTHORIZED,
+                UseCaseError::Unauthorized => StatusCode::UNAUTHORIZED,
                 UseCaseError::Forbidden => StatusCode::FORBIDDEN,
                 UseCaseError::NotFound => StatusCode::NOT_FOUND,
                 UseCaseError::Conflict { message: _ } => StatusCode::CONFLICT,

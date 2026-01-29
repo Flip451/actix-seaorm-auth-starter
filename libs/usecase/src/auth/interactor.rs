@@ -115,7 +115,7 @@ impl<TM: TransactionManager> AuthService for AuthInteractor<TM> {
         };
 
         if !is_valid || user.is_none() {
-            return Err(UseCaseError::UnAuthorized);
+            return Err(UseCaseError::Unauthorized);
         }
 
         let user = user.unwrap();

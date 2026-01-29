@@ -38,7 +38,7 @@ impl FromRequest for AdminContext {
 
         let token = match auth_header {
             Some(t) => t,
-            None => return ready(Err(ApiError::UseCaseError(UseCaseError::UnAuthorized))),
+            None => return ready(Err(ApiError::UseCaseError(UseCaseError::Unauthorized))),
         };
 
         match token_service.verify_token(token) {
@@ -86,7 +86,7 @@ impl FromRequest for AuthenticatedUserContext {
 
         let token = match auth_header {
             Some(t) => t,
-            None => return ready(Err(ApiError::UseCaseError(UseCaseError::UnAuthorized))),
+            None => return ready(Err(ApiError::UseCaseError(UseCaseError::Unauthorized))),
         };
 
         // ロールにかかわらず検証を行う
