@@ -3,7 +3,6 @@ use crate::{
     usecase_error::UseCaseError,
 };
 
-use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use domain::user::{UserId, UserRole};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
@@ -19,7 +18,6 @@ impl TokenInteractor {
     }
 }
 
-#[async_trait]
 impl TokenService for TokenInteractor {
     /// トークンの発行 (Login時に使用)
     fn issue_token(&self, user_id: UserId, role: UserRole) -> Result<String, UseCaseError> {
