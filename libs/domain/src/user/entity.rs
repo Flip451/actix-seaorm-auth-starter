@@ -164,7 +164,7 @@ impl User {
 // ユーザーの状態遷移に関するメソッド群
 impl User {
     pub fn verify_email<V: EmailVerifier>(&mut self, verifier: &V) -> Result<(), UserDomainError> {
-        let email = match self.state {
+        let email = match &self.state {
             UserState::Active { .. } => return Ok(()), // すでに検証済みなので何もしない
             UserState::SuspendedByAdmin { .. } => {
                 Err(UserStateTransitionError::AlreadySuspended {
@@ -176,14 +176,14 @@ impl User {
                     to: UserStateKind::Active,
                 })?
             }
-            UserState::PendingVerification { ref email } => {
+            UserState::PendingVerification { email } => {
                 let email = verifier.verify(email)?;
                 self.state = UserState::Active {
                     email: email.clone(),
                 };
                 email
             }
-            UserState::ActiveWithUnverifiedEmail { ref email } => {
+            UserState::ActiveWithUnverifiedEmail { email } => {
                 let email = verifier.verify(email)?;
                 self.state = UserState::Active {
                     email: email.clone(),
@@ -210,7 +210,7 @@ impl User {
             return Ok(());
         }
 
-        match self.state {
+        match &self.state {
             UserState::Active { .. } => {
                 self.state = UserState::ActiveWithUnverifiedEmail {
                     email: new_email.clone(),
@@ -247,8 +247,8 @@ impl User {
     }
 
     pub fn suspend(&mut self, reason: String) -> Result<(), UserDomainError> {
-        let email = match self.state {
-            UserState::Active { ref email } => {
+        let email = match &self.state {
+            UserState::Active { email } => {
                 let email = email.unverify();
                 self.state = UserState::SuspendedByAdmin {
                     email: email.clone(),
@@ -256,21 +256,21 @@ impl User {
                 email
             }
             UserState::SuspendedByAdmin { .. } => return Ok(()), // すでに停止中なので何もしない
-            UserState::DeactivatedByUser { ref email } => {
+            UserState::DeactivatedByUser { email } => {
                 let email = email.clone();
                 self.state = UserState::SuspendedByAdmin {
                     email: email.clone(),
                 };
                 email
             }
-            UserState::PendingVerification { ref email } => {
+            UserState::PendingVerification { email } => {
                 let email = email.clone();
                 self.state = UserState::SuspendedByAdmin {
                     email: email.clone(),
                 };
                 email
             }
-            UserState::ActiveWithUnverifiedEmail { ref email } => {
+            UserState::ActiveWithUnverifiedEmail { email } => {
                 let email = email.clone();
                 self.state = UserState::SuspendedByAdmin {
                     email: email.clone(),
@@ -290,8 +290,8 @@ impl User {
     }
 
     pub fn deactivate(&mut self) -> Result<(), UserDomainError> {
-        let email = match self.state {
-            UserState::Active { ref email } => {
+        let email = match &self.state {
+            UserState::Active { email } => {
                 let email = email.unverify();
                 self.state = UserState::DeactivatedByUser {
                     email: email.clone(),
@@ -324,14 +324,14 @@ impl User {
     }
 
     pub fn activate<V: EmailVerifier>(&mut self) -> Result<(), UserDomainError> {
-        let email = match self.state {
+        let email = match &self.state {
             UserState::Active { .. } => return Ok(()), // すでにアクティブなので何もしない
             UserState::SuspendedByAdmin { .. } => {
                 Err(UserStateTransitionError::AlreadySuspended {
                     to: UserStateKind::Active,
                 })?
             }
-            UserState::DeactivatedByUser { ref email } => {
+            UserState::DeactivatedByUser { email } => {
                 let email = email.clone();
                 self.state = UserState::ActiveWithUnverifiedEmail {
                     email: email.clone(),
@@ -358,7 +358,7 @@ impl User {
     }
 
     pub fn unlock_suspension(&mut self) -> Result<(), UserDomainError> {
-        let email = match self.state {
+        let email = match &self.state {
             UserState::Active { .. }
             | UserState::DeactivatedByUser { .. }
             | UserState::PendingVerification { .. }
@@ -367,7 +367,7 @@ impl User {
                     from: self.state.clone(),
                 })?
             }
-            UserState::SuspendedByAdmin { ref email } => {
+            UserState::SuspendedByAdmin { email } => {
                 let email = email.clone();
                 self.state = UserState::ActiveWithUnverifiedEmail {
                     email: email.clone(),

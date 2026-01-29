@@ -103,7 +103,7 @@ pub enum OutboxEventStatus {
 // TODO: #52 で completed_at と processed_at を分ける際に修正する
 impl OutboxEvent {
     pub fn complete(&mut self) -> Result<(), OutboxEventDomainError> {
-        match self.status {
+        match &self.status {
             OutboxEventStatus::Pending | OutboxEventStatus::Failed => {
                 self.status = OutboxEventStatus::Completed;
                 self.processed_at = Some(Utc::now());
@@ -122,7 +122,7 @@ impl OutboxEvent {
     }
 
     pub fn fail(&mut self) -> Result<(), OutboxEventDomainError> {
-        match self.status {
+        match &self.status {
             OutboxEventStatus::Pending => {
                 self.status = OutboxEventStatus::Failed;
             }
