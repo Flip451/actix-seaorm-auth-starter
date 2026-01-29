@@ -118,8 +118,8 @@ mod tests {
     #[rstest]
     #[case(VerifiedEmail::new("invalid-email"), "invalid-email")]
     #[case(UnverifiedEmail::new("invalid-email"), "invalid-email")]
-    fn test_invalid_email_error(
-        #[case] new_email_result: Result<impl EmailTrait, EmailFormatError>,
+    fn test_invalid_email_error<T: EmailTrait>(
+        #[case] new_email_result: Result<T, EmailFormatError>,
         #[case] expected_invalid_email_in_error: &str,
     ) {
         if let Err(EmailFormatError::InvalidFormat {
