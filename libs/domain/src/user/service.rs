@@ -83,8 +83,8 @@ impl<'a> UserUniquenessService<'a> {
     ) -> Result<UniqueUsername, UserRepositoryError> {
         if self.user_repo.find_by_username(username).await?.is_some() {
             Err(UserDomainError::AlreadyExists(
-                UserUniqueConstraintViolation::Email {
-                    duplicated_email: username.to_string(),
+                UserUniqueConstraintViolation::Username {
+                    duplicated_username: username.to_string(),
                 },
             ))?;
         }
