@@ -69,7 +69,7 @@ pub async fn update_user_handler(
     service: web::Data<dyn UserService>,
     body: web::Json<UpdateUserRequest>,
 ) -> Result<impl Responder, ApiError> {
-    body.validate().map_err(ApiError::InvalidInput)?;
+    body.validate()?;
 
     let input = UpdateUserInput {
         username: body.username.clone(),

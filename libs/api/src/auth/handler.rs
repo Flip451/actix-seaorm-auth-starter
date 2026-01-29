@@ -28,7 +28,7 @@ pub async fn signup_handler(
     service: web::Data<dyn AuthService>,
     body: web::Json<SignupRequest>,
 ) -> Result<impl Responder, ApiError> {
-    body.validate().map_err(ApiError::InvalidInput)?;
+    body.validate()?;
 
     let input = SignupInput {
         username: body.username.clone(),
@@ -46,7 +46,7 @@ pub async fn login_handler(
     service: web::Data<dyn AuthService>,
     body: web::Json<LoginRequest>,
 ) -> Result<impl Responder, ApiError> {
-    body.validate().map_err(ApiError::InvalidInput)?;
+    body.validate()?;
 
     let input = LoginInput {
         email: body.email.clone(),

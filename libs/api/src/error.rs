@@ -7,7 +7,7 @@ use usecase::usecase_error::UseCaseError;
 #[derive(Debug, Error)]
 pub enum ApiError {
     #[error("入力の形式が不正です: {0}")]
-    InvalidInput(ValidationErrors),
+    InvalidInput(#[from] ValidationErrors),
 
     #[error(transparent)]
     UseCaseError(#[from] UseCaseError),
