@@ -1,8 +1,10 @@
-use crate::auth::{
-    dto::{LoginInput, SignupInput},
-    error::AuthError,
-    service::AuthService,
-    token_service::TokenService,
+use crate::{
+    auth::{
+        dto::{LoginInput, SignupInput},
+        service::AuthService,
+        token_service::TokenService,
+    },
+    usecase_error::UseCaseError,
 };
 use async_trait::async_trait;
 use domain::{
@@ -53,7 +55,7 @@ impl<TM: TransactionManager> AuthService for AuthInteractor<TM> {
             email = %input.email
         )
     )]
-    async fn signup(&self, input: SignupInput) -> Result<User, AuthError> {
+    async fn signup(&self, input: SignupInput) -> Result<User, UseCaseError> {
         // ここでDTOからValueObjectへの変換を行う
         let username = input.username;
         let email = input.email;
@@ -86,14 +88,14 @@ impl<TM: TransactionManager> AuthService for AuthInteractor<TM> {
         skip(self, input),
         fields(email = %input.email)
     )]
-    async fn login(&self, input: LoginInput) -> Result<String, AuthError> {
+    async fn login(&self, input: LoginInput) -> Result<String, UseCaseError> {
         // ここでDTOからValueObjectへの変換を行う
         let email = UnverifiedEmail::new(&input.email)?;
         let password = RawPassword::new(&input.password)?;
         // 1. ユーザーを検索
-        let user_opt = tx!(self.transaction_manager, |factory| {
+        let user_opt: Option<User> = tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
-            Ok::<_, AuthError>(user_repo.find_by_email(email.as_str()).await?)
+            Ok::<_, UseCaseError>(user_repo.find_by_email(email.as_str()).await?)
         })
         .await?;
 
@@ -113,7 +115,7 @@ impl<TM: TransactionManager> AuthService for AuthInteractor<TM> {
         };
 
         if !is_valid || user.is_none() {
-            return Err(AuthError::InvalidCredentials);
+            return Err(UseCaseError::Unauthorized);
         }
 
         let user = user.unwrap();

@@ -8,10 +8,10 @@ use domain::auth::policies::update_profile::UpdateProfilePayload;
 use domain::auth::policies::view_profile::ViewProfilePayload;
 
 use crate::shared::identity::Identity;
+use crate::usecase_error::UseCaseError;
 use crate::user::service::UserService;
 
 use super::dto::UserResponse;
-use super::error::UserError;
 use domain::auth::policy::{AuthorizationService, UserAction};
 use domain::transaction::TransactionManager;
 use domain::tx;
@@ -41,7 +41,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     async fn list_users(
         &self,
         identity: Box<dyn Identity>,
-    ) -> Result<Vec<UserResponse>, UserError> {
+    ) -> Result<Vec<UserResponse>, UseCaseError> {
         let users = tx!(self.transaction_manager, |factory| {
             // ポリシーチェック
             AuthorizationService::can(
@@ -51,7 +51,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             )?;
 
             let user_repo = factory.user_repository();
-            Ok::<_, UserError>(user_repo.find_all().await?)
+            Ok::<_, UseCaseError>(user_repo.find_all().await?)
         })
         .await?;
 
@@ -78,14 +78,14 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         &self,
         identity: Box<dyn Identity>,
         user_id: UserId,
-    ) -> Result<UserResponse, UserError> {
+    ) -> Result<UserResponse, UseCaseError> {
         let user = tx!(self.transaction_manager, |factory| {
             // プロフィールの取得
             let user_repo = factory.user_repository();
             let user = user_repo
                 .find_by_id(user_id)
                 .await?
-                .ok_or(UserError::NotFound)?;
+                .ok_or(UseCaseError::NotFound)?;
 
             // ポリシーチェック
             AuthorizationService::can(
@@ -94,7 +94,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                 UserAction::ViewProfile(ViewProfilePayload { target: &user }),
             )?;
 
-            Ok::<_, UserError>(user)
+            Ok::<_, UseCaseError>(user)
         })
         .await?;
 
@@ -119,7 +119,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         identity: Box<dyn Identity>,
         target_id: UserId,
         input: super::dto::UpdateUserInput,
-    ) -> Result<UserResponse, UserError> {
+    ) -> Result<UserResponse, UseCaseError> {
         let updated_user = tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
             let user_uniqueness_service = UserUniquenessService::new(user_repo.clone());
@@ -127,7 +127,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             let mut user = user_repo
                 .find_by_id(target_id)
                 .await?
-                .ok_or(UserError::NotFound)?;
+                .ok_or(UseCaseError::NotFound)?;
 
             if let Some(username) = input.username {
                 // ポリシーチェック
@@ -163,7 +163,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             // 変更の保存
             let updated_user = user_repo.save(user).await?;
 
-            Ok::<_, UserError>(updated_user)
+            Ok::<_, UseCaseError>(updated_user)
         })
         .await?;
 
@@ -188,14 +188,14 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         identity: Box<dyn Identity>,
         target_id: UserId,
         reason: String,
-    ) -> Result<(), UserError> {
+    ) -> Result<(), UseCaseError> {
         tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
 
             let mut target_user = user_repo
                 .find_by_id(target_id)
                 .await?
-                .ok_or(UserError::NotFound)?;
+                .ok_or(UseCaseError::NotFound)?;
 
             // ポリシーチェック
             AuthorizationService::can(
@@ -212,7 +212,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             // 変更を保存
             user_repo.save(target_user).await?;
 
-            Ok::<_, UserError>(())
+            Ok::<_, UseCaseError>(())
         })
         .await
     }

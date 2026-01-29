@@ -3,7 +3,6 @@ use domain::{
         OutboxEventDomainError, OutboxReconstructionError, OutboxRepositoryError,
     },
     transaction::IntoTxError,
-    user::{UserId, UserRepositoryError},
 };
 use thiserror::Error;
 
@@ -14,14 +13,8 @@ pub enum RelayError {
     #[error(transparent)]
     DomainError(#[from] OutboxEventDomainError),
 
-    #[error("ユーザーが見つかりません: {0}")]
-    UserNotFound(UserId),
-
     #[error(transparent)]
     OutboxRepositoryError(#[from] OutboxRepositoryError),
-
-    #[error(transparent)]
-    UserRepositoryError(#[from] UserRepositoryError),
 
     #[error(transparent)]
     EmailServiceError(#[from] EmailServiceError),

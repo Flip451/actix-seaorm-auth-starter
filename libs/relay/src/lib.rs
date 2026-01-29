@@ -56,7 +56,7 @@ impl RelayWorker {
     pub fn spawn(mut self) -> JoinHandle<()> {
         tokio::spawn(async move {
             loop {
-                match self.state {
+                match &self.state {
                     // [Idle 状態] interval 秒待機
                     RelayState::Idle => {
                         tokio::select! {

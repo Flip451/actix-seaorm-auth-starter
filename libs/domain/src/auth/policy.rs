@@ -34,6 +34,7 @@ pub struct AuthorizationContext<'a> {
 }
 
 // 認可エラーの定義
+// TODO: #38 で整理
 #[derive(Debug, thiserror::Error)]
 pub enum AuthorizationError {
     #[error("権限がありません")]
@@ -44,6 +45,17 @@ pub enum AuthorizationError {
     CannotUnlockSelf,
     #[error("管理者を管理者が停止することはできません")]
     CannotSuspendAdmin,
+}
+
+impl AuthorizationError {
+    pub fn message_for_client(&self) -> &'static str {
+        match self {
+            AuthorizationError::Forbidden => "権限がありません",
+            AuthorizationError::CannotSuspendSelf => "自分自身を利用停止にすることはできません",
+            AuthorizationError::CannotUnlockSelf => "自分自身のロック解除はできません",
+            AuthorizationError::CannotSuspendAdmin => "管理者を管理者が停止することはできません",
+        }
+    }
 }
 
 pub trait Policy<'a> {
