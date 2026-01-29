@@ -4224,6 +4224,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "domain",
+ "futures-util",
  "jsonwebtoken",
  "opentelemetry",
  "serde",
