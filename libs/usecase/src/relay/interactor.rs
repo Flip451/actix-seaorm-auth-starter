@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use domain::shared::service::clock::Clock;
 use domain::{transaction::TransactionManager, tx};
 use futures_util::future;
 
@@ -26,13 +27,19 @@ use super::service::OutboxRelayService;
 pub struct RelayInteractor<TM: TransactionManager> {
     transaction_manager: Arc<TM>,
     mapper: Arc<EventMapper>,
+    clock: Arc<dyn Clock>,
 }
 
 impl<TM: TransactionManager> RelayInteractor<TM> {
-    pub fn new(transaction_manager: Arc<TM>, mapper: Arc<EventMapper>) -> Self {
+    pub fn new(
+        transaction_manager: Arc<TM>,
+        mapper: Arc<EventMapper>,
+        clock: Arc<dyn Clock>,
+    ) -> Self {
         Self {
             transaction_manager,
             mapper,
+            clock,
         }
     }
 }
@@ -44,6 +51,7 @@ impl<TM: TransactionManager> OutboxRelayService for RelayInteractor<TM> {
     #[tracing::instrument(skip(self))]
     async fn process_batch(&self, limit: u64) -> Result<usize, RelayError> {
         let mapper = self.mapper.clone();
+        let clock = self.clock.clone();
 
         tx!(self.transaction_manager, |factory| {
             let outbox_repo = factory.outbox_repository();
@@ -90,9 +98,9 @@ impl<TM: TransactionManager> OutboxRelayService for RelayInteractor<TM> {
             // 4. 結果に基づいてステータスを更新
             for (event, success) in events.iter_mut().zip(results) {
                 if success {
-                    event.complete()?;
+                    event.complete(clock.as_ref())?;
                 } else {
-                    event.fail()?;
+                    event.fail(clock.as_ref())?;
                 }
             }
 

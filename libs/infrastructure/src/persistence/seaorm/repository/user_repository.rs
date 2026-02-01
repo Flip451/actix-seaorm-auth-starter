@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use chrono::Utc;
 use migration::constants::UniqueConstraints;
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter, Set, sea_query::OnConflict};
 
@@ -158,7 +157,7 @@ where
             status: Set(user.state_str().to_string()),
             role: Set(user.role().to_string()),
             created_at: Set(user.created_at().into()), // 新規作成時は引数の値、更新時は無視される
-            updated_at: Set(Utc::now().into()),
+            updated_at: Set(user.updated_at().into()),
         };
 
         // ON CONFLICT (id) DO UPDATE ...

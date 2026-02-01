@@ -1,12 +1,14 @@
 pub mod auth;
 pub mod email_service;
 pub mod persistence;
+pub mod shared;
 pub mod user;
 
 use std::sync::Arc;
 
 use crate::auth::argon2::password_service::Argon2PasswordHasher;
 use crate::persistence::seaorm::transaction::SeaOrmTransactionManager;
+use crate::shared::clock::SystemClock;
 use crate::user::uuid_generator::UuidUserIdGenerator;
 use domain::transaction::TransactionManager;
 use domain::user::UserFactory;
@@ -58,13 +60,15 @@ impl AppRegistry {
         email_service: Arc<dyn EmailService>,
         jwt_secret: String,
     ) -> Self {
+        let clock = Arc::new(SystemClock);
+
         let password_hasher = Arc::new(Argon2PasswordHasher);
 
-        let token_service = Arc::new(TokenInteractor::new(jwt_secret));
+        let token_service = Arc::new(TokenInteractor::new(jwt_secret, clock.clone()));
 
         let user_id_generator = Arc::new(UuidUserIdGenerator);
 
-        let user_factory = Arc::new(UserFactory::new(user_id_generator.clone()));
+        let user_factory = Arc::new(UserFactory::new(user_id_generator.clone(), clock.clone()));
 
         let auth_service = Arc::new(AuthInteractor::new(
             repos.transaction_manager.clone(),
@@ -73,7 +77,10 @@ impl AppRegistry {
             user_factory.clone(),
         ));
 
-        let user_service = Arc::new(UserInteractor::new(repos.transaction_manager.clone()));
+        let user_service = Arc::new(UserInteractor::new(
+            repos.transaction_manager.clone(),
+            clock.clone(),
+        ));
 
         let user_created_factory = UserCreatedFactory::new(email_service.clone());
         let user_suspended_factory = UserSuspendedFactory::new(email_service.clone());
@@ -100,6 +107,7 @@ impl AppRegistry {
         let outbox_relay_service = Arc::new(RelayInteractor::new(
             repos.transaction_manager.clone(),
             Arc::new(event_mapper),
+            clock.clone(),
         ));
 
         Self {

@@ -3,7 +3,10 @@ use derive_entity::Entity;
 use strum::EnumString;
 
 use crate::{
-    shared::outbox_event::{EntityWithEvents, OutboxEvent},
+    shared::{
+        outbox_event::{EntityWithEvents, OutboxEvent},
+        service::clock::Clock,
+    },
     user::{
         Email, EmailTrait, UserEvent, UserId, UserReconstructionError, UserStateTransitionError,
         error::ModificationWithInvalidStateError,
@@ -38,8 +41,8 @@ impl User {
         id: UserId,
         UniqueUserInfo { email, username }: UniqueUserInfo,
         password: HashedPassword,
+        now: DateTime<Utc>,
     ) -> Result<Self, UserDomainError> {
-        let now = Utc::now();
         Ok(Self {
             id,
             username: username.clone(),
@@ -90,7 +93,10 @@ impl User {
     fn pull_outbox_events(&mut self) -> Vec<OutboxEvent> {
         std::mem::take(&mut self.events)
             .into_iter()
-            .map(|e| OutboxEvent::new(e.into()))
+            .map(|e| {
+                let created_at = e.created_at();
+                OutboxEvent::new(e.into(), created_at)
+            })
             .collect()
     }
 
@@ -147,15 +153,19 @@ impl User {
     pub fn change_username(
         &mut self,
         UniqueUsername(new_username): UniqueUsername,
+        clock: &dyn Clock,
     ) -> Result<(), ModificationWithInvalidStateError> {
         let old_username = self.username.clone();
         self.username = new_username;
+
+        let now = clock.now();
+        self.updated_at = now;
 
         self.record_event(UserEvent::UsernameChanged(UsernameChangedEvent {
             old_username,
             new_username: self.username.clone(),
             email: self.email(),
-            changed_at: Utc::now(),
+            changed_at: now,
         }));
         Ok(())
     }
@@ -163,7 +173,11 @@ impl User {
 
 // ユーザーの状態遷移に関するメソッド群
 impl User {
-    pub fn verify_email<V: EmailVerifier>(&mut self, verifier: &V) -> Result<(), UserDomainError> {
+    pub fn verify_email<V: EmailVerifier>(
+        &mut self,
+        verifier: &V,
+        clock: &dyn Clock,
+    ) -> Result<(), UserDomainError> {
         let email = match &self.state {
             UserState::Active { .. } => return Ok(()), // すでに検証済みなので何もしない
             UserState::SuspendedByAdmin { .. } => {
@@ -192,10 +206,13 @@ impl User {
             }
         };
 
+        let now = clock.now();
+        self.updated_at = now;
+
         self.record_event(UserEvent::EmailVerified(UserEmailVerifiedEvent {
             email,
             username: self.username.clone(),
-            verified_at: Utc::now(),
+            verified_at: now,
         }));
 
         Ok(())
@@ -204,6 +221,7 @@ impl User {
     pub fn change_email(
         &mut self,
         UniqueEmail(new_email): UniqueEmail,
+        clock: &dyn Clock,
     ) -> Result<(), ModificationWithInvalidStateError> {
         if new_email.as_str() == self.email().as_str() {
             // 新しいメールアドレスが現在のものと同じ場合、何もしない
@@ -238,15 +256,18 @@ impl User {
             }
         }
 
+        let now = clock.now();
+        self.updated_at = now;
+
         self.record_event(UserEvent::EmailChanged(UserEmailChangedEvent {
             new_email,
             username: self.username.clone(),
-            changed_at: Utc::now(),
+            changed_at: now,
         }));
         Ok(())
     }
 
-    pub fn suspend(&mut self, reason: String) -> Result<(), UserDomainError> {
+    pub fn suspend(&mut self, reason: String, clock: &dyn Clock) -> Result<(), UserDomainError> {
         let email = match &self.state {
             UserState::Active { email } => {
                 let email = email.unverify();
@@ -279,17 +300,20 @@ impl User {
             }
         };
 
+        let now = clock.now();
+        self.updated_at = now;
+
         self.record_event(UserEvent::Suspended(UserSuspendedEvent {
             username: self.username.clone(),
             email,
             reason,
-            suspended_at: Utc::now(),
+            suspended_at: now,
         }));
 
         Ok(())
     }
 
-    pub fn deactivate(&mut self) -> Result<(), UserDomainError> {
+    pub fn deactivate(&mut self, clock: &dyn Clock) -> Result<(), UserDomainError> {
         let email = match &self.state {
             UserState::Active { email } => {
                 let email = email.unverify();
@@ -314,16 +338,19 @@ impl User {
             }
         };
 
+        let now = clock.now();
+        self.updated_at = now;
+
         self.record_event(UserEvent::Deactivated(UserDeactivatedEvent {
             username: self.username.clone(),
             email,
-            deactivated_at: Utc::now(),
+            deactivated_at: now,
         }));
 
         Ok(())
     }
 
-    pub fn activate<V: EmailVerifier>(&mut self) -> Result<(), UserDomainError> {
+    pub fn activate(&mut self, clock: &dyn Clock) -> Result<(), UserDomainError> {
         let email = match &self.state {
             UserState::Active { .. } => return Ok(()), // すでにアクティブなので何もしない
             UserState::SuspendedByAdmin { .. } => {
@@ -348,16 +375,19 @@ impl User {
             }
         };
 
+        let now = clock.now();
+        self.updated_at = now;
+
         self.record_event(UserEvent::Reactivated(UserReactivatedEvent {
             username: self.username.clone(),
             email,
-            reactivated_at: Utc::now(),
+            reactivated_at: now,
         }));
 
         Ok(())
     }
 
-    pub fn unlock_suspension(&mut self) -> Result<(), UserDomainError> {
+    pub fn unlock_suspension(&mut self, clock: &dyn Clock) -> Result<(), UserDomainError> {
         let email = match &self.state {
             UserState::Active { .. }
             | UserState::DeactivatedByUser { .. }
@@ -376,10 +406,13 @@ impl User {
             }
         };
 
+        let now = clock.now();
+        self.updated_at = now;
+
         self.record_event(UserEvent::Unlocked(UserUnlockedEvent {
             username: self.username.clone(),
             email,
-            unlocked_at: Utc::now(),
+            unlocked_at: now,
         }));
 
         Ok(())
@@ -444,7 +477,7 @@ impl UserState {
         self.kind_raw().into()
     }
 
-    pub(crate) fn kind_raw(&self) -> UserStateKind {
+    fn kind_raw(&self) -> UserStateKind {
         match self {
             UserState::Active { .. } => UserStateKind::Active,
             UserState::SuspendedByAdmin { .. } => UserStateKind::SuspendedByAdmin,

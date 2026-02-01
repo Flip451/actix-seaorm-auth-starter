@@ -16,6 +16,23 @@ pub enum UserEvent {
     EmailVerified(UserEmailVerifiedEvent),
 }
 
+impl UserEvent {
+    /// イベントの発生日時を取得する
+    pub(crate) fn created_at(&self) -> DateTime<Utc> {
+        match self {
+            UserEvent::Created(e) => e.registered_at,
+            UserEvent::Suspended(e) => e.suspended_at,
+            UserEvent::Unlocked(e) => e.unlocked_at,
+            UserEvent::Deactivated(e) => e.deactivated_at,
+            UserEvent::Reactivated(e) => e.reactivated_at,
+            UserEvent::PromotedToAdmin(e) => e.promoted_at,
+            UserEvent::UsernameChanged(e) => e.changed_at,
+            UserEvent::EmailChanged(e) => e.changed_at,
+            UserEvent::EmailVerified(e) => e.verified_at,
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct UserCreatedEvent {
     pub email: UnverifiedEmail,
