@@ -350,7 +350,7 @@ impl User {
         Ok(())
     }
 
-    pub fn activate<V: EmailVerifier>(&mut self, clock: &dyn Clock) -> Result<(), UserDomainError> {
+    pub fn activate(&mut self, clock: &dyn Clock) -> Result<(), UserDomainError> {
         let email = match &self.state {
             UserState::Active { .. } => return Ok(()), // すでにアクティブなので何もしない
             UserState::SuspendedByAdmin { .. } => {
