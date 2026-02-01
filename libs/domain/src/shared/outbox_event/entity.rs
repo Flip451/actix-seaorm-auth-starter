@@ -8,6 +8,7 @@ use uuid::Uuid;
 use crate::shared::{
     domain_event::DomainEvent,
     outbox_event::error::{OutboxEventDomainError, OutboxStatusTransitionError},
+    service::clock::Clock,
 };
 
 use super::OutboxEventId;
@@ -24,13 +25,13 @@ pub struct OutboxEvent {
 }
 
 impl OutboxEvent {
-    pub fn new(event: DomainEvent) -> Self {
+    pub fn new(event: DomainEvent, created_at: DateTime<Utc>) -> Self {
         Self {
             id: Uuid::new_v4().into(),
             event,
             status: OutboxEventStatus::Pending,
             trace_id: Self::get_current_trace_id(),
-            created_at: Utc::now(),
+            created_at,
             processed_at: None,
         }
     }
@@ -102,11 +103,11 @@ pub enum OutboxEventStatus {
 
 // TODO: #52 で completed_at と processed_at を分ける際に修正する
 impl OutboxEvent {
-    pub fn complete(&mut self) -> Result<(), OutboxEventDomainError> {
+    pub fn complete(&mut self, clock: &dyn Clock) -> Result<(), OutboxEventDomainError> {
         match &self.status {
             OutboxEventStatus::Pending | OutboxEventStatus::Failed => {
                 self.status = OutboxEventStatus::Completed;
-                self.processed_at = Some(Utc::now());
+                self.processed_at = Some(clock.now());
             }
             OutboxEventStatus::Completed => Err(OutboxStatusTransitionError::AlreadyCompleted {
                 to: OutboxEventStatus::Completed,
@@ -121,7 +122,7 @@ impl OutboxEvent {
         Ok(())
     }
 
-    pub fn fail(&mut self) -> Result<(), OutboxEventDomainError> {
+    pub fn fail(&mut self, _clock: &dyn Clock) -> Result<(), OutboxEventDomainError> {
         match &self.status {
             OutboxEventStatus::Pending => {
                 self.status = OutboxEventStatus::Failed;

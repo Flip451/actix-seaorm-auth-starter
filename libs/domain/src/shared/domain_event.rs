@@ -19,18 +19,22 @@ impl From<UserEvent> for DomainEvent {
 mod tests {
     use rstest::rstest;
 
-    use chrono::Utc;
+    use chrono::{DateTime, TimeZone as _, Utc};
 
     use crate::user::{self, EmailTrait, UnverifiedEmail, UserCreatedEvent};
 
     use super::*;
+
+    fn fixed_time() -> DateTime<Utc> {
+        Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap()
+    }
 
     #[rstest]
     #[case(
         UserEvent::Created(UserCreatedEvent {
             email: UnverifiedEmail::new("user@example.com").unwrap(),
             username: "user123".to_string(),
-            registered_at: Utc::now()
+            registered_at: fixed_time(),
         }),
         "UserEvent::Created"
     )]
@@ -39,7 +43,7 @@ mod tests {
             email: UnverifiedEmail::new("user@example.com").unwrap(),
             username: "user123".to_string(),
             reason: "Violation of terms".to_string(),
-            suspended_at: Utc::now(),
+            suspended_at: fixed_time(),
         }),
         "UserEvent::Suspended"
     )]
@@ -47,7 +51,7 @@ mod tests {
         UserEvent::Unlocked(user::UserUnlockedEvent {
             username: "user123".to_string(),
             email: UnverifiedEmail::new("user@example.com").unwrap(),
-            unlocked_at: Utc::now(),
+            unlocked_at: fixed_time(),
         }),
         "UserEvent::Unlocked"
     )]
@@ -55,7 +59,7 @@ mod tests {
         UserEvent::Deactivated(user::UserDeactivatedEvent {
             username: "user123".to_string(),
             email: UnverifiedEmail::new("user@example.com").unwrap(),
-            deactivated_at: Utc::now(),
+            deactivated_at: fixed_time(),
         }),
         "UserEvent::Deactivated"
     )]

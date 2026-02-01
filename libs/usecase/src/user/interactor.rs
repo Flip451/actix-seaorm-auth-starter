@@ -6,6 +6,7 @@ use domain::auth::policies::list_users::ListUsersPayload;
 use domain::auth::policies::suspend_user::SuspendUserPayload;
 use domain::auth::policies::update_profile::UpdateProfilePayload;
 use domain::auth::policies::view_profile::ViewProfilePayload;
+use domain::shared::service::clock::Clock;
 
 use crate::shared::identity::Identity;
 use crate::usecase_error::UseCaseError;
@@ -19,12 +20,14 @@ use domain::user::{UserId, UserUniquenessService};
 
 pub struct UserInteractor<TM: TransactionManager> {
     transaction_manager: Arc<TM>,
+    clock: Arc<dyn Clock>,
 }
 
 impl<TM: TransactionManager> UserInteractor<TM> {
-    pub fn new(transaction_manager: Arc<TM>) -> Self {
+    pub fn new(transaction_manager: Arc<TM>, clock: Arc<dyn Clock>) -> Self {
         Self {
             transaction_manager,
+            clock,
         }
     }
 }
@@ -120,6 +123,8 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         target_id: UserId,
         input: super::dto::UpdateUserInput,
     ) -> Result<UserResponse, UseCaseError> {
+        let clock = self.clock.clone();
+
         let updated_user = tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
             let user_uniqueness_service = UserUniquenessService::new(user_repo.clone());
@@ -143,7 +148,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                     .await?;
 
                 // ドメインロジックの実行
-                user.change_username(username)?;
+                user.change_username(username, clock.as_ref())?;
             }
             if let Some(email) = input.email {
                 // ポリシーチェック
@@ -157,7 +162,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                 let email = user_uniqueness_service.ensure_unique_email(&email).await?;
 
                 // ドメインロジックの実行
-                user.change_email(email)?;
+                user.change_email(email, clock.as_ref())?;
             }
 
             // 変更の保存
@@ -189,6 +194,8 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         target_id: UserId,
         reason: String,
     ) -> Result<(), UseCaseError> {
+        let clock = self.clock.clone();
+
         tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
 
@@ -207,7 +214,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             )?;
 
             // ユーザーの状態を停止に変更
-            target_user.suspend(reason)?;
+            target_user.suspend(reason, clock.as_ref())?;
 
             // 変更を保存
             user_repo.save(target_user).await?;

@@ -14,4 +14,5 @@ tracing = { workspace = true }
 opentelemetry = { workspace = true }
 tracing-opentelemetry = { workspace = true }
 validator = { workspace = true }
+futures-util = { workspace = true }
 jsonwebtoken = { version = "10.2.0", features = ["rust_crypto"] }
