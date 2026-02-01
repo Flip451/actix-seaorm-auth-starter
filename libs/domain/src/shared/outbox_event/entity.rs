@@ -122,7 +122,7 @@ impl OutboxEvent {
         Ok(())
     }
 
-    pub fn fail(&mut self, clock: &dyn Clock) -> Result<(), OutboxEventDomainError> {
+    pub fn fail(&mut self, _clock: &dyn Clock) -> Result<(), OutboxEventDomainError> {
         match &self.status {
             OutboxEventStatus::Pending => {
                 self.status = OutboxEventStatus::Failed;

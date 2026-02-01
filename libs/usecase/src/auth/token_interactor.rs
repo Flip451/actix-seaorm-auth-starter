@@ -6,7 +6,10 @@ use crate::{
 };
 
 use chrono::Duration;
-use domain::{shared::service::clock::Clock, user::{UserId, UserRole}};
+use domain::{
+    shared::service::clock::Clock,
+    user::{UserId, UserRole},
+};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 
 #[derive(Clone)] // Clone可能にしておく（ActixのStateで共有するため）
