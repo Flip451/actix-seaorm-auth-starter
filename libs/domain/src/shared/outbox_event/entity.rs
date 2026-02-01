@@ -140,7 +140,6 @@ impl OutboxEvent {
                 })?
             }
         }
-        self.processed_at = Some(clock.now());
 
         Ok(())
     }
