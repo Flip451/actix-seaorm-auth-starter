@@ -1,27 +1,30 @@
+use std::sync::Arc;
+
 use crate::{
     auth::token_service::{Claims, TokenService},
     usecase_error::UseCaseError,
 };
 
 use chrono::{Duration, Utc};
-use domain::user::{UserId, UserRole};
+use domain::{shared::service::clock::Clock, user::{UserId, UserRole}};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 
 #[derive(Clone)] // Clone可能にしておく（ActixのStateで共有するため）
 pub struct TokenInteractor {
     jwt_secret: String,
+    clock: Arc<dyn Clock>,
 }
 
 impl TokenInteractor {
-    pub fn new(jwt_secret: String) -> Self {
-        Self { jwt_secret }
+    pub fn new(jwt_secret: String, clock: Arc<dyn Clock>) -> Self {
+        Self { jwt_secret, clock }
     }
 }
 
 impl TokenService for TokenInteractor {
     /// トークンの発行 (Login時に使用)
     fn issue_token(&self, user_id: UserId, role: UserRole) -> Result<String, UseCaseError> {
-        let expiration = Utc::now()
+        let expiration = self.clock.now()
             .checked_add_signed(Duration::hours(24))
             .expect("valid timestamp")
             .timestamp() as usize;
@@ -29,7 +32,7 @@ impl TokenService for TokenInteractor {
         let claims = Claims {
             sub: user_id,
             role,
-            iat: Utc::now().timestamp() as usize,
+            iat: self.clock.now().timestamp() as usize,
             exp: expiration,
         };
 
