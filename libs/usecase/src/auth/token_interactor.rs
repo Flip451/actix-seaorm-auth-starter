@@ -5,7 +5,7 @@ use crate::{
     usecase_error::UseCaseError,
 };
 
-use chrono::{Duration, Utc};
+use chrono::Duration;
 use domain::{shared::service::clock::Clock, user::{UserId, UserRole}};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 
