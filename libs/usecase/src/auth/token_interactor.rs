@@ -24,7 +24,9 @@ impl TokenInteractor {
 impl TokenService for TokenInteractor {
     /// トークンの発行 (Login時に使用)
     fn issue_token(&self, user_id: UserId, role: UserRole) -> Result<String, UseCaseError> {
-        let expiration = self.clock.now()
+        let now = self.clock.now();
+
+        let expiration = now
             .checked_add_signed(Duration::hours(24))
             .expect("valid timestamp")
             .timestamp() as usize;
@@ -32,7 +34,7 @@ impl TokenService for TokenInteractor {
         let claims = Claims {
             sub: user_id,
             role,
-            iat: self.clock.now().timestamp() as usize,
+            iat: now.timestamp() as usize,
             exp: expiration,
         };
 
