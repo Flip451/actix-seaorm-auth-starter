@@ -13,6 +13,9 @@ pub enum OutboxRepositoryError {
     #[error(transparent)]
     DomainError(#[from] OutboxEventDomainError),
 
+    #[error("ドメインイベントのシリアライズに失敗しました: {0}")]
+    DomainEventSerializationError(#[from] serde_json::Error),
+
     #[error(transparent)]
     ReconstructionError(#[from] OutboxEventReconstructionError),
 

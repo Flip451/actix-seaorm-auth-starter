@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use domain::shared::{
     outbox_event::{
-        OutboxEvent, OutboxEventReconstructionError, OutboxRepository, OutboxRepositoryError,
+        OutboxEvent, OutboxRepository, OutboxRepositoryError,
         entity::{OutboxEventStatusKind, OutboxEventStatusRaw},
     },
     service::clock::Clock,
@@ -24,8 +24,7 @@ where
 fn get_active_model_from_event(
     event: OutboxEvent,
 ) -> Result<outbox_entity::ActiveModel, OutboxRepositoryError> {
-    let payload = serde_json::to_value(event.domain_event())
-        .map_err(|e| OutboxEventReconstructionError::DomainEventReconstructionError(e.into()))?;
+    let payload = serde_json::to_value(event.domain_event())?;
 
     let event_type = event.domain_event().to_string();
 

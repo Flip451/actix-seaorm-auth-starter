@@ -34,6 +34,9 @@ impl From<OutboxRepositoryError> for RelayError {
             OutboxRepositoryError::ReconstructionError(outbox_event_reconstruction_error) => {
                 outbox_event_reconstruction_error.into()
             }
+            OutboxRepositoryError::DomainEventSerializationError(
+                domain_event_serialization_error,
+            ) => RelayError::Internal(domain_event_serialization_error.into()),
         }
     }
 }
