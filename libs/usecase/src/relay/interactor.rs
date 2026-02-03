@@ -105,8 +105,9 @@ impl<TM: TransactionManager> OutboxRelayService for RelayInteractor<TM> {
             for (event, result) in events.iter_mut().zip(results) {
                 if let Err(e) = &result {
                     event.handle_failure(process_started_at, calculator.as_ref(), clock.as_ref(), e)?;
+                } else {
+                    event.complete(process_started_at, clock.as_ref())?;
                 }
-                event.complete(process_started_at, clock.as_ref())?;
             }
 
             // 5. 更新結果を一括保存
