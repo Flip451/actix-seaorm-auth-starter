@@ -1,12 +1,11 @@
 use async_trait::async_trait;
 use domain::shared::{
-    domain_event::DomainEvent,
     outbox_event::{
-        OutboxEvent, OutboxEventStatus, OutboxReconstructionError, OutboxRepository,
-        OutboxRepositoryError,
+        OutboxEvent, OutboxEventReconstructionError, OutboxRepository, OutboxRepositoryError,
+        entity::{OutboxEventStatusKind, OutboxEventStatusRaw},
     },
+    service::clock::Clock,
 };
-use opentelemetry::trace::TraceId;
 use sea_orm::{ActiveValue::Set, DbBackend, EntityTrait, Statement, Value, sea_query::OnConflict};
 
 use crate::persistence::seaorm::connect::Connectable;
@@ -26,7 +25,7 @@ fn get_active_model_from_event(
     event: OutboxEvent,
 ) -> Result<outbox_entity::ActiveModel, OutboxRepositoryError> {
     let payload = serde_json::to_value(event.domain_event())
-        .map_err(|e| OutboxRepositoryError::Persistence(e.into()))?;
+        .map_err(|e| OutboxEventReconstructionError::DomainEventReconstructionError(e.into()))?;
 
     let event_type = event.domain_event().to_string();
 
@@ -34,10 +33,13 @@ fn get_active_model_from_event(
         id: Set(event.id().into()),
         event_type: Set(event_type),
         payload: Set(payload),
-        status: Set(event.status().to_string()),
+        status: Set(event.status().kind().to_string()),
         trace_id: Set(event.trace_id().map(|tid| tid.to_string())),
         created_at: Set(event.created_at().into()),
         processed_at: Set(event.processed_at().map(|dt| dt.into())),
+        retry_count: Set(event.retry_count() as i32),
+        next_attempt_at: Set(event.next_attempt_at().map(|dt| dt.into())),
+        last_attempted_at: Set(event.last_attempted_at().map(|dt| dt.into())),
     })
 }
 
@@ -53,25 +55,35 @@ impl<C: Connectable<T>, T: sea_orm::ConnectionTrait> SeaOrmPostgresOutboxReposit
     fn map_to_outbox_event(
         &self,
         model: outbox_entity::Model,
-    ) -> Result<OutboxEvent, OutboxReconstructionError> {
-        let event: DomainEvent = serde_json::from_value(model.payload)
-            .map_err(|e| OutboxReconstructionError::EventReconstructionError(e.into()))?;
+    ) -> Result<OutboxEvent, OutboxRepositoryError> {
+        let outbox_entity::Model {
+            id,
+            event_type: _,
+            payload,
+            status,
+            trace_id,
+            created_at,
+            processed_at,
+            retry_count,
+            next_attempt_at,
+            last_attempted_at,
+        } = model;
 
-        let trace_id = model
-            .trace_id
-            .map(|tid| {
-                TraceId::from_hex(&tid).map_err(OutboxReconstructionError::ParseTraceIdError)
-            })
-            .transpose()?;
+        let status_source = OutboxEventStatusRaw {
+            kind: status,
+            retry_count: retry_count as u32,
+            next_attempt_at: next_attempt_at.map(|dt| dt.into()),
+            last_attempted_at: last_attempted_at.map(|dt| dt.into()),
+            processed_at: processed_at.map(|dt| dt.into()),
+        };
 
         Ok(OutboxEvent::reconstruct(
-            model.id.into(),
-            event,
-            model.status.parse()?,
+            id.into(),
+            payload,
+            status_source,
             trace_id,
-            model.created_at.into(),
-            model.processed_at.map(|dt| dt.into()),
-        ))
+            created_at.into(),
+        )?)
     }
 }
 
@@ -98,7 +110,7 @@ where
             )
             .exec(self.conn.connect())
             .await
-            .map_err(|e| OutboxRepositoryError::Persistence(e.into()))?;
+            .map_err(|e| OutboxRepositoryError::DataStoreError(e.into()))?;
 
         Ok(())
     }
@@ -123,7 +135,7 @@ where
             )
             .exec(self.conn.connect())
             .await
-            .map_err(|e| OutboxRepositoryError::Persistence(e.into()))?;
+            .map_err(|e| OutboxRepositoryError::DataStoreError(e.into()))?;
 
         Ok(())
     }
@@ -131,12 +143,14 @@ where
     async fn lock_pending_events(
         &self,
         limit: u64,
-    ) -> Result<Vec<OutboxEvent>, OutboxReconstructionError> {
+        clock: &dyn Clock,
+    ) -> Result<Vec<OutboxEvent>, OutboxRepositoryError> {
         let sql = r#"
             SELECT * FROM outbox
-            WHERE status = $1
-            ORDER BY created_at ASC
-            LIMIT $2
+            WHERE (status = $1)
+                OR (status = $2 AND next_attempt_at <= $3)
+            ORDER BY next_attempt_at ASC NULLS FIRST
+            LIMIT $4
             FOR UPDATE SKIP LOCKED
         "#;
 
@@ -144,7 +158,13 @@ where
             DbBackend::Postgres,
             sql,
             vec![
-                OutboxEventStatus::Pending.to_string().into(),
+                // $1:
+                OutboxEventStatusKind::Pending.to_string().into(),
+                // $2:
+                OutboxEventStatusKind::Failed.to_string().into(),
+                // $3: 現在時刻
+                Value::from(clock.now()),
+                // $4: Limit
                 Value::BigUnsigned(Some(limit)),
             ],
         );
@@ -153,7 +173,7 @@ where
             .from_raw_sql(stmt)
             .all(self.conn.connect())
             .await
-            .map_err(|e| OutboxReconstructionError::DataStoreError(e.into()))?;
+            .map_err(|e| OutboxRepositoryError::DataStoreError(e.into()))?;
 
         let events = models
             .into_iter()

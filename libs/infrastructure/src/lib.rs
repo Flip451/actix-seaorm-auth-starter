@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod email_service;
 pub mod persistence;
+pub mod relay;
 pub mod shared;
 pub mod user;
 
@@ -8,6 +9,9 @@ use std::sync::Arc;
 
 use crate::auth::argon2::password_service::Argon2PasswordHasher;
 use crate::persistence::seaorm::transaction::SeaOrmTransactionManager;
+use crate::relay::next_attempt_calculator::backoff_next_attempt_calculator::{
+    BackoffCalculatorConfig, BackoffNextAttemptCalculator,
+};
 use crate::shared::clock::SystemClock;
 use crate::user::uuid_generator::UuidUserIdGenerator;
 use domain::transaction::TransactionManager;
@@ -59,8 +63,11 @@ impl AppRegistry {
         repos: RepoRegistry<TM>,
         email_service: Arc<dyn EmailService>,
         jwt_secret: String,
+        backoff_calculator_config: BackoffCalculatorConfig,
     ) -> Self {
         let clock = Arc::new(SystemClock);
+        let next_attempt_calculator =
+            Arc::new(BackoffNextAttemptCalculator::new(backoff_calculator_config));
 
         let password_hasher = Arc::new(Argon2PasswordHasher);
 
@@ -107,6 +114,7 @@ impl AppRegistry {
         let outbox_relay_service = Arc::new(RelayInteractor::new(
             repos.transaction_manager.clone(),
             Arc::new(event_mapper),
+            next_attempt_calculator,
             clock.clone(),
         ));
 

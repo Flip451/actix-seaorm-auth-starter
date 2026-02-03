@@ -1,3 +1,4 @@
+use domain::shared::outbox_event::entity::OutboxEventStatusKind;
 use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
@@ -12,15 +13,15 @@ impl MigrationTrait for Migration {
                     .table(Outbox::Table)
                     .if_not_exists()
                     .col(ColumnDef::new(Outbox::Id).uuid().not_null().primary_key())
-                    .col(ColumnDef::new(Outbox::EventType).string().not_null()) // 例: "UserSuspended"
+                    .col(ColumnDef::new(Outbox::EventType).string().not_null()) // 例: "UserEvent::Suspended"
                     .col(ColumnDef::new(Outbox::Payload).json_binary().not_null()) // イベントの中身
                     .col(
                         ColumnDef::new(Outbox::Status)
                             .string()
                             .not_null()
-                            .default("PENDING"),
+                            .default(OutboxEventStatusKind::Pending.to_string()),
                     ) // PENDING, PUBLISHED, FAILED, COMPLETED
-                    .col(ColumnDef::new(Outbox::TraceId).string().null()) // OpenTelemetryのTraceID [5]
+                    .col(ColumnDef::new(Outbox::TraceId).string().null()) // OpenTelemetryのTraceID
                     .col(
                         ColumnDef::new(Outbox::CreatedAt)
                             .timestamp_with_time_zone()

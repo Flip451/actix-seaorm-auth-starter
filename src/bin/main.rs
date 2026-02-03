@@ -10,6 +10,7 @@ use tracing_actix_web::TracingLogger;
 
 use infrastructure::{
     AppRegistry, RepoRegistry, email_service::stub_email_service::email_service::StubEmailService,
+    relay::next_attempt_calculator::backoff_next_attempt_calculator::BackoffCalculatorConfig,
 };
 
 #[actix_web::main]
@@ -34,6 +35,35 @@ async fn main() -> std::io::Result<()> {
     let relay_config = RelayConfig::new(relay_batch_size, relay_interval_secs)
         .unwrap_or_else(|e| panic!("Failed to create RelayConfig: {e}"));
 
+    let max_retries = std::env::var("RELAY_MAX_RETRIES")
+        .expect("RELAY_MAX_RETRIES must be set")
+        .parse()
+        .expect("RELAY_MAX_RETRIES must be a valid number");
+    let backoff_max_factor = std::env::var("RELAY_BACKOFF_MAX_FACTOR")
+        .expect("RELAY_BACKOFF_MAX_FACTOR must be set")
+        .parse()
+        .expect("RELAY_BACKOFF_MAX_FACTOR must be a valid number");
+    let backoff_base_factor = std::env::var("RELAY_BACKOFF_BASE_FACTOR")
+        .expect("RELAY_BACKOFF_BASE_FACTOR must be set")
+        .parse()
+        .expect("RELAY_BACKOFF_BASE_FACTOR must be a valid number");
+    let backoff_base_delay_seconds = std::env::var("RELAY_BACKOFF_BASE_DELAY_SECONDS")
+        .expect("RELAY_BACKOFF_BASE_DELAY_SECONDS must be set")
+        .parse()
+        .expect("RELAY_BACKOFF_BASE_DELAY_SECONDS must be a valid number");
+    let backoff_jitter_max_millis = std::env::var("RELAY_BACKOFF_JITTER_MAX_MILLIS")
+        .expect("RELAY_BACKOFF_JITTER_MAX_MILLIS must be set")
+        .parse()
+        .expect("RELAY_BACKOFF_JITTER_MAX_MILLIS must be a valid number");
+
+    let backoff_calculator_config = BackoffCalculatorConfig {
+        max_retries,
+        max_factor: backoff_max_factor,
+        base_factor: backoff_base_factor,
+        base_delay_seconds: backoff_base_delay_seconds,
+        jitter_max_millis: backoff_jitter_max_millis,
+    };
+
     let db_conn = Database::connect(database_url)
         .await
         .expect("Failed to connect DB");
@@ -47,7 +77,7 @@ async fn main() -> std::io::Result<()> {
     let email_service = Arc::new(StubEmailService::new());
 
     // DIコンテナ（Registry）の初期化
-    let registry = AppRegistry::new(repos, email_service, jwt_secret);
+    let registry = AppRegistry::new(repos, email_service, jwt_secret, backoff_calculator_config);
 
     // Actix-web 内で共有するために web::Data にラップ
     let auth_service = web::Data::from(registry.auth_service.clone());

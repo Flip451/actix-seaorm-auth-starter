@@ -1,28 +1,22 @@
-use std::num::ParseIntError;
-
 use async_trait::async_trait;
 use thiserror::Error;
+
+use crate::shared::{
+    outbox_event::{OutboxEventDomainError, error::OutboxEventReconstructionError},
+    service::clock::Clock,
+};
 
 use super::OutboxEvent;
 
 #[derive(Debug, Error)]
 pub enum OutboxRepositoryError {
-    #[error("イベントの保存に失敗しました: {0}")]
-    Persistence(#[source] anyhow::Error),
-}
+    #[error(transparent)]
+    DomainError(#[from] OutboxEventDomainError),
 
-#[derive(Debug, Error)]
-pub enum OutboxReconstructionError {
-    #[error("トレースIDのパースに失敗しました: {0}")]
-    ParseTraceIdError(ParseIntError),
+    #[error(transparent)]
+    ReconstructionError(#[from] OutboxEventReconstructionError),
 
-    #[error("無効なイベントステータスです: {0}")]
-    InvalidOutboxEventStatus(#[from] strum::ParseError),
-
-    #[error("イベントの再構築に失敗しました: {0}")]
-    EventReconstructionError(#[source] anyhow::Error),
-
-    #[error("データストアからの取得に失敗しました: {0}")]
+    #[error("データストアのエラー: {0}")]
     DataStoreError(#[source] anyhow::Error),
 }
 
@@ -34,5 +28,6 @@ pub trait OutboxRepository: Send + Sync {
     async fn lock_pending_events(
         &self,
         limit: u64,
-    ) -> Result<Vec<OutboxEvent>, OutboxReconstructionError>;
+        clock: &dyn Clock,
+    ) -> Result<Vec<OutboxEvent>, OutboxRepositoryError>;
 }
