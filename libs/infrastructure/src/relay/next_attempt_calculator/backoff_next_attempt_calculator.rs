@@ -1,13 +1,62 @@
 use chrono::{DateTime, Duration, Utc};
 use domain::shared::outbox_event::{NextAttemptCalculator, service::NextAttemptStatus};
 use rand::Rng;
+use thiserror::Error;
 
 pub struct BackoffCalculatorConfig {
-    pub max_retries: u32,
-    pub max_factor: f64,
-    pub base_factor: f64,
-    pub base_delay_seconds: f64,
-    pub jitter_max_millis: i64,
+    max_retries: u32,
+    max_factor: f64,
+    base_factor: f64,
+    base_delay_seconds: f64,
+    jitter_max_millis: i64,
+}
+
+#[derive(Debug, Error)]
+pub enum BackoffCalculatorConfigError {
+    #[error("Invalid configuration for BackoffNextAttemptCalculator: {0}")]
+    InvalidConfig(String),
+}
+
+impl BackoffCalculatorConfig {
+    pub fn new(
+        max_retries: u32,
+        max_factor: f64,
+        base_factor: f64,
+        base_delay_seconds: f64,
+        jitter_max_millis: i64,
+    ) -> Result<Self, BackoffCalculatorConfigError> {
+        if max_factor < 1.0 {
+            return Err(BackoffCalculatorConfigError::InvalidConfig(
+                "max_factor must be at least 1.0".to_string(),
+            ));
+        }
+
+        if base_factor < 1.0 {
+            return Err(BackoffCalculatorConfigError::InvalidConfig(
+                "base_factor must be at least 1.0".to_string(),
+            ));
+        }
+
+        if base_delay_seconds <= 0.0 {
+            return Err(BackoffCalculatorConfigError::InvalidConfig(
+                "base_delay_seconds must be positive".to_string(),
+            ));
+        }
+
+        if jitter_max_millis <= 0 {
+            return Err(BackoffCalculatorConfigError::InvalidConfig(
+                "jitter_max_millis must be positive".to_string(),
+            ));
+        }
+
+        Ok(Self {
+            max_retries,
+            max_factor,
+            base_factor,
+            base_delay_seconds,
+            jitter_max_millis,
+        })
+    }
 }
 
 pub(crate) struct BackoffNextAttemptCalculator {
@@ -31,12 +80,20 @@ pub(crate) struct BackoffNextAttemptCalculator {
 
 impl BackoffNextAttemptCalculator {
     pub fn new(config: BackoffCalculatorConfig) -> Self {
+        let BackoffCalculatorConfig {
+            max_retries,
+            max_factor,
+            base_factor,
+            base_delay_seconds,
+            jitter_max_millis,
+        } = config;
+
         Self {
-            max_retries: config.max_retries,
-            max_factor: config.max_factor,
-            base_factor: config.base_factor,
-            base_delay_seconds: config.base_delay_seconds,
-            jitter_max_millis: config.jitter_max_millis,
+            max_retries,
+            max_factor,
+            base_factor,
+            base_delay_seconds,
+            jitter_max_millis,
         }
     }
 }

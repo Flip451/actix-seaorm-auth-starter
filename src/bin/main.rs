@@ -56,13 +56,14 @@ async fn main() -> std::io::Result<()> {
         .parse()
         .expect("RELAY_BACKOFF_JITTER_MAX_MILLIS must be a valid number");
 
-    let backoff_calculator_config = BackoffCalculatorConfig {
+    let backoff_calculator_config = BackoffCalculatorConfig::new(
         max_retries,
-        max_factor: backoff_max_factor,
-        base_factor: backoff_base_factor,
-        base_delay_seconds: backoff_base_delay_seconds,
-        jitter_max_millis: backoff_jitter_max_millis,
-    };
+        backoff_max_factor,
+        backoff_base_factor,
+        backoff_base_delay_seconds,
+        backoff_jitter_max_millis,
+    )
+    .unwrap_or_else(|e| panic!("Failed to create BackoffCalculatorConfig: {}", e));
 
     let db_conn = Database::connect(database_url)
         .await
