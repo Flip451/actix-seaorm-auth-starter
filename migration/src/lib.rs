@@ -7,6 +7,7 @@ mod m20251224_071855_add_role_to_user;
 mod m20260104_042952_replace_is_active_with_status;
 mod m20260107_121138_create_outbox_table;
 mod m20260203_134756_add_retry_fields_to_outbox;
+mod m20260204_152948_normalize_outbox_status;
 
 pub struct Migrator;
 
@@ -19,6 +20,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260104_042952_replace_is_active_with_status::Migration),
             Box::new(m20260107_121138_create_outbox_table::Migration),
             Box::new(m20260203_134756_add_retry_fields_to_outbox::Migration),
+            Box::new(m20260204_152948_normalize_outbox_status::Migration),
         ]
     }
 }
