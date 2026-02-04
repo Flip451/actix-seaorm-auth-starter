@@ -1,3 +1,4 @@
+use domain::user::UserRole;
 use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
@@ -15,7 +16,7 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(Alias::new("role"))
                             .string()
                             .not_null()
-                            .default("user"), // デフォルト値を設定
+                            .default(UserRole::User.to_string()), // デフォルト値を設定
                     )
                     .to_owned(),
             )

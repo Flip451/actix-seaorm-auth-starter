@@ -15,6 +15,9 @@ pub struct Model {
     pub trace_id: Option<String>,
     pub created_at: DateTimeWithTimeZone,
     pub processed_at: Option<DateTimeWithTimeZone>,
+    pub retry_count: i32,
+    pub next_attempt_at: Option<DateTimeWithTimeZone>,
+    pub last_attempted_at: Option<DateTimeWithTimeZone>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

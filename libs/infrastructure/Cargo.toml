@@ -16,5 +16,7 @@ opentelemetry = { workspace = true }
 tracing-opentelemetry = { workspace = true }
 anyhow = { workspace = true }
 chrono = { workspace = true }
-argon2 = "0.5.3"
 sea-orm = { workspace = true }
+rand = { workspace = true }
+thiserror = { workspace = true }
+argon2 = "0.5.3"

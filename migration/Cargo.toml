@@ -9,6 +9,7 @@ name = "migration"
 path = "src/lib.rs"
 
 [dependencies]
+domain = { workspace = true }
 strum = { workspace = true }
 async-std = { version = "1", features = ["attributes", "tokio1"] }
 

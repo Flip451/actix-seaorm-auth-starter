@@ -51,7 +51,10 @@ impl EventHandler for SendEmailWhenUserCreatedHandler {
 
         let email_message = EmailMessage { to, subject, body };
 
-        self.email_service.send_email(email_message).await?;
+        self.email_service
+            .send_email(email_message)
+            .await
+            .map_err(|e| RelayError::ProcessingError(e.into()))?;
 
         Ok(())
     }
