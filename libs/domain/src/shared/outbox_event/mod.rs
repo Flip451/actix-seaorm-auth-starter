@@ -9,5 +9,5 @@ pub use entity::{OutboxEvent, OutboxEventStatus};
 pub use entity_with_events::EntityWithEvents;
 pub use error::{OutboxEventDomainError, OutboxEventReconstructionError};
 pub use repository::{OutboxRepository, OutboxRepositoryError};
-pub use service::NextAttemptCalculator;
+pub use service::{NextAttemptCalculator, OutboxEventIdGenerator};
 pub use value_objects::outbox_event_id::OutboxEventId;

@@ -4,7 +4,6 @@ use opentelemetry::trace::{TraceContextExt, TraceId};
 use serde_json::Value;
 use tracing::Span;
 use tracing_opentelemetry::OpenTelemetrySpanExt;
-use uuid::Uuid;
 
 use crate::shared::{
     domain_event::DomainEvent,
@@ -31,9 +30,9 @@ pub struct OutboxEvent {
 }
 
 impl OutboxEvent {
-    pub fn new(event: DomainEvent, created_at: DateTime<Utc>) -> Self {
+    pub(crate) fn new(id: OutboxEventId, event: DomainEvent, created_at: DateTime<Utc>) -> Self {
         Self {
-            id: Uuid::new_v4().into(),
+            id,
             event,
             status: OutboxEventStatus::Pending,
             trace_id: Self::get_current_trace_id(),
@@ -235,7 +234,7 @@ impl OutboxEvent {
         process_start_at: DateTime<Utc>,
         calculator: &dyn NextAttemptCalculator,
         clock: &dyn Clock,
-        error: &impl std::error::Error,
+        error: &impl std::fmt::Debug,
     ) -> Result<(), OutboxEventDomainError> {
         let (now, current_retry_count) = match &self.status {
             OutboxEventStatus::Pending => {
@@ -351,5 +350,289 @@ impl TryFrom<OutboxEventStatusRaw> for OutboxEventStatus {
                     .ok_or(OutboxEventReconstructionError::PermanentlyFailedButNoProcessedAt)?,
             }),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::shared::domain_event::DomainEvent;
+    use crate::shared::outbox_event::OutboxEventIdGenerator;
+    use crate::shared::outbox_event::service::NextAttemptStatus;
+    use crate::user::{EmailTrait as _, UnverifiedEmail, UserCreatedEvent, UserEvent};
+    use chrono::{TimeZone, Utc};
+    use mockall::{mock, predicate::*};
+    use rstest::*;
+    use uuid::Uuid;
+
+    // --- Mocks Definition ---
+
+    mock! {
+        pub Clock {}
+        impl Clock for Clock {
+            fn now(&self) -> DateTime<Utc>;
+        }
+    }
+
+    mock! {
+        pub Calculator {}
+        impl NextAttemptCalculator for Calculator {
+            fn next_attempt_status(
+                &self,
+                retry_count: u32,
+                last_failed_at: DateTime<Utc>,
+            ) -> NextAttemptStatus;
+        }
+    }
+
+    mock! {
+        pub IdGen {}
+        impl OutboxEventIdGenerator for IdGen {
+            fn generate(&self) -> OutboxEventId;
+        }
+    }
+
+    // --- Fixtures ---
+
+    #[fixture]
+    fn base_time() -> DateTime<Utc> {
+        Utc.with_ymd_and_hms(2025, 1, 1, 10, 0, 0).unwrap()
+    }
+
+    #[fixture]
+    fn outbox_event_id() -> OutboxEventId {
+        Uuid::new_v4().into()
+    }
+
+    #[fixture]
+    fn domain_event(base_time: DateTime<Utc>) -> DomainEvent {
+        DomainEvent::UserEvent(UserEvent::Created(UserCreatedEvent {
+            email: UnverifiedEmail::new("test@example.com").unwrap(),
+            username: "testuser".to_string(),
+            registered_at: base_time,
+        }))
+    }
+
+    #[fixture]
+    fn pending_event(
+        outbox_event_id: OutboxEventId,
+        domain_event: DomainEvent,
+        base_time: DateTime<Utc>,
+    ) -> OutboxEvent {
+        OutboxEvent::new(outbox_event_id, domain_event, base_time)
+    }
+
+    // --- Tests for complete() ---
+
+    #[rstest]
+    #[case::from_pending(
+        OutboxEventStatus::Pending,
+        0 // expected retry_count
+    )]
+    #[case::from_failed(
+        OutboxEventStatus::Failed {
+            retry_count: 3,
+            next_attempt_at: Utc::now(),
+            last_attempted_at: Utc::now(),
+            failed_at: Utc::now()
+        },
+        3 // expected retry_count (should be preserved)
+    )]
+    fn test_complete_success(
+        mut pending_event: OutboxEvent,
+        base_time: DateTime<Utc>,
+        #[case] initial_status: OutboxEventStatus,
+        #[case] expected_retry_count: u32,
+    ) {
+        // Arrange
+        pending_event.status = initial_status; // Force set initial status
+
+        let completed_time = base_time + chrono::Duration::seconds(10);
+
+        let mut mock_clock = MockClock::new();
+        mock_clock.expect_now().return_const(completed_time);
+
+        // Act
+        let result = pending_event.complete(base_time, &mock_clock);
+
+        // Assert
+        assert!(result.is_ok());
+
+        match pending_event.status() {
+            OutboxEventStatus::Completed {
+                retry_count,
+                last_attempted_at,
+                completed_at,
+            } => {
+                assert_eq!(retry_count, expected_retry_count);
+                assert_eq!(last_attempted_at, base_time); // Process start time
+                assert_eq!(completed_at, completed_time); // Clock time
+            }
+            _ => panic!("Status should be Completed"),
+        }
+    }
+
+    #[rstest]
+    #[case::already_completed(OutboxEventStatus::Completed {
+        retry_count: 0, last_attempted_at: Utc::now(), completed_at: Utc::now()
+    })]
+    #[case::permanently_failed(OutboxEventStatus::PermanentlyFailed {
+        retry_count: 1, last_attempted_at: Utc::now(), failed_at: Utc::now()
+    })]
+    fn test_complete_invalid_transition(
+        mut pending_event: OutboxEvent,
+        base_time: DateTime<Utc>,
+        #[case] invalid_status: OutboxEventStatus,
+    ) {
+        // Arrange
+        pending_event.status = invalid_status;
+        let mut mock_clock = MockClock::new();
+        mock_clock.expect_now().return_const(base_time);
+
+        // Act
+        let result = pending_event.complete(base_time, &mock_clock);
+
+        // Assert
+        assert!(matches!(
+            result,
+            Err(OutboxEventDomainError::InvalidStatusTransition(_))
+        ));
+    }
+
+    // --- Tests for handle_failure() ---
+
+    #[rstest]
+    #[case::first_failure(
+        OutboxEventStatus::Pending,
+        0, // current retry count
+        1  // expected retry count
+    )]
+    #[case::subsequent_failure(
+        OutboxEventStatus::Failed {
+            retry_count: 2,
+            next_attempt_at: Utc::now(),
+            last_attempted_at: Utc::now(),
+            failed_at: Utc::now()
+        },
+        2, // current retry count
+        3  // expected retry count
+    )]
+    fn test_handle_failure_retry(
+        mut pending_event: OutboxEvent,
+        base_time: DateTime<Utc>,
+        #[case] initial_status: OutboxEventStatus,
+        #[case] current_retry_count: u32,
+        #[case] expected_retry_count: u32,
+    ) {
+        // Arrange
+        pending_event.status = initial_status;
+        let fail_time = base_time + chrono::Duration::seconds(5);
+        let next_retry_time = fail_time + chrono::Duration::minutes(10);
+
+        let mut mock_clock = MockClock::new();
+        mock_clock.expect_now().return_const(fail_time);
+
+        let mut mock_calc = MockCalculator::new();
+        mock_calc
+            .expect_next_attempt_status()
+            .with(eq(current_retry_count), eq(fail_time))
+            .return_const(NextAttemptStatus::RetryAt(next_retry_time));
+
+        // Act
+        let result = pending_event.handle_failure(
+            base_time,
+            &mock_calc,
+            &mock_clock,
+            &anyhow::anyhow!("error"),
+        );
+
+        // Assert
+        assert!(result.is_ok());
+        match pending_event.status() {
+            OutboxEventStatus::Failed {
+                retry_count,
+                next_attempt_at,
+                last_attempted_at,
+                failed_at,
+            } => {
+                assert_eq!(retry_count, expected_retry_count);
+                assert_eq!(next_attempt_at, next_retry_time);
+                assert_eq!(last_attempted_at, base_time);
+                assert_eq!(failed_at, fail_time);
+            }
+            _ => panic!("Status should be Failed"),
+        }
+    }
+
+    #[rstest]
+    fn test_handle_failure_permanent(mut pending_event: OutboxEvent, base_time: DateTime<Utc>) {
+        // Arrange
+        let fail_time = base_time + chrono::Duration::seconds(5);
+
+        let mut mock_clock = MockClock::new();
+        mock_clock.expect_now().return_const(fail_time);
+
+        let mut mock_calc = MockCalculator::new();
+        mock_calc
+            .expect_next_attempt_status()
+            .return_const(NextAttemptStatus::PermanentlyFailed);
+
+        // Act
+        let result = pending_event.handle_failure(
+            base_time,
+            &mock_calc,
+            &mock_clock,
+            &anyhow::anyhow!("fatal error"),
+        );
+
+        // Assert
+        assert!(result.is_ok());
+        match pending_event.status() {
+            OutboxEventStatus::PermanentlyFailed {
+                retry_count,
+                last_attempted_at,
+                failed_at,
+            } => {
+                assert_eq!(retry_count, 1);
+                assert_eq!(last_attempted_at, base_time);
+                assert_eq!(failed_at, fail_time);
+            }
+            _ => panic!("Status should be PermanentlyFailed"),
+        }
+    }
+
+    #[rstest]
+    #[case(OutboxEventStatus::Completed {
+        retry_count: 0, last_attempted_at: Utc::now(), completed_at: Utc::now()
+    })]
+    #[case(OutboxEventStatus::PermanentlyFailed {
+        retry_count: 1, last_attempted_at: Utc::now(), failed_at: Utc::now()
+    })]
+    fn test_handle_failure_invalid_transition(
+        mut pending_event: OutboxEvent,
+        base_time: DateTime<Utc>,
+        #[case] invalid_status: OutboxEventStatus,
+    ) {
+        // Arrange
+        pending_event.status = invalid_status;
+
+        let mut mock_clock = MockClock::new();
+        mock_clock.expect_now().return_const(base_time); // Mocking calls inside check block if any
+
+        let mock_calc = MockCalculator::new(); // Should not be called
+
+        // Act
+        let result = pending_event.handle_failure(
+            base_time,
+            &mock_calc,
+            &mock_clock,
+            &anyhow::anyhow!("error"),
+        );
+
+        // Assert
+        assert!(matches!(
+            result,
+            Err(OutboxEventDomainError::InvalidStatusTransition(_))
+        ));
     }
 }

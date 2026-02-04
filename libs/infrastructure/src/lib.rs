@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod email_service;
+pub mod outbox_event;
 pub mod persistence;
 pub mod relay;
 pub mod shared;
@@ -8,6 +9,7 @@ pub mod user;
 use std::sync::Arc;
 
 use crate::auth::argon2::password_service::Argon2PasswordHasher;
+use crate::outbox_event::outbox_event_id_generator::UuidOutboxIdGenerator;
 use crate::persistence::seaorm::transaction::SeaOrmTransactionManager;
 use crate::relay::next_attempt_calculator::backoff_next_attempt_calculator::{
     BackoffCalculatorConfig, BackoffNextAttemptCalculator,
@@ -43,7 +45,11 @@ pub struct RepoRegistry<TM: TransactionManager> {
 impl RepoRegistry<SeaOrmTransactionManager> {
     /// SeaORM 用の具体的な実装で構築
     pub fn new_seaorm(db: sea_orm::DatabaseConnection) -> Self {
-        let transaction_manager = Arc::new(SeaOrmTransactionManager::new(db.clone()));
+        let outbox_event_id_generator = Arc::new(UuidOutboxIdGenerator);
+        let transaction_manager = Arc::new(SeaOrmTransactionManager::new(
+            db.clone(),
+            outbox_event_id_generator,
+        ));
         Self {
             transaction_manager,
         }

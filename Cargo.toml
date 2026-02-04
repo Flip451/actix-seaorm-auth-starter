@@ -60,6 +60,7 @@ quote = "1.0.44"
 proc-macro2 = "1.0.106"
 trybuild = "1.0.114"
 rand = "0.9.2"
+mockall = "0.14.0"
 
 [dependencies]
 infrastructure = { workspace = true }
