@@ -104,6 +104,9 @@ where
                         outbox_entity::Column::Status,
                         outbox_entity::Column::TraceId,
                         outbox_entity::Column::ProcessedAt,
+                        outbox_entity::Column::RetryCount,
+                        outbox_entity::Column::NextAttemptAt,
+                        outbox_entity::Column::LastAttemptedAt,
                     ])
                     .to_owned(),
             )
@@ -129,6 +132,9 @@ where
                         outbox_entity::Column::Status,
                         outbox_entity::Column::TraceId,
                         outbox_entity::Column::ProcessedAt,
+                        outbox_entity::Column::RetryCount,
+                        outbox_entity::Column::NextAttemptAt,
+                        outbox_entity::Column::LastAttemptedAt,
                     ])
                     .to_owned(),
             )
