@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use domain::shared::outbox_event::NextAttemptCalculator;
 use domain::shared::service::clock::Clock;
 use domain::{transaction::TransactionManager, tx};
 use futures_util::future;
@@ -27,6 +28,7 @@ use super::service::OutboxRelayService;
 pub struct RelayInteractor<TM: TransactionManager> {
     transaction_manager: Arc<TM>,
     mapper: Arc<EventMapper>,
+    calculator: Arc<dyn NextAttemptCalculator>,
     clock: Arc<dyn Clock>,
 }
 
@@ -34,11 +36,13 @@ impl<TM: TransactionManager> RelayInteractor<TM> {
     pub fn new(
         transaction_manager: Arc<TM>,
         mapper: Arc<EventMapper>,
+        calculator: Arc<dyn NextAttemptCalculator>,
         clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
             transaction_manager,
             mapper,
+            calculator,
             clock,
         }
     }
@@ -52,11 +56,13 @@ impl<TM: TransactionManager> OutboxRelayService for RelayInteractor<TM> {
     async fn process_batch(&self, limit: u64) -> Result<usize, RelayError> {
         let mapper = self.mapper.clone();
         let clock = self.clock.clone();
+        let process_started_at = clock.now();
+        let calculator = self.calculator.clone();
 
         tx!(self.transaction_manager, |factory| {
             let outbox_repo = factory.outbox_repository();
 
-            let mut events = outbox_repo.lock_pending_events(limit).await?;
+            let mut events = outbox_repo.lock_pending_events(limit, clock.as_ref()).await?;
 
             let count = events.len();
 
@@ -76,18 +82,18 @@ impl<TM: TransactionManager> OutboxRelayService for RelayInteractor<TM> {
 
                 // 各イベントの処理を非同期タスクとして定義
                 tasks.push(async move {
-                    let mut success = true;
+                    let mut result = Ok(());
                     // 1つのイベントに対して複数のハンドラがある場合、それらは順次実行
                     // (1つでも失敗したらそのイベントは失敗とみなす)
                     for handler in handlers {
                         let event_id = handler.outbox_event_id();
                         if let Err(e) = handler.handle_event().await {
                             tracing::error!(error = ?e, %event_id, "イベントハンドラの実行に失敗しました");
-                            success = false;
+                            result = Err(e);
                             break;
                         }
                     }
-                    success
+                    result
                 });
             }
 
@@ -96,11 +102,11 @@ impl<TM: TransactionManager> OutboxRelayService for RelayInteractor<TM> {
             let results = future::join_all(tasks).await;
 
             // 4. 結果に基づいてステータスを更新
-            for (event, success) in events.iter_mut().zip(results) {
-                if success {
-                    event.complete(clock.as_ref())?;
+            for (event, result) in events.iter_mut().zip(results) {
+                if let Err(e) = &result {
+                    event.handle_failure(process_started_at, calculator.as_ref(), clock.as_ref(), e)?;
                 } else {
-                    event.fail(clock.as_ref())?;
+                    event.complete(process_started_at, clock.as_ref())?;
                 }
             }
 

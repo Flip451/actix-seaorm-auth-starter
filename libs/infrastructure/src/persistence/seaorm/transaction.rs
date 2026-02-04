@@ -6,7 +6,9 @@ use crate::persistence::seaorm::repository::outbox_repository::SeaOrmPostgresOut
 use super::repository::user_repository::SeaOrmUserRepository;
 use async_trait::async_trait;
 use domain::repository::RepositoryFactory;
-use domain::shared::outbox_event::{EntityWithEvents, OutboxEvent, OutboxRepository};
+use domain::shared::outbox_event::{
+    EntityWithEvents, OutboxEvent, OutboxEventIdGenerator, OutboxRepository,
+};
 use domain::transaction::{IntoTxError, TransactionManager};
 use domain::user::UserRepository;
 use futures_util::future::BoxFuture;
@@ -35,9 +37,12 @@ impl EntityTracker {
         entities.push(entity);
     }
 
-    pub fn pull_all_events(&self) -> Vec<OutboxEvent> {
+    pub fn pull_all_events(&self, id_generator: &dyn OutboxEventIdGenerator) -> Vec<OutboxEvent> {
         let mut entities = self.tracked_entities.lock().unwrap();
-        entities.iter_mut().flat_map(|e| e.pull_events()).collect()
+        entities
+            .iter_mut()
+            .flat_map(|e| e.pull_events(id_generator))
+            .collect()
     }
 }
 
@@ -60,11 +65,18 @@ impl<'a> RepositoryFactory<'a> for SeaOrmRepositoryFactory<'a> {
 
 pub struct SeaOrmTransactionManager {
     db: DatabaseConnection,
+    outbox_event_id_generator: Arc<dyn OutboxEventIdGenerator>,
 }
 
 impl SeaOrmTransactionManager {
-    pub fn new(db: DatabaseConnection) -> Self {
-        Self { db }
+    pub fn new(
+        db: DatabaseConnection,
+        outbox_event_id_generator: Arc<dyn OutboxEventIdGenerator>,
+    ) -> Self {
+        Self {
+            db,
+            outbox_event_id_generator,
+        }
     }
 }
 
@@ -93,7 +105,9 @@ impl TransactionManager for SeaOrmTransactionManager {
         match result {
             Ok(value) => {
                 // 5. トラッカーから全エンティティのイベントを回収 [4]
-                let all_events = factory.tracker.pull_all_events();
+                let all_events = factory
+                    .tracker
+                    .pull_all_events(self.outbox_event_id_generator.as_ref());
 
                 // 6. イベントがある場合、同一トランザクション内で Outbox 保存 [4, 5]
                 if !all_events.is_empty() {
