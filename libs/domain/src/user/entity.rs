@@ -410,7 +410,7 @@ impl User {
 }
 
 impl EntityWithEvents for User {
-    fn pull_events(&mut self, id_generator: &dyn OutboxEventIdGenerator) -> Vec<OutboxEvent> {
+    fn drain_events(&mut self, id_generator: &dyn OutboxEventIdGenerator) -> Vec<OutboxEvent> {
         std::mem::take(&mut self.events)
             .into_iter()
             .map(|e| {
@@ -419,6 +419,10 @@ impl EntityWithEvents for User {
                 OutboxEvent::new(id, e.into(), created_at)
             })
             .collect()
+    }
+
+    fn tracking_id(&self) -> String {
+        format!("User-{}", self.id().to_string())
     }
 }
 
