@@ -420,10 +420,6 @@ impl EntityWithEvents for User {
             })
             .collect()
     }
-
-    fn tracking_id(&self) -> String {
-        format!("User-{}", self.id().to_string())
-    }
 }
 
 pub struct UserStateRaw {
