@@ -5,14 +5,15 @@ use domain::auth::policies::change_email::ChangeEmailPayload;
 use domain::auth::policies::list_users::ListUsersPayload;
 use domain::auth::policies::suspend_user::SuspendUserPayload;
 use domain::auth::policies::update_profile::UpdateProfilePayload;
+use domain::auth::policies::view_own_profile::ViewOwnProfilePayload;
 use domain::auth::policies::view_profile::ViewProfilePayload;
 use domain::shared::service::clock::Clock;
 
 use crate::shared::identity::IdentityWrapper;
 use crate::usecase_error::UseCaseError;
 use crate::user::dto::{
-    GetProfileInput, ListUsersInput, ListUsersOutput, SuspendUserInput, SuspendUserOutput,
-    UpdateUserProfileInput,
+    GetOwnProfileInput, GetProfileInput, ListUsersInput, ListUsersOutput, SuspendUserInput,
+    SuspendUserOutput, UpdateUserProfileInput,
 };
 use crate::user::service::UserService;
 
@@ -56,6 +57,32 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         Ok(ListUsersOutput {
             users: users.into_iter().map(|u| u.into()).collect(),
         })
+    }
+
+    #[tracing::instrument(skip(self))]
+    async fn get_own_profile(
+        &self,
+        identity: IdentityWrapper,
+        input: GetOwnProfileInput,
+    ) -> Result<UserData, UseCaseError> {
+        let user = tx!(self.transaction_manager, |factory| {
+            // プロフィールの取得
+            let user_repo = factory.user_repository();
+            let user = user_repo
+                .find_by_id(input.user_id.into())
+                .await?
+                .ok_or(UseCaseError::NotFound)?;
+            // ポリシーチェック
+            AuthorizationService::can(
+                &identity,
+                UserAction::ViewOwnProfile(ViewOwnProfilePayload { target: &user }),
+            )?;
+
+            Ok::<_, UseCaseError>(user)
+        })
+        .await?;
+
+        Ok(user.into())
     }
 
     #[tracing::instrument(skip(self))]

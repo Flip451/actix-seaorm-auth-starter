@@ -11,7 +11,7 @@ pub struct ListUsersRequest {
 }
 
 impl From<ListUsersRequest> for ListUsersInput {
-    fn from(_query: ListUsersRequest) -> Self {
+    fn from(_req: ListUsersRequest) -> Self {
         ListUsersInput {
             // Map fields from ListUsersRequest to ListUsersInput here
         }

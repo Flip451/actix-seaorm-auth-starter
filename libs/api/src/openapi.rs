@@ -2,13 +2,14 @@ use utoipa::OpenApi;
 use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
 
 use crate::auth::{login, signup};
-use crate::user::{get_profile, list_users, suspend_user, update_profile};
+use crate::user::{get_own_profile, get_profile, list_users, suspend_user, update_profile};
 
 #[derive(OpenApi)]
 #[openapi(
     paths(
         login::login_handler,
         signup::signup_handler,
+        get_own_profile::get_own_profile_handler,
         get_profile::get_profile_handler,
         list_users::list_users_handler,
         suspend_user::suspend_user_handler,
@@ -24,6 +25,8 @@ use crate::user::{get_profile, list_users, suspend_user, update_profile};
             get_profile::GetProfileResponse,
             list_users::ListUsersRequest,
             list_users::ListUsersResponse,
+            get_own_profile::GetOwnProfileRequest,
+            get_own_profile::GetOwnProfileResponse,
             suspend_user::SuspendUserRequest,
             suspend_user::SuspendUserResponse,
             update_profile::UpdateProfileRequest,

@@ -4,8 +4,8 @@ use crate::{
     shared::identity::IdentityWrapper,
     usecase_error::UseCaseError,
     user::dto::{
-        GetProfileInput, ListUsersInput, ListUsersOutput, SuspendUserInput, SuspendUserOutput,
-        UpdateUserProfileInput, UserData,
+        GetOwnProfileInput, GetProfileInput, ListUsersInput, ListUsersOutput, SuspendUserInput,
+        SuspendUserOutput, UpdateUserProfileInput, UserData,
     },
 };
 
@@ -16,6 +16,12 @@ pub trait UserService: Send + Sync {
         identity: IdentityWrapper,
         input: ListUsersInput,
     ) -> Result<ListUsersOutput, UseCaseError>;
+
+    async fn get_own_profile(
+        &self,
+        identity: IdentityWrapper,
+        input: GetOwnProfileInput,
+    ) -> Result<UserData, UseCaseError>;
 
     async fn get_user_profile(
         &self,

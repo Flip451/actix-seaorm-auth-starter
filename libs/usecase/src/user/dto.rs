@@ -21,6 +21,11 @@ impl From<User> for UserData {
 }
 
 #[derive(Debug)]
+pub struct GetOwnProfileInput {
+    pub user_id: Uuid,
+}
+
+#[derive(Debug)]
 pub struct GetProfileInput {
     pub user_id: Uuid,
 }

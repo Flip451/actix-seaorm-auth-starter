@@ -8,6 +8,7 @@ use crate::{
         suspend_user::{SuspendUserPayload, SuspendUserPolicy},
         unlock_user::{UnlockUserPayload, UnlockUserPolicy},
         update_profile::{UpdateProfilePayload, UpdateProfilePolicy},
+        view_own_profile::{ViewOwnProfilePayload, ViewOwnProfilePolicy},
         view_profile::{ViewProfilePayload, ViewProfilePolicy},
     },
     user::{UserId, UserRole},
@@ -23,6 +24,7 @@ pub enum UserAction<'a> {
     PromoteToAdmin(PromoteToAdminPayload<'a>), // 管理者への昇格
     ListUsers(ListUsersPayload),               // ユーザー一覧の取得
     ViewProfile(ViewProfilePayload<'a>),       // プロフィール閲覧
+    ViewOwnProfile(ViewOwnProfilePayload<'a>), // 自分のプロフィール閲覧
     UpdateProfile(UpdateProfilePayload<'a>),   // プロフィール更新
     ChangeEmail(ChangeEmailPayload<'a>),       // メールアドレス変更
 }
@@ -88,6 +90,7 @@ impl AuthorizationService {
             UserAction::ActivateUser(payload) => Box::new(ActivateUserPolicy::new(payload)),
             UserAction::PromoteToAdmin(payload) => Box::new(PromoteToAdminPolicy::new(payload)),
             UserAction::ListUsers(payload) => Box::new(ListUsersPolicy::new(payload)),
+            UserAction::ViewOwnProfile(payload) => Box::new(ViewOwnProfilePolicy::new(payload)),
             UserAction::ViewProfile(payload) => Box::new(ViewProfilePolicy::new(payload)),
             UserAction::UpdateProfile(payload) => Box::new(UpdateProfilePolicy::new(payload)),
             UserAction::ChangeEmail(payload) => Box::new(ChangeEmailPolicy::new(payload)),
