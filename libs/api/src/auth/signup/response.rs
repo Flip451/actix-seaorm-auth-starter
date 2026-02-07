@@ -1,10 +1,11 @@
+use actix_web::http::StatusCode;
 use serde::Serialize;
 use usecase::auth::dto::SignupOutput;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
 #[derive(Serialize, ToSchema)]
-pub struct SignupResponse {
+pub(crate) struct SignupResponse {
     #[schema(example = "550e8400-e29b-41d4-a716-446655440000")]
     user_id: Uuid,
 }
@@ -17,4 +18,4 @@ impl From<SignupOutput> for SignupResponse {
     }
 }
 
-crate::impl_responder_for!(SignupResponse);
+crate::impl_responder_for!(SignupResponse, StatusCode::CREATED);

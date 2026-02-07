@@ -1,15 +1,31 @@
-use actix_web::{Responder, web};
+use actix_web::{Responder, get, web};
 use usecase::user::service::UserService;
 use validator::Validate as _;
 
 use crate::{error::ApiError, middleware::AdminContext};
 
-use super::{ListUsersQuery, ListUsersResponse};
+use super::{ListUsersRequest, ListUsersResponse};
 
+#[utoipa::path(
+    get,
+    path = "/users/list",
+    responses(
+        (status = 200, description = "ユーザー一覧取得成功", body = ListUsersResponse),
+        (status = 400, description = "リクエストエラー"),
+        (status = 401, description = "認証エラー"),
+        (status = 403, description = "権限エラー"),
+        (status = 500, description = "サーバーエラー"),
+    ),
+    security(
+        ("bearer_auth" = []) // Swagger UIで鍵マークを表示
+    ),
+    tag = "users",
+)]
+#[get("/users/list")]
 #[tracing::instrument(skip(service))]
 pub async fn list_users_handler(
     admin: AdminContext,
-    query: web::Query<ListUsersQuery>,
+    query: web::Query<ListUsersRequest>,
     service: web::Data<dyn UserService>,
 ) -> Result<impl Responder, ApiError> {
     query.validate()?;

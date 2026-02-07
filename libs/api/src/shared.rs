@@ -1,6 +1,6 @@
 #[macro_export]
 macro_rules! impl_responder_for {
-    ($target: ty) => {
+    ($target: ty, $status: expr) => {
         impl actix_web::Responder for $target {
             type Body = actix_web::body::BoxBody;
 
@@ -8,7 +8,7 @@ macro_rules! impl_responder_for {
                 self,
                 _req: &actix_web::HttpRequest,
             ) -> actix_web::HttpResponse<Self::Body> {
-                actix_web::HttpResponse::Ok().json(self)
+                actix_web::HttpResponse::build($status).json(self)
             }
         }
     };

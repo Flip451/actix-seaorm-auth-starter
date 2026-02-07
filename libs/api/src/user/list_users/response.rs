@@ -1,9 +1,10 @@
+use actix_web::http::StatusCode;
 use serde::Serialize;
 use usecase::user::dto::{ListUsersOutput, UserData};
 use utoipa::ToSchema;
 
 #[derive(Serialize, ToSchema)]
-pub struct ListUsersResponse {
+pub(crate) struct ListUsersResponse {
     #[schema(example =
         json!([
             {
@@ -25,7 +26,7 @@ impl From<ListUsersOutput> for ListUsersResponse {
 }
 
 #[derive(Serialize, ToSchema)]
-pub struct UserInfo {
+pub(crate) struct UserInfo {
     pub id: String,
     pub username: String,
     pub email: String,
@@ -43,4 +44,4 @@ impl From<UserData> for UserInfo {
     }
 }
 
-crate::impl_responder_for!(ListUsersResponse);
+crate::impl_responder_for!(ListUsersResponse, StatusCode::OK);

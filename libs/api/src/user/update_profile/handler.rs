@@ -1,21 +1,38 @@
-use actix_web::{Responder, web};
+use actix_web::{Responder, patch, web};
 use usecase::user::service::UserService;
 use validator::Validate as _;
 
 use super::{UpdateProfileRequest, UpdateProfileResponse};
 use crate::{error::ApiError, middleware::AuthenticatedUserContext};
 
+#[utoipa::path(
+    patch,
+    path = "/users/update-profile/{user_id}",
+    responses(
+        (status = 200, description = "ユーザー情報更新成功", body = UpdateProfileResponse),
+        (status = 400, description = "リクエストエラー"),
+        (status = 401, description = "認証エラー"),
+        (status = 403, description = "権限エラー"),
+        (status = 500, description = "サーバーエラー"),
+    ),
+    security(
+        ("bearer_auth" = []) // Swagger UIで鍵マークを表示
+    ),
+    tag = "users",
+)]
+#[patch("/users/update-profile/{user_id}")]
 #[tracing::instrument(skip(service))]
 pub async fn update_profile_handler(
     user: AuthenticatedUserContext,
+    user_id: web::Path<uuid::Uuid>,
     service: web::Data<dyn UserService>,
     body: web::Json<UpdateProfileRequest>,
 ) -> Result<impl Responder, ApiError> {
     body.validate()?;
 
-    let input = body.into_inner().into();
+    let input = body.into_inner().into_input(*user_id);
 
-    let output = service.update_user(user.into(), input).await?;
+    let output = service.update_user_profile(user.into(), input).await?;
 
     Ok(UpdateProfileResponse::from(output))
 }

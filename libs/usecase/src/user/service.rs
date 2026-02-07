@@ -5,7 +5,7 @@ use crate::{
     usecase_error::UseCaseError,
     user::dto::{
         GetProfileInput, ListUsersInput, ListUsersOutput, SuspendUserInput, SuspendUserOutput,
-        UpdateUserInput, UserData,
+        UpdateUserProfileInput, UserData,
     },
 };
 
@@ -17,16 +17,16 @@ pub trait UserService: Send + Sync {
         input: ListUsersInput,
     ) -> Result<ListUsersOutput, UseCaseError>;
 
-    async fn get_user_by_id(
+    async fn get_user_profile(
         &self,
         identity: IdentityWrapper,
         input: GetProfileInput,
     ) -> Result<UserData, UseCaseError>;
 
-    async fn update_user(
+    async fn update_user_profile(
         &self,
         identity: IdentityWrapper,
-        input: UpdateUserInput,
+        input: UpdateUserProfileInput,
     ) -> Result<UserData, UseCaseError>;
 
     async fn suspend_user(

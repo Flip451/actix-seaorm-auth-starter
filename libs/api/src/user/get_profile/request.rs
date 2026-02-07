@@ -6,14 +6,11 @@ use validator::Validate;
 
 #[derive(derive_more::Debug, Deserialize, Validate, ToSchema)]
 pub struct GetProfileRequest {
-    #[schema(example = "550e8400-e29b-41d4-a716-446655440000")]
-    pub user_id: Uuid,
+    // Add query parameters here if needed
 }
 
-impl From<GetProfileRequest> for GetProfileInput {
-    fn from(req: GetProfileRequest) -> Self {
-        Self {
-            user_id: req.user_id,
-        }
+impl GetProfileRequest {
+    pub(super) fn into_input(self, user_id: Uuid) -> GetProfileInput {
+        GetProfileInput { user_id }
     }
 }

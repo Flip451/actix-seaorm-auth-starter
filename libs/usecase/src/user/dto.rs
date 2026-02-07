@@ -35,7 +35,7 @@ pub struct ListUsersOutput {
 }
 
 #[derive(Debug)]
-pub struct UpdateUserInput {
+pub struct UpdateUserProfileInput {
     pub target_id: Uuid,
     pub username: Option<String>,
     pub email: Option<String>,

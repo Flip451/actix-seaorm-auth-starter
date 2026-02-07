@@ -12,7 +12,7 @@ use crate::shared::identity::IdentityWrapper;
 use crate::usecase_error::UseCaseError;
 use crate::user::dto::{
     GetProfileInput, ListUsersInput, ListUsersOutput, SuspendUserInput, SuspendUserOutput,
-    UpdateUserInput,
+    UpdateUserProfileInput,
 };
 use crate::user::service::UserService;
 
@@ -59,7 +59,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     }
 
     #[tracing::instrument(skip(self))]
-    async fn get_user_by_id(
+    async fn get_user_profile(
         &self,
         identity: IdentityWrapper,
         input: GetProfileInput,
@@ -86,10 +86,10 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     }
 
     #[tracing::instrument(skip(self))]
-    async fn update_user(
+    async fn update_user_profile(
         &self,
         identity: IdentityWrapper,
-        input: UpdateUserInput,
+        input: UpdateUserProfileInput,
     ) -> Result<UserData, UseCaseError> {
         let clock = self.clock.clone();
 

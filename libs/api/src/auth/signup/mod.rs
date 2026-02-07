@@ -3,5 +3,5 @@ pub mod request;
 pub mod response;
 
 pub use handler::*;
-use request::*;
-use response::*;
+pub(crate) use request::SignupRequest;
+pub(crate) use response::SignupResponse;

@@ -1,9 +1,10 @@
+use actix_web::http::StatusCode;
 use serde::Serialize;
 use usecase::auth::dto::LoginOutput;
 use utoipa::ToSchema;
 
 #[derive(Serialize, ToSchema)]
-pub struct LoginResponse {
+pub(crate) struct LoginResponse {
     #[schema(example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")]
     token: String,
 }
@@ -16,4 +17,4 @@ impl From<LoginOutput> for LoginResponse {
     }
 }
 
-crate::impl_responder_for!(LoginResponse);
+crate::impl_responder_for!(LoginResponse, StatusCode::OK);

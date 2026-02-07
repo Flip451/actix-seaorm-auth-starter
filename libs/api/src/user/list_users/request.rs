@@ -4,16 +4,16 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 #[derive(derive_more::Debug, Deserialize, Validate, ToSchema)]
-pub struct ListUsersQuery {
+pub struct ListUsersRequest {
     // Define query parameters here, e.g.:
     // pub page: Option<u32>,
     // pub per_page: Option<u32>,
 }
 
-impl From<ListUsersQuery> for ListUsersInput {
-    fn from(_query: ListUsersQuery) -> Self {
+impl From<ListUsersRequest> for ListUsersInput {
+    fn from(_query: ListUsersRequest) -> Self {
         ListUsersInput {
-            // Map fields from ListUsersQuery to ListUsersInput here
+            // Map fields from ListUsersRequest to ListUsersInput here
         }
     }
 }

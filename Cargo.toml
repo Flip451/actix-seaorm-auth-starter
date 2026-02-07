@@ -71,6 +71,8 @@ relay = { workspace = true }
 sea-orm = { workspace = true }
 actix-web = { workspace = true }
 tokio-util = { workspace = true }
+utoipa = { workspace = true }
 
 tracing-actix-web = "0.7"
 dotenvy = "0.15.7"
+utoipa-swagger-ui = { version = "9.0.2", features = ["actix-web"] }

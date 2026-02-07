@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use actix_web::{App, HttpServer, web};
+use api::openapi::ApiDoc;
 use app::telemetry;
 use dotenvy::dotenv;
 use relay::{RelayConfig, RelayWorker};
@@ -12,6 +13,8 @@ use infrastructure::{
     AppRegistry, RepoRegistry, email_service::stub_email_service::email_service::StubEmailService,
     relay::next_attempt_calculator::backoff_next_attempt_calculator::BackoffCalculatorConfig,
 };
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -105,6 +108,10 @@ async fn main() -> std::io::Result<()> {
             .app_data(user_service.clone())
             .app_data(token_service.clone())
             .configure(api::routes_config)
+            .service(
+                SwaggerUi::new("/swagger-ui/{_:.*}")
+                    .url("/api-docs/openapi.json", ApiDoc::openapi()),
+            )
     })
     .bind(("0.0.0.0", 8080))?
     .run();
