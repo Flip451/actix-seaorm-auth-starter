@@ -30,14 +30,6 @@ impl Claims {
     pub fn user_role(&self) -> UserRoleData {
         self.role.into()
     }
-
-    pub fn expiration(&self) -> DateTime<Utc> {
-        DateTime::<Utc>::from_timestamp(self.exp, 0).expect("invalid timestamp")
-    }
-
-    pub fn issued_at(&self) -> DateTime<Utc> {
-        DateTime::<Utc>::from_timestamp(self.iat, 0).expect("invalid timestamp")
-    }
 }
 
 pub trait TokenService: Send + Sync {
