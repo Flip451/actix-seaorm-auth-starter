@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-domain = { workspace = true }
 usecase = { workspace = true }
 thiserror = { workspace = true }
 validator = { workspace = true }
@@ -13,3 +12,6 @@ serde_json = { workspace = true }
 tracing = { workspace = true }
 futures-util = { workspace = true }
 actix-web = { workspace = true }
+utoipa = { workspace = true }
+uuid = { workspace = true }
+derive_more = { workspace = true }

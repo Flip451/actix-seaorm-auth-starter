@@ -62,15 +62,19 @@ pub trait Policy<'a> {
     fn check(&self, ctx: &AuthorizationContext<'a>) -> Result<(), AuthorizationError>;
 }
 
-// 認可サービス（ポリシーの管理） [5]
+pub trait Actor {
+    fn actor_id(&self) -> UserId;
+    fn actor_role(&self) -> UserRole;
+}
+
+// 認可サービス（ポリシーの管理）
 pub struct AuthorizationService;
 
 impl AuthorizationService {
-    pub fn can(
-        actor_id: UserId,
-        actor_role: UserRole,
-        action: UserAction,
-    ) -> Result<(), AuthorizationError> {
+    pub fn can(actor: &impl Actor, action: UserAction) -> Result<(), AuthorizationError> {
+        let actor_id = actor.actor_id();
+        let actor_role = actor.actor_role();
+
         let ctx = AuthorizationContext {
             actor_id,
             actor_role,

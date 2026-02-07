@@ -1,14 +1,43 @@
+use chrono::{DateTime, Utc};
 use domain::user::{UserId, UserRole};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
-use crate::usecase_error::UseCaseError;
+use crate::{shared::identity::UserRoleData, usecase_error::UseCaseError};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: UserId,
-    pub role: UserRole,
-    pub exp: usize,
-    pub iat: usize,
+    sub: UserId,
+    role: UserRole,
+    exp: i64,
+    iat: i64,
+}
+
+impl Claims {
+    pub(crate) fn new(sub: UserId, role: UserRole, iat: DateTime<Utc>, exp: DateTime<Utc>) -> Self {
+        Self {
+            sub,
+            role,
+            exp: exp.timestamp(),
+            iat: iat.timestamp(),
+        }
+    }
+
+    pub fn user_id(&self) -> Uuid {
+        self.sub.into()
+    }
+
+    pub fn user_role(&self) -> UserRoleData {
+        self.role.into()
+    }
+
+    pub fn expiration(&self) -> DateTime<Utc> {
+        DateTime::<Utc>::from_timestamp(self.exp, 0).expect("invalid timestamp")
+    }
+
+    pub fn issued_at(&self) -> DateTime<Utc> {
+        DateTime::<Utc>::from_timestamp(self.iat, 0).expect("invalid timestamp")
+    }
 }
 
 pub trait TokenService: Send + Sync {

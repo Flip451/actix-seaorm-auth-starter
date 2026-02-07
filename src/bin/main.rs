@@ -104,8 +104,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(auth_service.clone())
             .app_data(user_service.clone())
             .app_data(token_service.clone())
-            .configure(api::auth::handler::auth_config)
-            .configure(api::user::handler::user_config)
+            .configure(api::routes_config)
     })
     .bind(("0.0.0.0", 8080))?
     .run();

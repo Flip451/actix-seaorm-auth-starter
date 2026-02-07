@@ -1,22 +1,22 @@
 use crate::error::ApiError;
 use actix_web::{FromRequest, HttpRequest, dev::Payload, web};
-use domain::user::{UserId, UserRole};
 use futures_util::future::{Ready, ready};
 use usecase::auth::token_service::TokenService;
-use usecase::shared::identity::Identity;
+use usecase::shared::identity::{Identity, UserRoleData};
+use uuid::Uuid;
 
-#[derive(Clone, Copy)]
+#[derive(derive_more::Debug, Clone, Copy)]
 pub struct AdminContext {
-    pub user_id: UserId,
+    user_id: Uuid,
 }
 
 impl Identity for AdminContext {
-    fn actor_id(&self) -> UserId {
+    fn actor_id(&self) -> Uuid {
         self.user_id
     }
 
-    fn actor_role(&self) -> UserRole {
-        UserRole::Admin
+    fn actor_role(&self) -> UserRoleData {
+        UserRoleData::Admin
     }
 }
 
@@ -42,8 +42,8 @@ impl FromRequest for AdminContext {
 
         match token_service.verify_token(token) {
             // ロールが Admin であることを確認
-            Ok(claims) if claims.role == UserRole::Admin => ready(Ok(AdminContext {
-                user_id: claims.sub,
+            Ok(claims) if claims.user_role() == UserRoleData::Admin => ready(Ok(AdminContext {
+                user_id: claims.user_id(),
             })),
             // Admin でない場合は Forbidden を返す
             Ok(_) => ready(Err(ApiError::Forbidden)),
@@ -52,18 +52,18 @@ impl FromRequest for AdminContext {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(derive_more::Debug, Clone, Copy)]
 pub struct AuthenticatedUserContext {
-    pub user_id: UserId,
-    pub user_role: UserRole,
+    user_id: Uuid,
+    user_role: UserRoleData,
 }
 
 impl Identity for AuthenticatedUserContext {
-    fn actor_id(&self) -> UserId {
+    fn actor_id(&self) -> Uuid {
         self.user_id
     }
 
-    fn actor_role(&self) -> UserRole {
+    fn actor_role(&self) -> UserRoleData {
         self.user_role
     }
 }
@@ -91,8 +91,8 @@ impl FromRequest for AuthenticatedUserContext {
         // ロールにかかわらず検証を行う
         match token_service.verify_token(token) {
             Ok(claims) => ready(Ok(AuthenticatedUserContext {
-                user_id: claims.sub,
-                user_role: claims.role,
+                user_id: claims.user_id(),
+                user_role: claims.user_role(),
             })),
             Err(e) => ready(Err(ApiError::UseCaseError(e))),
         }
