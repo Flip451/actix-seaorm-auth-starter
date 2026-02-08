@@ -31,15 +31,9 @@ impl TokenService for TokenInteractor {
 
         let expiration = now
             .checked_add_signed(Duration::hours(24))
-            .expect("valid timestamp")
-            .timestamp() as usize;
+            .expect("valid timestamp");
 
-        let claims = Claims {
-            sub: user_id,
-            role,
-            iat: now.timestamp() as usize,
-            exp: expiration,
-        };
+        let claims = Claims::new(user_id, role, now, expiration);
 
         encode(
             &Header::default(),

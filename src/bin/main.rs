@@ -99,13 +99,21 @@ async fn main() -> std::io::Result<()> {
 
     // 3. サーバー起動
     let server = HttpServer::new(move || {
-        App::new()
+        let app = App::new()
             .wrap(TracingLogger::default()) // ログ・追跡用ミドルウェア
             .app_data(auth_service.clone())
             .app_data(user_service.clone())
             .app_data(token_service.clone())
-            .configure(api::auth::handler::auth_config)
-            .configure(api::user::handler::user_config)
+            .configure(api::routes_config);
+
+        // Swagger UI の設定
+        #[cfg(feature = "api-docs")]
+        let app = app.service(
+            utoipa_swagger_ui::SwaggerUi::new("/swagger-ui/{_:.*}")
+                .url("/api-docs/openapi.json", api::generate_api_doc()),
+        );
+
+        app
     })
     .bind(("0.0.0.0", 8080))?
     .run();

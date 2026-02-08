@@ -1,6 +1,6 @@
 use crate::{
     auth::{
-        dto::{LoginInput, SignupInput},
+        dto::{LoginInput, LoginOutput, SignupInput, SignupOutput},
         service::AuthService,
         token_service::TokenService,
     },
@@ -48,14 +48,8 @@ impl<TM> AuthInteractor<TM> {
 #[async_trait]
 impl<TM: TransactionManager> AuthService for AuthInteractor<TM> {
     /// サインアップ（ユーザー登録）
-    #[tracing::instrument(
-        skip(self, input),
-        fields(
-            username = %input.username,
-            email = %input.email
-        )
-    )]
-    async fn signup(&self, input: SignupInput) -> Result<User, UseCaseError> {
+    #[tracing::instrument(skip(self))]
+    async fn signup(&self, input: SignupInput) -> Result<SignupOutput, UseCaseError> {
         // ここでDTOからValueObjectへの変換を行う
         let username = input.username;
         let email = input.email;
@@ -78,7 +72,7 @@ impl<TM: TransactionManager> AuthService for AuthInteractor<TM> {
             // 2. 永続化
             let user = user_repo.save(user).await?;
 
-            Ok(user)
+            Ok(SignupOutput::from(user))
         })
         .await
     }
@@ -88,7 +82,7 @@ impl<TM: TransactionManager> AuthService for AuthInteractor<TM> {
         skip(self, input),
         fields(email = %input.email)
     )]
-    async fn login(&self, input: LoginInput) -> Result<String, UseCaseError> {
+    async fn login(&self, input: LoginInput) -> Result<LoginOutput, UseCaseError> {
         // ここでDTOからValueObjectへの変換を行う
         let email = UnverifiedEmail::new(&input.email)?;
         let password = RawPassword::new(&input.password)?;
@@ -123,6 +117,6 @@ impl<TM: TransactionManager> AuthService for AuthInteractor<TM> {
         // 3. JWT トークンの生成
         let token = self.token_service.issue_token(user.id(), user.role())?;
 
-        Ok(token)
+        Ok(LoginOutput { token })
     }
 }
