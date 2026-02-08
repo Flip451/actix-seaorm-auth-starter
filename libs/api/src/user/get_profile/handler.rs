@@ -23,7 +23,7 @@ use super::{GetProfileRequest, GetProfileResponse};
     ),
     tag = "users",
 )]
-#[get("/users/show-profile/{user_id}")]
+#[get("/show-profile/{user_id}")]
 #[tracing::instrument(skip(service))]
 pub async fn get_profile_handler(
     user: AuthenticatedUserContext,

@@ -21,7 +21,7 @@ use crate::{error::ApiError, middleware::AdminContext, user::suspend_user::Suspe
     ),
     tag = "users",
 )]
-#[patch("/users/suspend/{user_id}")]
+#[patch("/suspend/{user_id}")]
 #[tracing::instrument(skip(service))]
 pub async fn suspend_user_handler(
     admin: AdminContext,

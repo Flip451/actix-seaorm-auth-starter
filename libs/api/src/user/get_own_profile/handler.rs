@@ -22,7 +22,7 @@ use super::{GetOwnProfileRequest, GetOwnProfileResponse};
     ),
     tag = "users",
 )]
-#[get("/users/me")]
+#[get("/me")]
 #[tracing::instrument(skip(service))]
 pub async fn get_own_profile_handler(
     user: AuthenticatedUserContext,

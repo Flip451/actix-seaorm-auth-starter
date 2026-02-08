@@ -16,7 +16,7 @@ use crate::error::ApiError;
     ),
     tag = "auth",
 )]
-#[post("/auth/login")]
+#[post("/login")]
 #[tracing::instrument(skip(service))]
 pub async fn login_handler(
     service: web::Data<dyn AuthService>,

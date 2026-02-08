@@ -4,7 +4,7 @@ use super::{login, signup};
 
 pub fn auth_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
-        web::scope("")
+        web::scope("/auth")
             .service(signup::signup_handler)
             .service(login::login_handler),
     );

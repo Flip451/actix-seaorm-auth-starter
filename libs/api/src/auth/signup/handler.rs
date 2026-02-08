@@ -16,7 +16,7 @@ use super::{SignupRequest, SignupResponse};
     ),
     tag = "auth",
 )]
-#[post("/auth/signup")]
+#[post("/signup")]
 #[tracing::instrument(skip(service))]
 pub async fn signup_handler(
     service: web::Data<dyn AuthService>,

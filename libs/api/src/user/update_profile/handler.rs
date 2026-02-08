@@ -20,7 +20,7 @@ use crate::{error::ApiError, middleware::AuthenticatedUserContext};
     ),
     tag = "users",
 )]
-#[patch("/users/update-profile/{user_id}")]
+#[patch("/update-profile/{user_id}")]
 #[tracing::instrument(skip(service))]
 pub async fn update_profile_handler(
     user: AuthenticatedUserContext,

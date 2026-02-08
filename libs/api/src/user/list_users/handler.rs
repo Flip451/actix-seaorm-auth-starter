@@ -21,7 +21,7 @@ use super::{ListUsersRequest, ListUsersResponse};
     ),
     tag = "users",
 )]
-#[get("/users/list")]
+#[get("/list")]
 #[tracing::instrument(skip(service))]
 pub async fn list_users_handler(
     admin: AdminContext,
