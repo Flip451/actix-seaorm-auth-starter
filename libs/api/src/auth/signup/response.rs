@@ -1,12 +1,17 @@
 use actix_web::http::StatusCode;
 use serde::Serialize;
 use usecase::auth::dto::SignupOutput;
+#[cfg(feature = "api-docs")]
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize)]
+#[cfg_attr(feature = "api-docs", derive(ToSchema))]
 pub(crate) struct SignupResponse {
-    #[schema(example = "550e8400-e29b-41d4-a716-446655440000")]
+    #[cfg_attr(
+        feature = "api-docs",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     user_id: Uuid,
 }
 

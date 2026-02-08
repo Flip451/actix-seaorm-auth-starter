@@ -1,15 +1,18 @@
 use serde::Deserialize;
-use utoipa::ToSchema;
 use validator::Validate;
 
-#[derive(derive_more::Debug, Deserialize, Validate, ToSchema)]
+#[cfg(feature = "api-docs")]
+use utoipa::ToSchema;
+
+#[derive(derive_more::Debug, Deserialize, Validate)]
+#[cfg_attr(feature = "api-docs", derive(ToSchema))]
 pub struct LoginRequest {
     #[validate(email(message = "無効なメールアドレス形式です"))]
-    #[schema(example = "user@example.com")]
+    #[cfg_attr(feature = "api-docs", schema(example = "user@example.com"))]
     pub email: String,
 
     #[validate(length(min = 8, message = "パスワードは8文字以上必要です"))]
-    #[schema(example = "password123")]
+    #[cfg_attr(feature = "api-docs", schema(example = "password123"))]
     #[debug(skip)]
     pub password: String,
 }

@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use actix_web::{App, HttpServer, web};
-use api::openapi::ApiDoc;
 use app::telemetry;
 use dotenvy::dotenv;
 use relay::{RelayConfig, RelayWorker};
@@ -13,8 +12,6 @@ use infrastructure::{
     AppRegistry, RepoRegistry, email_service::stub_email_service::email_service::StubEmailService,
     relay::next_attempt_calculator::backoff_next_attempt_calculator::BackoffCalculatorConfig,
 };
-use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -102,16 +99,21 @@ async fn main() -> std::io::Result<()> {
 
     // 3. サーバー起動
     let server = HttpServer::new(move || {
-        App::new()
+        let app = App::new()
             .wrap(TracingLogger::default()) // ログ・追跡用ミドルウェア
             .app_data(auth_service.clone())
             .app_data(user_service.clone())
             .app_data(token_service.clone())
-            .configure(api::routes_config)
-            .service(
-                SwaggerUi::new("/swagger-ui/{_:.*}")
-                    .url("/api-docs/openapi.json", ApiDoc::openapi()),
-            )
+            .configure(api::routes_config);
+
+        // Swagger UI の設定
+        #[cfg(feature = "api-docs")]
+        let app = app.service(
+            utoipa_swagger_ui::SwaggerUi::new("/swagger-ui/{_:.*}")
+                .url("/api-docs/openapi.json", api::generate_api_doc()),
+        );
+
+        app
     })
     .bind(("0.0.0.0", 8080))?
     .run();

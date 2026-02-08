@@ -18,7 +18,7 @@ use crate::user::dto::{
 use crate::user::service::UserService;
 
 use super::dto::UserData;
-use domain::auth::policy::{AuthorizationService, UserAction};
+use domain::auth::policy::{Actor as _, AuthorizationService, UserAction};
 use domain::transaction::TransactionManager;
 use domain::tx;
 use domain::user::UserUniquenessService;
@@ -39,7 +39,10 @@ impl<TM: TransactionManager> UserInteractor<TM> {
 
 #[async_trait]
 impl<TM: TransactionManager> UserService for UserInteractor<TM> {
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(self), fields(
+        actor_id = %identity.actor_id(),
+        actor_role = %identity.actor_role(),
+    ))]
     async fn list_users(
         &self,
         identity: IdentityWrapper,
@@ -59,7 +62,10 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         })
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(self), fields(
+        actor_id = %identity.actor_id(),
+        actor_role = %identity.actor_role(),
+    ))]
     async fn get_own_profile(
         &self,
         identity: IdentityWrapper,
@@ -85,7 +91,10 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         Ok(user.into())
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(self), fields(
+        actor_id = %identity.actor_id(),
+        actor_role = %identity.actor_role(),
+    ))]
     async fn get_user_profile(
         &self,
         identity: IdentityWrapper,
@@ -112,7 +121,10 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         Ok(user.into())
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(self), fields(
+        actor_id = %identity.actor_id(),
+        actor_role = %identity.actor_role(),
+    ))]
     async fn update_user_profile(
         &self,
         identity: IdentityWrapper,
@@ -168,7 +180,10 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         Ok(updated_user.into())
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(self), fields(
+        actor_id = %identity.actor_id(),
+        actor_role = %identity.actor_role(),
+    ))]
     async fn suspend_user(
         &self,
         identity: IdentityWrapper,

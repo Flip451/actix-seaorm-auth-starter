@@ -1,41 +1,16 @@
 use utoipa::OpenApi;
 use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
 
-use crate::auth::{login, signup};
-use crate::user::{get_own_profile, get_profile, list_users, suspend_user, update_profile};
+use crate::admin::routes::{AdminApi, AdminApiTag};
+use crate::auth::routes::AuthApi;
+use crate::user::routes::UserApi;
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(
-        login::login_handler,
-        signup::signup_handler,
-        get_own_profile::get_own_profile_handler,
-        get_profile::get_profile_handler,
-        list_users::list_users_handler,
-        suspend_user::suspend_user_handler,
-        update_profile::update_profile_handler,
-    ),
-    components(
-        schemas(
-            login::LoginRequest,
-            login::LoginResponse,
-            signup::SignupRequest,
-            signup::SignupResponse,
-            get_profile::GetProfileRequest,
-            get_profile::GetProfileResponse,
-            list_users::ListUsersRequest,
-            list_users::ListUsersResponse,
-            get_own_profile::GetOwnProfileRequest,
-            get_own_profile::GetOwnProfileResponse,
-            suspend_user::SuspendUserRequest,
-            suspend_user::SuspendUserResponse,
-            update_profile::UpdateProfileRequest,
-            update_profile::UpdateProfileResponse,
-        )
-    ),
-    tags(
-        (name = "auth", description = "認証関連API"),
-        (name = "users", description = "ユーザー操作API")
+    info(
+        title = "My Application API",
+        version = "0.1.0",
+        description = "This is the API documentation for My Application."
     ),
     modifiers(&SecurityAddon)
 )]
@@ -57,4 +32,33 @@ impl utoipa::Modify for SecurityAddon {
             ),
         );
     }
+}
+
+pub fn generate_api_doc() -> utoipa::openapi::OpenApi {
+    let sub_docs: Vec<&dyn OpenApiExt> = vec![
+        &AdminApi, &AuthApi,
+        &UserApi,
+        // 他のモジュールのAPIドキュメントをここに追加
+    ];
+
+    let mut doc = ApiDoc::openapi();
+
+    for sub_doc in sub_docs {
+        doc.merge(sub_doc.get_merged_doc());
+    }
+
+    doc
+}
+
+pub(crate) trait OpenApiExt {
+    fn get_merged_doc(&self) -> utoipa::openapi::OpenApi;
+}
+
+#[derive(strum::Display)]
+#[strum(serialize_all = "snake_case")]
+pub(crate) enum OpenApiTag {
+    #[strum(serialize = "admin/{0}")]
+    Admin(AdminApiTag),
+    Auth,
+    User,
 }

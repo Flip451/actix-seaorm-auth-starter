@@ -1,13 +1,16 @@
 use serde::Deserialize;
 use usecase::user::dto::SuspendUserInput;
-use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(derive_more::Debug, Deserialize, Validate, ToSchema)]
+#[cfg(feature = "api-docs")]
+use utoipa::ToSchema;
+
+#[derive(derive_more::Debug, Deserialize, Validate)]
+#[cfg_attr(feature = "api-docs", derive(ToSchema))]
 pub struct SuspendUserRequest {
     #[validate(length(min = 1, message = "理由は空にできません"))]
-    #[schema(example = "規約違反")]
+    #[cfg_attr(feature = "api-docs", schema(example = "規約違反"))]
     pub reason: String,
 }
 

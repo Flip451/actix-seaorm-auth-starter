@@ -1,14 +1,19 @@
 use actix_web::http::StatusCode;
 use serde::Serialize;
 use usecase::user::dto::SuspendUserOutput;
+#[cfg(feature = "api-docs")]
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize)]
+#[cfg_attr(feature = "api-docs", derive(ToSchema))]
 pub(crate) struct SuspendUserResponse {
-    #[schema(example = "123e4567-e89b-12d3-a456-426614174000")]
+    #[cfg_attr(
+        feature = "api-docs",
+        schema(example = "123e4567-e89b-12d3-a456-426614174000")
+    )]
     user_id: Uuid,
-    #[schema(example = true)]
+    #[cfg_attr(feature = "api-docs", schema(example = true))]
     suspended: bool,
 }
 

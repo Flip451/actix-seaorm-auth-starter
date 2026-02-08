@@ -5,20 +5,23 @@ use validator::Validate as _;
 use super::{UpdateProfileRequest, UpdateProfileResponse};
 use crate::{error::ApiError, middleware::AuthenticatedUserContext};
 
-#[utoipa::path(
-    patch,
-    path = "/users/update-profile/{user_id}",
-    responses(
-        (status = 200, description = "ユーザー情報更新成功", body = UpdateProfileResponse),
-        (status = 400, description = "リクエストエラー"),
-        (status = 401, description = "認証エラー"),
-        (status = 403, description = "権限エラー"),
-        (status = 500, description = "サーバーエラー"),
-    ),
-    security(
-        ("bearer_auth" = []) // Swagger UIで鍵マークを表示
-    ),
-    tag = "users",
+#[cfg_attr(
+    feature = "api-docs",
+    utoipa::path(
+        patch,
+        path = "/users/update-profile/{user_id}",
+        responses(
+            (status = 200, description = "ユーザー情報更新成功", body = UpdateProfileResponse),
+            (status = 400, description = "リクエストエラー"),
+            (status = 401, description = "認証エラー"),
+            (status = 403, description = "権限エラー"),
+            (status = 500, description = "サーバーエラー"),
+        ),
+        security(
+            ("bearer_auth" = []) // Swagger UIで鍵マークを表示
+        ),
+        tag = "users",
+    )
 )]
 #[patch("/update-profile/{user_id}")]
 #[tracing::instrument(skip(service))]

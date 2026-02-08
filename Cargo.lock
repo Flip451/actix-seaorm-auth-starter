@@ -2276,7 +2276,6 @@ dependencies = [
  "sea-orm",
  "tokio-util",
  "tracing-actix-web",
- "utoipa",
  "utoipa-swagger-ui",
 ]
 

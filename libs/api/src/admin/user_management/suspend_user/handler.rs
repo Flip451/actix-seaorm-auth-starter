@@ -1,18 +1,18 @@
-use actix_web::{Responder, get, web};
+use actix_web::{Responder, patch, web};
 use usecase::user::service::UserService;
-use validator::Validate as _;
+use uuid::Uuid;
+use validator::Validate;
 
+use super::{SuspendUserRequest, SuspendUserResponse};
 use crate::{error::ApiError, middleware::AdminContext};
-
-use super::{ListUsersRequest, ListUsersResponse};
 
 #[cfg_attr(
     feature = "api-docs",
     utoipa::path(
-        get,
-        path = "/users/list",
+        patch,
+        path = "/admin/users/suspend/{user_id}",
         responses(
-            (status = 200, description = "ユーザー一覧取得成功", body = ListUsersResponse),
+            (status = 200, description = "ユーザー停止成功", body = SuspendUserResponse),
             (status = 400, description = "リクエストエラー"),
             (status = 401, description = "認証エラー"),
             (status = 403, description = "権限エラー"),
@@ -21,21 +21,22 @@ use super::{ListUsersRequest, ListUsersResponse};
         security(
             ("bearer_auth" = []) // Swagger UIで鍵マークを表示
         ),
-        tag = "users",
+        tag = "admin/user_management",
     )
 )]
-#[get("/list")]
+#[patch("/suspend/{user_id}")]
 #[tracing::instrument(skip(service))]
-pub async fn list_users_handler(
+pub async fn suspend_user_handler(
     admin: AdminContext,
-    query: web::Query<ListUsersRequest>,
+    user_id: web::Path<Uuid>,
+    body: web::Json<SuspendUserRequest>,
     service: web::Data<dyn UserService>,
 ) -> Result<impl Responder, ApiError> {
-    query.validate()?;
+    body.validate()?;
 
-    let input = query.into_inner().into();
+    let input = body.into_inner().into_input(*user_id);
 
-    let output = service.list_users(admin.into(), input).await?;
+    let output = service.suspend_user(admin.into(), input).await?;
 
-    Ok(ListUsersResponse::from(output))
+    Ok(SuspendUserResponse::from(output))
 }

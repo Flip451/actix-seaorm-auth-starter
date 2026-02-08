@@ -5,16 +5,19 @@ use validator::Validate as _;
 use super::{LoginRequest, LoginResponse};
 use crate::error::ApiError;
 
-#[utoipa::path(
-    post,
-    path = "/auth/login",
-    responses(
-        (status = 200, description = "ログイン成功", body = LoginResponse),
-        (status = 400, description = "リクエストエラー"),
-        (status = 401, description = "認証エラー"),
-        (status = 500, description = "サーバーエラー"),
-    ),
-    tag = "auth",
+#[cfg_attr(
+    feature = "api-docs",
+    utoipa::path(
+        post,
+        path = "/auth/login",
+        responses(
+            (status = 200, description = "ログイン成功", body = LoginResponse),
+            (status = 400, description = "リクエストエラー"),
+            (status = 401, description = "認証エラー"),
+            (status = 500, description = "サーバーエラー"),
+        ),
+        tag = "auth",
+    )
 )]
 #[post("/login")]
 #[tracing::instrument(skip(service))]

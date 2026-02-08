@@ -6,15 +6,18 @@ use crate::error::ApiError;
 
 use super::{SignupRequest, SignupResponse};
 
-#[utoipa::path(
-    post,
-    path = "/auth/signup",
-    responses(
-        (status = 201, description = "ユーザー登録成功", body = SignupResponse),
-        (status = 400, description = "リクエストエラー"),
-        (status = 500, description = "サーバーエラー"),
-    ),
-    tag = "auth",
+#[cfg_attr(
+    feature = "api-docs",
+    utoipa::path(
+        post,
+        path = "/auth/signup",
+        responses(
+            (status = 201, description = "ユーザー登録成功", body = SignupResponse),
+            (status = 400, description = "リクエストエラー"),
+            (status = 500, description = "サーバーエラー"),
+        ),
+        tag = "auth",
+    )
 )]
 #[post("/signup")]
 #[tracing::instrument(skip(service))]

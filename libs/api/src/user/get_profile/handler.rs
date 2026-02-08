@@ -7,21 +7,24 @@ use crate::{error::ApiError, middleware::AuthenticatedUserContext};
 
 use super::{GetProfileRequest, GetProfileResponse};
 
-#[utoipa::path(
-    get,
-    path = "/users/show-profile/{user_id}",
-    responses(
-        (status = 200, description = "ユーザー情報取得成功", body = GetProfileResponse),
-        (status = 400, description = "リクエストエラー"),
-        (status = 401, description = "認証エラー"),
-        (status = 403, description = "権限エラー"),
-        (status = 404, description = "ユーザーが見つかりません"),
-        (status = 500, description = "サーバーエラー"),
-    ),
-    security(
-        ("bearer_auth" = []) // Swagger UIで鍵マークを表示
-    ),
-    tag = "users",
+#[cfg_attr(
+    feature = "api-docs",
+    utoipa::path(
+        get,
+        path = "/users/show-profile/{user_id}",
+        responses(
+            (status = 200, description = "ユーザー情報取得成功", body = GetProfileResponse),
+            (status = 400, description = "リクエストエラー"),
+            (status = 401, description = "認証エラー"),
+            (status = 403, description = "権限エラー"),
+            (status = 404, description = "ユーザーが見つかりません"),
+            (status = 500, description = "サーバーエラー"),
+        ),
+        security(
+            ("bearer_auth" = []) // Swagger UIで鍵マークを表示
+        ),
+        tag = "users",
+    )
 )]
 #[get("/show-profile/{user_id}")]
 #[tracing::instrument(skip(service))]
