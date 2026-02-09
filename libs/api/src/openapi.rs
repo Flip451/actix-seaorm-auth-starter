@@ -21,7 +21,7 @@ struct SecurityAddon;
 impl utoipa::Modify for SecurityAddon {
     fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
         // Bearer Token 認証定義の追加
-        let components = openapi.components.as_mut().unwrap();
+        let components = openapi.components.get_or_insert_with(Default::default);
         components.add_security_scheme(
             "bearer_auth",
             SecurityScheme::Http(
