@@ -45,8 +45,13 @@ pub struct ListUsersOutput {
 pub struct UpdateUserProfileInput {
     pub target_id: Uuid,
     pub username: Option<String>,
+}
+
+#[derive(derive_more::Debug)]
+pub struct UpdateUserEmailInput {
+    pub target_id: Uuid,
     #[debug(skip)]
-    pub email: Option<String>,
+    pub new_email: String,
 }
 
 #[derive(derive_more::Debug)]

@@ -13,7 +13,7 @@ use crate::shared::identity::IdentityWrapper;
 use crate::usecase_error::UseCaseError;
 use crate::user::dto::{
     GetOwnProfileInput, GetProfileInput, ListUsersInput, ListUsersOutput, SuspendUserInput,
-    SuspendUserOutput, UpdateUserProfileInput,
+    SuspendUserOutput, UpdateUserEmailInput, UpdateUserProfileInput,
 };
 use crate::user::service::UserService;
 
@@ -141,13 +141,13 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                 .await?
                 .ok_or(UseCaseError::NotFound)?;
 
-            if let Some(username) = input.username {
-                // ポリシーチェック
-                AuthorizationService::can(
-                    &identity,
-                    UserAction::UpdateProfile(UpdateProfilePayload { target: &user }),
-                )?;
+            // ポリシーチェック
+            AuthorizationService::can(
+                &identity,
+                UserAction::UpdateProfile(UpdateProfilePayload { target: &user }),
+            )?;
 
+            if let Some(username) = input.username {
                 // ユーザー名の重複チェック
                 let username = user_uniqueness_service
                     .ensure_unique_username(&username)
@@ -156,19 +156,50 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
                 // ドメインロジックの実行
                 user.change_username(username, clock.as_ref())?;
             }
-            if let Some(email) = input.email {
-                // ポリシーチェック
-                AuthorizationService::can(
-                    &identity,
-                    UserAction::ChangeEmail(ChangeEmailPayload { target: &user }),
-                )?;
 
-                // メールアドレスの重複チェック
-                let email = user_uniqueness_service.ensure_unique_email(&email).await?;
+            // 変更の保存
+            let updated_user = user_repo.save(user).await?;
 
-                // ドメインロジックの実行
-                user.change_email(email, clock.as_ref())?;
-            }
+            Ok::<_, UseCaseError>(updated_user)
+        })
+        .await?;
+
+        Ok(updated_user.into())
+    }
+
+    #[tracing::instrument(skip(self), fields(
+        actor_id = %identity.actor_id(),
+        actor_role = %identity.actor_role(),
+    ))]
+    async fn update_user_email(
+        &self,
+        identity: IdentityWrapper,
+        input: UpdateUserEmailInput,
+    ) -> Result<UserData, UseCaseError> {
+        let clock = self.clock.clone();
+
+        let updated_user = tx!(self.transaction_manager, |factory| {
+            let user_repo = factory.user_repository();
+            let user_uniqueness_service = UserUniquenessService::new(user_repo.clone());
+
+            let mut user = user_repo
+                .find_by_id(input.target_id.into())
+                .await?
+                .ok_or(UseCaseError::NotFound)?;
+
+            // ポリシーチェック
+            AuthorizationService::can(
+                &identity,
+                UserAction::ChangeEmail(ChangeEmailPayload { target: &user }),
+            )?;
+
+            // メールアドレスの重複チェック
+            let email = user_uniqueness_service
+                .ensure_unique_email(&input.new_email)
+                .await?;
+
+            // ドメインロジックの実行
+            user.change_email(email, clock.as_ref())?;
 
             // 変更の保存
             let updated_user = user_repo.save(user).await?;

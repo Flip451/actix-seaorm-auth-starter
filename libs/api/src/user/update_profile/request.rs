@@ -11,18 +11,14 @@ pub struct UpdateProfileRequest {
     #[validate(length(min = 1, message = "ユーザー名は空にできません"))]
     #[cfg_attr(feature = "api-docs", schema(example = "exampleuser"))]
     pub username: Option<String>,
-
-    #[validate(email(message = "無効なメールアドレス形式です"))]
-    #[cfg_attr(feature = "api-docs", schema(example = "updated@example.com"))]
-    pub email: Option<String>,
+    // 他に更新可能なプロフィール情報があればここに追加
 }
 
 impl UpdateProfileRequest {
-    pub(super) fn into_input(self, target_id: Uuid) -> usecase::user::dto::UpdateUserProfileInput {
+    pub(super) fn into_input(self, target_id: Uuid) -> UpdateUserProfileInput {
         UpdateUserProfileInput {
             target_id,
             username: self.username,
-            email: self.email,
         }
     }
 }
