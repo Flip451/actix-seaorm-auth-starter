@@ -6,5 +6,5 @@ pub mod promote_to_admin;
 pub mod suspend_user;
 pub mod unlock_user;
 pub mod update_profile;
-pub mod view_own_profile;
+pub mod view_detailed_profile;
 pub mod view_profile;

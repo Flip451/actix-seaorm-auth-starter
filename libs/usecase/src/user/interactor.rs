@@ -5,7 +5,7 @@ use domain::auth::policies::change_email::ChangeEmailPayload;
 use domain::auth::policies::list_users::ListUsersPayload;
 use domain::auth::policies::suspend_user::SuspendUserPayload;
 use domain::auth::policies::update_profile::UpdateProfilePayload;
-use domain::auth::policies::view_own_profile::ViewOwnProfilePayload;
+use domain::auth::policies::view_detailed_profile::ViewDetailedProfilePayload;
 use domain::auth::policies::view_profile::ViewProfilePayload;
 use domain::shared::service::clock::Clock;
 
@@ -81,7 +81,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             // ポリシーチェック
             AuthorizationService::can(
                 &identity,
-                UserAction::ViewOwnProfile(ViewOwnProfilePayload { target: &user }),
+                UserAction::ViewDetailedProfile(ViewDetailedProfilePayload { target: &user }),
             )?;
 
             Ok::<_, UseCaseError>(user)

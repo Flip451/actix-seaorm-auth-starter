@@ -8,7 +8,7 @@ use crate::{
         suspend_user::{SuspendUserPayload, SuspendUserPolicy},
         unlock_user::{UnlockUserPayload, UnlockUserPolicy},
         update_profile::{UpdateProfilePayload, UpdateProfilePolicy},
-        view_own_profile::{ViewOwnProfilePayload, ViewOwnProfilePolicy},
+        view_detailed_profile::{ViewDetailedProfilePayload, ViewDetailedProfilePolicy},
         view_profile::{ViewProfilePayload, ViewProfilePolicy},
     },
     user::{UserId, UserRole},
@@ -17,16 +17,16 @@ use crate::{
 // 操作（アクション）を定義 [4]
 #[derive(Clone, Copy)]
 pub enum UserAction<'a> {
-    SuspendUser(SuspendUserPayload<'a>),       // 利用停止
-    UnlockUser(UnlockUserPayload<'a>),         // ロック解除
-    DeactivateUser(DeactivateUserPayload<'a>), // 退会
-    ActivateUser(ActivateUserPayload<'a>),     // 利用再開
-    PromoteToAdmin(PromoteToAdminPayload<'a>), // 管理者への昇格
-    ListUsers(ListUsersPayload),               // ユーザー一覧の取得
-    ViewProfile(ViewProfilePayload<'a>),       // プロフィール閲覧
-    ViewOwnProfile(ViewOwnProfilePayload<'a>), // 自分のプロフィール閲覧
-    UpdateProfile(UpdateProfilePayload<'a>),   // プロフィール更新
-    ChangeEmail(ChangeEmailPayload<'a>),       // メールアドレス変更
+    SuspendUser(SuspendUserPayload<'a>),                 // 利用停止
+    UnlockUser(UnlockUserPayload<'a>),                   // ロック解除
+    DeactivateUser(DeactivateUserPayload<'a>),           // 退会
+    ActivateUser(ActivateUserPayload<'a>),               // 利用再開
+    PromoteToAdmin(PromoteToAdminPayload<'a>),           // 管理者への昇格
+    ListUsers(ListUsersPayload),                         // ユーザー一覧の取得
+    ViewProfile(ViewProfilePayload<'a>),                 // プロフィール閲覧
+    ViewDetailedProfile(ViewDetailedProfilePayload<'a>), // 詳細プロフィール閲覧
+    UpdateProfile(UpdateProfilePayload<'a>),             // プロフィール更新
+    ChangeEmail(ChangeEmailPayload<'a>),                 // メールアドレス変更
 }
 
 pub struct AuthorizationContext<'a> {
@@ -90,7 +90,9 @@ impl AuthorizationService {
             UserAction::ActivateUser(payload) => Box::new(ActivateUserPolicy::new(payload)),
             UserAction::PromoteToAdmin(payload) => Box::new(PromoteToAdminPolicy::new(payload)),
             UserAction::ListUsers(payload) => Box::new(ListUsersPolicy::new(payload)),
-            UserAction::ViewOwnProfile(payload) => Box::new(ViewOwnProfilePolicy::new(payload)),
+            UserAction::ViewDetailedProfile(payload) => {
+                Box::new(ViewDetailedProfilePolicy::new(payload))
+            }
             UserAction::ViewProfile(payload) => Box::new(ViewProfilePolicy::new(payload)),
             UserAction::UpdateProfile(payload) => Box::new(UpdateProfilePolicy::new(payload)),
             UserAction::ChangeEmail(payload) => Box::new(ChangeEmailPolicy::new(payload)),
