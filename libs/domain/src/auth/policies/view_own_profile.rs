@@ -17,8 +17,7 @@ impl<'a> ViewOwnProfilePolicy<'a> {
 }
 
 impl<'a> Policy<'a> for ViewOwnProfilePolicy<'a> {
-    // 管理者は任意のユーザーのプロフィールを閲覧できる
-    // ユーザーは自分自身のプロフィールを閲覧できる
+    // 任意のログイン済みユーザーは自分自身のプロフィールを閲覧できる
     fn check(&self, ctx: &AuthorizationContext<'a>) -> Result<(), AuthorizationError> {
         let target = self.0.target;
 
