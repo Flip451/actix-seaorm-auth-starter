@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(derive_more::Debug, Deserialize, Serialize)]
 pub struct SignupInput {
     pub username: String,
+    #[debug(skip)]
     pub email: String,
     #[debug(skip)]
     pub password: String,
@@ -22,6 +23,7 @@ impl From<User> for SignupOutput {
 
 #[derive(derive_more::Debug, Deserialize)]
 pub struct LoginInput {
+    #[debug(skip)]
     pub email: String,
     #[debug(skip)]
     pub password: String,
