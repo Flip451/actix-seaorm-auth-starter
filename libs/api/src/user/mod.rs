@@ -4,4 +4,4 @@ pub mod list_users;
 pub mod routes;
 pub mod update_profile;
 
-pub use self::routes::user_config;
+pub use routes::user_config;
