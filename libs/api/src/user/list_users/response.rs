@@ -1,6 +1,6 @@
 use actix_web::http::StatusCode;
 use serde::Serialize;
-use usecase::user::dto::{ListUsersOutput, UserData};
+use usecase::user::dto::{ListUsersOutput, UserItem};
 #[cfg(feature = "api-docs")]
 use utoipa::ToSchema;
 
@@ -14,7 +14,7 @@ pub(crate) struct ListUsersResponse {
                 {
                     "id": "550e8400-e29b-41d4-a716-446655440000",
                     "username": "exampleuser",
-                    "email": "example@example.com",
+                    "role": "user"
                 },
             ])
         )
@@ -35,16 +35,14 @@ impl From<ListUsersOutput> for ListUsersResponse {
 pub(crate) struct UserInfo {
     pub id: String,
     pub username: String,
-    pub email: String,
     pub role: String,
 }
 
-impl From<UserData> for UserInfo {
-    fn from(user: UserData) -> Self {
+impl From<UserItem> for UserInfo {
+    fn from(user: UserItem) -> Self {
         UserInfo {
             id: user.id.to_string(),
             username: user.username,
-            email: user.email,
             role: user.role.to_string(),
         }
     }

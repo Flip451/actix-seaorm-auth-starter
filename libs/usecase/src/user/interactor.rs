@@ -1,27 +1,23 @@
-use std::sync::Arc;
-
-use async_trait::async_trait;
-use domain::auth::policies::change_email::ChangeEmailPayload;
-use domain::auth::policies::list_users::ListUsersPayload;
-use domain::auth::policies::suspend_user::SuspendUserPayload;
-use domain::auth::policies::update_profile::UpdateProfilePayload;
-use domain::auth::policies::view_detailed_profile::ViewDetailedProfilePayload;
-use domain::auth::policies::view_profile::ViewProfilePayload;
-use domain::shared::service::clock::Clock;
-
 use crate::shared::identity::IdentityWrapper;
 use crate::usecase_error::UseCaseError;
 use crate::user::dto::{
     GetOwnProfileInput, GetProfileInput, ListUsersInput, ListUsersOutput, SuspendUserInput,
-    SuspendUserOutput, UpdateUserEmailInput, UpdateUserProfileInput,
+    SuspendUserOutput, UpdateUserEmailInput, UpdateUserEmailOutput, UpdateUserProfileInput,
+    UpdateUserProfileOutput, UserDetailedProfile, UserProfile,
 };
 use crate::user::service::UserService;
-
-use super::dto::UserData;
+use async_trait::async_trait;
+use domain::auth::policies::{
+    change_email::ChangeEmailPayload, list_users::ListUsersPayload,
+    suspend_user::SuspendUserPayload, update_profile::UpdateProfilePayload,
+    view_detailed_profile::ViewDetailedProfilePayload, view_profile::ViewProfilePayload,
+};
 use domain::auth::policy::{Actor as _, AuthorizationService, UserAction};
+use domain::shared::service::clock::Clock;
 use domain::transaction::TransactionManager;
 use domain::tx;
 use domain::user::UserUniquenessService;
+use std::sync::Arc;
 
 pub struct UserInteractor<TM: TransactionManager> {
     transaction_manager: Arc<TM>,
@@ -69,13 +65,13 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     async fn get_own_profile(
         &self,
         identity: IdentityWrapper,
-        input: GetOwnProfileInput,
-    ) -> Result<UserData, UseCaseError> {
+        _input: GetOwnProfileInput,
+    ) -> Result<UserDetailedProfile, UseCaseError> {
         let user = tx!(self.transaction_manager, |factory| {
             // プロフィールの取得
             let user_repo = factory.user_repository();
             let user = user_repo
-                .find_by_id(input.user_id.into())
+                .find_by_id(identity.actor_id())
                 .await?
                 .ok_or(UseCaseError::NotFound)?;
             // ポリシーチェック
@@ -99,7 +95,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         &self,
         identity: IdentityWrapper,
         input: GetProfileInput,
-    ) -> Result<UserData, UseCaseError> {
+    ) -> Result<UserProfile, UseCaseError> {
         let user = tx!(self.transaction_manager, |factory| {
             // プロフィールの取得
             let user_repo = factory.user_repository();
@@ -129,8 +125,10 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         &self,
         identity: IdentityWrapper,
         input: UpdateUserProfileInput,
-    ) -> Result<UserData, UseCaseError> {
+    ) -> Result<UpdateUserProfileOutput, UseCaseError> {
         let clock = self.clock.clone();
+
+        input.validate_not_empty()?;
 
         let updated_user = tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
@@ -175,7 +173,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         &self,
         identity: IdentityWrapper,
         input: UpdateUserEmailInput,
-    ) -> Result<UserData, UseCaseError> {
+    ) -> Result<UpdateUserEmailOutput, UseCaseError> {
         let clock = self.clock.clone();
 
         let updated_user = tx!(self.transaction_manager, |factory| {
@@ -223,7 +221,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         let clock = self.clock.clone();
         let SuspendUserInput { target_id, reason } = input;
 
-        tx!(self.transaction_manager, |factory| {
+        let updated_user = tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
 
             let mut target_user = user_repo
@@ -243,13 +241,12 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             target_user.suspend(reason, clock.as_ref())?;
 
             // 変更を保存
-            user_repo.save(target_user).await?;
+            let updated_user = user_repo.save(target_user).await?;
 
-            Ok::<_, UseCaseError>(SuspendUserOutput {
-                user_id: target_id,
-                suspended: true,
-            })
+            Ok::<_, UseCaseError>(updated_user)
         })
-        .await
+        .await?;
+
+        Ok(updated_user.into())
     }
 }

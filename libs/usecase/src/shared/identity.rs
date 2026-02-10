@@ -32,7 +32,8 @@ impl<T: Identity + 'static> From<T> for IdentityWrapper {
     }
 }
 
-#[derive(derive_more::Debug, Clone, Copy, derive_more::Display, PartialEq, Eq)]
+#[derive(derive_more::Debug, Clone, Copy, strum::Display, PartialEq, Eq)]
+#[strum(serialize_all = "snake_case")]
 pub enum UserRoleData {
     Admin,
     User,

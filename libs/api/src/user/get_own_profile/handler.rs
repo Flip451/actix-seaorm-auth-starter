@@ -1,5 +1,5 @@
 use actix_web::{Responder, get, web};
-use usecase::{shared::identity::Identity as _, user::service::UserService};
+use usecase::user::service::UserService;
 use validator::Validate as _;
 
 use crate::{error::ApiError, middleware::AuthenticatedUserContext};
@@ -34,7 +34,7 @@ pub async fn get_own_profile_handler(
 ) -> Result<impl Responder, ApiError> {
     query.validate()?;
 
-    let input = query.into_inner().into_input(user.actor_id());
+    let input = query.into_inner().into_input();
 
     let output = service.get_own_profile(user.into(), input).await?;
 

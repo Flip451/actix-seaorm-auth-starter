@@ -17,4 +17,5 @@ validator = { workspace = true }
 futures-util = { workspace = true }
 derive_more = { workspace = true }
 uuid = { workspace = true }
+strum = { workspace = true }
 jsonwebtoken = { version = "10.2.0", features = ["rust_crypto"] }

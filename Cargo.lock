@@ -4398,6 +4398,7 @@ dependencies = [
  "jsonwebtoken",
  "opentelemetry",
  "serde",
+ "strum 0.27.2",
  "thiserror 2.0.17",
  "tracing",
  "tracing-opentelemetry",

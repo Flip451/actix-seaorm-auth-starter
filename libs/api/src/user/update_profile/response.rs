@@ -1,6 +1,6 @@
 use actix_web::http::StatusCode;
 use serde::Serialize;
-use usecase::user::dto::UserData;
+use usecase::user::dto::UpdateUserProfileOutput;
 #[cfg(feature = "api-docs")]
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -15,16 +15,13 @@ pub(crate) struct UpdateProfileResponse {
     pub id: Uuid,
     #[cfg_attr(feature = "api-docs", schema(example = "exampleuser"))]
     pub username: String,
-    #[cfg_attr(feature = "api-docs", schema(example = "example@example.com"))]
-    pub email: String,
 }
 
-impl From<UserData> for UpdateProfileResponse {
-    fn from(user: UserData) -> Self {
+impl From<UpdateUserProfileOutput> for UpdateProfileResponse {
+    fn from(user: UpdateUserProfileOutput) -> Self {
         UpdateProfileResponse {
-            id: user.id.into(),
+            id: user.id,
             username: user.username,
-            email: user.email,
         }
     }
 }

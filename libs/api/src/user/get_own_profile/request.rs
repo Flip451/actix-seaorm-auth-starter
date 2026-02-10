@@ -2,7 +2,6 @@ use serde::Deserialize;
 use usecase::user::dto::GetOwnProfileInput;
 #[cfg(feature = "api-docs")]
 use utoipa::ToSchema;
-use uuid::Uuid;
 use validator::Validate;
 
 #[derive(derive_more::Debug, Deserialize, Validate)]
@@ -12,7 +11,7 @@ pub struct GetOwnProfileRequest {
 }
 
 impl GetOwnProfileRequest {
-    pub(super) fn into_input(self, user_id: Uuid) -> GetOwnProfileInput {
-        GetOwnProfileInput { user_id }
+    pub(super) fn into_input(self) -> GetOwnProfileInput {
+        GetOwnProfileInput
     }
 }

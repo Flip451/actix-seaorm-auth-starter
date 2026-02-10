@@ -1,6 +1,6 @@
 use actix_web::http::StatusCode;
 use serde::Serialize;
-use usecase::user::dto::UserData;
+use usecase::user::dto::UserDetailedProfile;
 #[cfg(feature = "api-docs")]
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -19,10 +19,10 @@ pub(crate) struct GetOwnProfileResponse {
     pub email: String,
 }
 
-impl From<UserData> for GetOwnProfileResponse {
-    fn from(user: UserData) -> Self {
+impl From<UserDetailedProfile> for GetOwnProfileResponse {
+    fn from(user: UserDetailedProfile) -> Self {
         GetOwnProfileResponse {
-            user_id: user.id.into(),
+            user_id: user.id,
             username: user.username,
             email: user.email,
         }
