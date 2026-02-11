@@ -1,5 +1,5 @@
 use crate::shared::identity::IdentityWrapper;
-use crate::usecase_error::UseCaseError;
+use crate::usecase_error::{UseCaseError, ValidationErrorList};
 use crate::user::dto::{
     GetOwnProfileInput, GetProfileInput, ListUsersInput, ListUsersOutput, SuspendUserInput,
     SuspendUserOutput, UpdateUserEmailInput, UpdateUserEmailOutput, UpdateUserProfileInput,
@@ -18,6 +18,7 @@ use domain::transaction::TransactionManager;
 use domain::tx;
 use domain::user::UserUniquenessService;
 use std::sync::Arc;
+use validator::Validate as _;
 
 pub struct UserInteractor<TM: TransactionManager> {
     transaction_manager: Arc<TM>,
@@ -128,7 +129,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     ) -> Result<UpdateUserProfileOutput, UseCaseError> {
         let clock = self.clock.clone();
 
-        input.validate_not_empty()?;
+        input.validate().map_err(ValidationErrorList::from)?;
 
         let updated_user = tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();

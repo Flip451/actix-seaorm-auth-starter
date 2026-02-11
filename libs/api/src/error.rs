@@ -2,7 +2,7 @@ use actix_web::{HttpResponse, ResponseError, http::StatusCode};
 use thiserror::Error;
 use validator::ValidationErrors;
 
-use usecase::usecase_error::UseCaseError;
+use usecase::usecase_error::{UseCaseError, ValidationErrorList};
 
 #[derive(Debug, Error)]
 pub enum ApiError {
@@ -40,24 +40,7 @@ impl ResponseError for ApiError {
         match self {
             // API層で発生したバリデーションエラーの場合
             ApiError::InvalidInput(validation_errors) => {
-                // validator::ValidationErrors -> Vec<ValidationError>
-                let errors: Vec<usecase::usecase_error::ValidationError> = validation_errors
-                    .field_errors()
-                    .into_iter()
-                    .flat_map(|(field, field_errors)| {
-                        field_errors.iter().map(move |err| {
-                            // #[validate(message = "...")] で指定されたメッセージを取得
-                            // 指定がない場合はエラーコード（"email", "length"など）を返す
-                            let message = err
-                                .message
-                                .as_ref()
-                                .map(|cow_str| cow_str.to_string())
-                                .unwrap_or_else(|| err.code.to_string());
-
-                            usecase::usecase_error::ValidationError::new(field.clone(), message)
-                        })
-                    })
-                    .collect();
+                let errors = ValidationErrorList::from(validation_errors);
 
                 HttpResponse::BadRequest().json(serde_json::json!({
                     "status": "error",

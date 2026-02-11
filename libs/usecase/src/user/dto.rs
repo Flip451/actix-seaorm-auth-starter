@@ -1,10 +1,8 @@
 use domain::user::User;
 use uuid::Uuid;
+use validator::Validate;
 
-use crate::{
-    shared::identity::UserRoleData,
-    usecase_error::{UseCaseError, ValidationError},
-};
+use crate::shared::identity::UserRoleData;
 
 #[derive(derive_more::Debug)]
 pub struct UserDetailedProfile {
@@ -61,10 +59,22 @@ impl From<User> for UserItem {
     }
 }
 
-#[derive(derive_more::Debug)]
+#[derive(derive_more::Debug, Validate)]
+#[validate(schema(function = "validate_at_least_one_field"))]
 pub struct UpdateUserProfileInput {
     pub target_id: Uuid,
     pub username: Option<String>,
+}
+
+fn validate_at_least_one_field(
+    input: &UpdateUserProfileInput,
+) -> Result<(), validator::ValidationError> {
+    if input.is_empty() {
+        let mut error = validator::ValidationError::new("at_least_one_field_required");
+        error.message = Some("少なくとも1つの項目を変更してください".into());
+        return Err(error);
+    }
+    Ok(())
 }
 
 impl UpdateUserProfileInput {
@@ -75,25 +85,6 @@ impl UpdateUserProfileInput {
         ]
         .iter()
         .all(|x| *x)
-    }
-
-    pub(crate) fn validate_not_empty(&self) -> Result<(), UseCaseError> {
-        if self.is_empty() {
-            let fields = vec![
-                "username",
-                // Add other optional fields here
-            ];
-            return Err(UseCaseError::InvalidInput(
-                fields
-                    .into_iter()
-                    .map(|field| {
-                        ValidationError::new(field, "少なくとも1つのフィールドを指定してください")
-                    })
-                    .collect(),
-            ));
-        }
-
-        Ok(())
     }
 }
 
