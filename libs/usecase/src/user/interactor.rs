@@ -1,5 +1,5 @@
 use crate::shared::identity::IdentityWrapper;
-use crate::usecase_error::{UseCaseError, ValidationErrorList};
+use crate::usecase_error::UseCaseError;
 use crate::user::dto::{
     GetOwnProfileInput, GetProfileInput, ListUsersInput, ListUsersOutput, SuspendUserInput,
     SuspendUserOutput, UpdateUserEmailInput, UpdateUserEmailOutput, UpdateUserProfileInput,
@@ -129,7 +129,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     ) -> Result<UpdateUserProfileOutput, UseCaseError> {
         let clock = self.clock.clone();
 
-        input.validate().map_err(ValidationErrorList::from)?;
+        input.validate()?;
 
         let updated_user = tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();

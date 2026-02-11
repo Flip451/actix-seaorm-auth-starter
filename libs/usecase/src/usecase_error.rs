@@ -109,6 +109,12 @@ impl From<ValidationErrorList> for UseCaseError {
     }
 }
 
+impl From<validator::ValidationErrors> for UseCaseError {
+    fn from(validation_errors: validator::ValidationErrors) -> Self {
+        UseCaseError::InvalidInput(ValidationErrorList::from(validation_errors))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
