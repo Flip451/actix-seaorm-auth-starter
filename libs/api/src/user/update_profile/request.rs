@@ -22,3 +22,39 @@ impl UpdateProfileRequest {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::UpdateProfileRequest;
+    use validator::Validate;
+
+    #[test]
+    fn test_validate_empty_username() {
+        let request = UpdateProfileRequest {
+            username: Some("".to_string()),
+        };
+
+        let result = request.validate();
+        assert!(result.is_err());
+        let errors = result.unwrap_err();
+        assert!(errors.field_errors().contains_key("username"));
+    }
+
+    #[test]
+    fn test_validate_valid_username() {
+        let request = UpdateProfileRequest {
+            username: Some("validuser".to_string()),
+        };
+
+        let result = request.validate();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_none_username() {
+        let request = UpdateProfileRequest { username: None };
+
+        let result = request.validate();
+        assert!(result.is_ok());
+    }
+}
