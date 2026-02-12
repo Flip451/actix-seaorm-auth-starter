@@ -3,14 +3,15 @@ use crate::usecase_error::UseCaseError;
 use crate::user::dto::{
     GetOwnProfileInput, GetProfileInput, ListUsersInput, ListUsersOutput, SuspendUserInput,
     SuspendUserOutput, UpdateUserEmailInput, UpdateUserEmailOutput, UpdateUserProfileInput,
-    UpdateUserProfileOutput, UserDetailedProfile, UserProfile,
+    UpdateUserProfileOutput, UserDetailedProfile, UserPublicProfile,
 };
 use crate::user::service::UserService;
 use async_trait::async_trait;
 use domain::auth::policies::{
     change_email::ChangeEmailPayload, list_users::ListUsersPayload,
     suspend_user::SuspendUserPayload, update_profile::UpdateProfilePayload,
-    view_detailed_profile::ViewDetailedProfilePayload, view_profile::ViewProfilePayload,
+    view_detailed_profile::ViewDetailedProfilePayload,
+    view_public_profile::ViewPublicProfilePayload,
 };
 use domain::auth::policy::{Actor as _, AuthorizationService, UserAction};
 use domain::shared::service::clock::Clock;
@@ -92,11 +93,11 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         actor_id = %identity.actor_id(),
         actor_role = %identity.actor_role(),
     ))]
-    async fn get_user_profile(
+    async fn get_public_profile(
         &self,
         identity: IdentityWrapper,
         input: GetProfileInput,
-    ) -> Result<UserProfile, UseCaseError> {
+    ) -> Result<UserPublicProfile, UseCaseError> {
         let user = tx!(self.transaction_manager, |factory| {
             // プロフィールの取得
             let user_repo = factory.user_repository();
@@ -108,7 +109,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             // ポリシーチェック
             AuthorizationService::can(
                 &identity,
-                UserAction::ViewProfile(ViewProfilePayload { target: &user }),
+                UserAction::ViewPublicProfile(ViewPublicProfilePayload { target: &user }),
             )?;
 
             Ok::<_, UseCaseError>(user)

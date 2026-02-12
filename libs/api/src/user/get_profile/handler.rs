@@ -38,7 +38,7 @@ pub async fn get_profile_handler(
 
     let input = query.into_inner().into_input(*user_id);
 
-    let output = service.get_user_profile(user.into(), input).await?;
+    let output = service.get_public_profile(user.into(), input).await?;
 
     Ok(GetProfileResponse::from(output))
 }

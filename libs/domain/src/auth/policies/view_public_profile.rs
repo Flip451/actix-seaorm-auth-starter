@@ -4,19 +4,19 @@ use crate::{
 };
 
 #[derive(Clone, Copy)]
-pub struct ViewProfilePayload<'a> {
+pub struct ViewPublicProfilePayload<'a> {
     pub target: &'a User,
 }
 
-pub struct ViewProfilePolicy<'a>(ViewProfilePayload<'a>);
+pub struct ViewPublicProfilePolicy<'a>(ViewPublicProfilePayload<'a>);
 
-impl<'a> ViewProfilePolicy<'a> {
-    pub fn new(payload: ViewProfilePayload<'a>) -> Self {
+impl<'a> ViewPublicProfilePolicy<'a> {
+    pub fn new(payload: ViewPublicProfilePayload<'a>) -> Self {
         Self(payload)
     }
 }
 
-impl<'a> Policy<'a> for ViewProfilePolicy<'a> {
+impl<'a> Policy<'a> for ViewPublicProfilePolicy<'a> {
     // 任意のログイン済みユーザーは任意のユーザーのプロフィールを閲覧できる
     fn check(&self, _ctx: &AuthorizationContext<'a>) -> Result<(), AuthorizationError> {
         let _target = self.0.target;

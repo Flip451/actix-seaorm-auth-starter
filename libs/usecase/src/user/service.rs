@@ -6,7 +6,7 @@ use crate::{
     user::dto::{
         GetOwnProfileInput, GetProfileInput, ListUsersInput, ListUsersOutput, SuspendUserInput,
         SuspendUserOutput, UpdateUserEmailInput, UpdateUserEmailOutput, UpdateUserProfileInput,
-        UpdateUserProfileOutput, UserDetailedProfile, UserProfile,
+        UpdateUserProfileOutput, UserDetailedProfile, UserPublicProfile,
     },
 };
 
@@ -24,11 +24,11 @@ pub trait UserService: Send + Sync {
         input: GetOwnProfileInput,
     ) -> Result<UserDetailedProfile, UseCaseError>;
 
-    async fn get_user_profile(
+    async fn get_public_profile(
         &self,
         identity: IdentityWrapper,
         input: GetProfileInput,
-    ) -> Result<UserProfile, UseCaseError>;
+    ) -> Result<UserPublicProfile, UseCaseError>;
 
     async fn update_user_profile(
         &self,

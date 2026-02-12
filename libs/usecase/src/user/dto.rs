@@ -118,15 +118,15 @@ impl From<User> for SuspendUserOutput {
 }
 
 #[derive(derive_more::Debug)]
-pub struct UserProfile {
+pub struct UserPublicProfile {
     pub id: Uuid,
     pub username: String,
     pub role: UserRoleData,
 }
 
-impl From<User> for UserProfile {
+impl From<User> for UserPublicProfile {
     fn from(user: User) -> Self {
-        UserProfile {
+        UserPublicProfile {
             id: user.id().into(),
             username: user.username().to_string(),
             role: user.role().into(),

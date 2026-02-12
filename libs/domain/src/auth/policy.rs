@@ -9,7 +9,7 @@ use crate::{
         unlock_user::{UnlockUserPayload, UnlockUserPolicy},
         update_profile::{UpdateProfilePayload, UpdateProfilePolicy},
         view_detailed_profile::{ViewDetailedProfilePayload, ViewDetailedProfilePolicy},
-        view_profile::{ViewProfilePayload, ViewProfilePolicy},
+        view_public_profile::{ViewPublicProfilePayload, ViewPublicProfilePolicy},
     },
     user::{UserId, UserRole},
 };
@@ -23,7 +23,7 @@ pub enum UserAction<'a> {
     ActivateUser(ActivateUserPayload<'a>),               // 利用再開
     PromoteToAdmin(PromoteToAdminPayload<'a>),           // 管理者への昇格
     ListUsers(ListUsersPayload),                         // ユーザー一覧の取得
-    ViewProfile(ViewProfilePayload<'a>),                 // プロフィール閲覧
+    ViewPublicProfile(ViewPublicProfilePayload<'a>),     // プロフィール閲覧
     ViewDetailedProfile(ViewDetailedProfilePayload<'a>), // 詳細プロフィール閲覧
     UpdateProfile(UpdateProfilePayload<'a>),             // プロフィール更新
     ChangeEmail(ChangeEmailPayload<'a>),                 // メールアドレス変更
@@ -93,7 +93,9 @@ impl AuthorizationService {
             UserAction::ViewDetailedProfile(payload) => {
                 Box::new(ViewDetailedProfilePolicy::new(payload))
             }
-            UserAction::ViewProfile(payload) => Box::new(ViewProfilePolicy::new(payload)),
+            UserAction::ViewPublicProfile(payload) => {
+                Box::new(ViewPublicProfilePolicy::new(payload))
+            }
             UserAction::UpdateProfile(payload) => Box::new(UpdateProfilePolicy::new(payload)),
             UserAction::ChangeEmail(payload) => Box::new(ChangeEmailPolicy::new(payload)),
         };
