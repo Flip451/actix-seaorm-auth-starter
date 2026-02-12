@@ -25,7 +25,7 @@ use crate::{error::ApiError, middleware::AdminContext};
         security(
             ("bearer_auth" = []) // Swagger UIで鍵マークを表示
         ),
-        tag = OpenApiTag::Admin(AdminApiTag::UserManagement).into(),
+        tag = OpenApiTag::Admin(AdminApiTag::UserManagement).as_ref(),
     )
 )]
 #[patch("/suspend/{user_id}")]

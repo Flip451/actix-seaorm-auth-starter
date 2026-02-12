@@ -54,11 +54,18 @@ pub(crate) trait OpenApiExt {
     fn get_merged_doc(&self) -> utoipa::openapi::OpenApi;
 }
 
-#[derive(strum::IntoStaticStr)]
-#[strum(serialize_all = "snake_case")]
 pub(crate) enum OpenApiTag {
-    #[strum(serialize = "admin/{0}")]
     Admin(AdminApiTag),
     Auth,
-    User,
+    Users,
+}
+
+impl OpenApiTag {
+    pub fn as_ref(&self) -> &'static str {
+        match self {
+            OpenApiTag::Admin(admin_api_tag) => admin_api_tag.as_ref(),
+            OpenApiTag::Auth => "auth",
+            OpenApiTag::Users => "users",
+        }
+    }
 }

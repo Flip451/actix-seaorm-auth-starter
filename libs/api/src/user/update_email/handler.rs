@@ -22,7 +22,7 @@ use crate::{error::ApiError, middleware::AuthenticatedUserContext};
         security(
             ("bearer_auth" = []) // Swagger UIで鍵マークを表示
         ),
-        tag = OpenApiTag::User.into(),
+        tag = OpenApiTag::Users.as_ref(),
     )
 )]
 #[patch("/update-email/{user_id}")]

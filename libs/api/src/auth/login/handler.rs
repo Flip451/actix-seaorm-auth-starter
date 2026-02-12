@@ -18,7 +18,7 @@ use crate::openapi::OpenApiTag;
             (status = 401, description = "認証エラー"),
             (status = 500, description = "サーバーエラー"),
         ),
-        tag = OpenApiTag::Auth.into(),
+        tag = OpenApiTag::Auth.as_ref(),
     )
 )]
 #[post("/login")]

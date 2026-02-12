@@ -48,7 +48,7 @@ pub mod openapi {
             )
         ),
         tags((
-            name = <OpenApiTag as Into<&'static str>>::into(OpenApiTag::User),
+            name = OpenApiTag::Users.as_ref(),
             description = "ユーザー関連のエンドポイント"
         ))
     )]

@@ -17,7 +17,7 @@ use crate::openapi::OpenApiTag;
             (status = 400, description = "リクエストエラー"),
             (status = 500, description = "サーバーエラー"),
         ),
-        tag = OpenApiTag::Auth.into(),
+        tag = OpenApiTag::Auth.as_ref(),
     )
 )]
 #[post("/signup")]

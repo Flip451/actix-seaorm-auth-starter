@@ -32,9 +32,17 @@ pub mod openapi {
         }
     }
 
-    #[derive(strum::IntoStaticStr)]
+    #[derive(strum::Display)]
     #[strum(serialize_all = "snake_case")]
     pub(crate) enum AdminApiTag {
         UserManagement,
+    }
+
+    impl AdminApiTag {
+        pub fn as_ref(&self) -> &'static str {
+            match self {
+                AdminApiTag::UserManagement => "admin/user_management",
+            }
+        }
     }
 }
