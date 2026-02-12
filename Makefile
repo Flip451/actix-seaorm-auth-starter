@@ -5,7 +5,7 @@ DB_SERVICE = db
 CLI_SERVICE = sea-orm-cli
 ENTITY_OUTPUT = libs/infrastructure/src/persistence/seaorm/entities
 
-.PHONY: help build up down restart logs ps shell db-shell build-tools migrate-generate migrate-up migrate-down migrate-status generate-entity run watch fmt lint test check ci clean
+.PHONY: help build up down restart logs ps shell db-shell build-tools migrate-generate migrate-up migrate-down migrate-status generate-entity run watch fmt lint test check check-api-docs ci clean
 
 help: ## ヘルプを表示
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -92,10 +92,14 @@ test: ## アプリケーションのテスト
 
 # cargo check
 check: ## 本番ビルドが通るか確認
-	$(DOCKER_COMPOSE) run --rm $(APP_SERVICE) cargo check --all --release
+	$(DOCKER_COMPOSE) run --rm $(APP_SERVICE) cargo check --workspace --release
+
+# cargo check --features api-docs
+check-all-features: ## APIドキュメント生成が通るか確認
+	$(DOCKER_COMPOSE) run --rm $(APP_SERVICE) cargo check --workspace --all-features
 
 # fmt, lint, test, check をまとめて実行
-ci: fmt lint test check ## CI用: フォーマット, 静的解析, テスト, チェックを実行
+ci: fmt lint test check check-all-features ## CI用: フォーマット, 静的解析, テスト, チェックを実行
 	@echo "CI checks passed."
 
 # キャッシュのクリーンアップなど
