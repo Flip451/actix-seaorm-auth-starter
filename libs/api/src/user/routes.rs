@@ -1,6 +1,6 @@
 use actix_web::web;
 
-use crate::user::{get_own_profile, get_profile, list_users, update_profile};
+use crate::user::{get_own_profile, get_profile, list_users, update_email, update_profile};
 
 pub fn user_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -8,6 +8,7 @@ pub fn user_config(cfg: &mut web::ServiceConfig) {
             .service(get_own_profile::get_own_profile_handler)
             .service(get_profile::get_profile_handler)
             .service(list_users::list_users_handler)
+            .service(update_email::update_email_handler)
             .service(update_profile::update_profile_handler),
     );
 }
@@ -29,7 +30,8 @@ pub mod openapi {
             get_own_profile::get_own_profile_handler,
             get_profile::get_profile_handler,
             list_users::list_users_handler,
-            update_profile::update_profile_handler
+            update_email::update_email_handler,
+            update_profile::update_profile_handler,
         ),
         components(
             schemas(
@@ -39,6 +41,8 @@ pub mod openapi {
                 get_profile::GetProfileResponse,
                 list_users::ListUsersRequest,
                 list_users::ListUsersResponse,
+                update_email::UpdateEmailRequest,
+                update_email::UpdateEmailResponse,
                 update_profile::UpdateProfileRequest,
                 update_profile::UpdateProfileResponse
             )
