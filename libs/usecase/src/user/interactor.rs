@@ -37,7 +37,7 @@ impl<TM: TransactionManager> UserInteractor<TM> {
 
 #[async_trait]
 impl<TM: TransactionManager> UserService for UserInteractor<TM> {
-    #[tracing::instrument(skip(self), fields(
+    #[tracing::instrument(skip(self, identity), fields(
         actor_id = %identity.actor_id(),
         actor_role = %identity.actor_role(),
     ))]
@@ -60,7 +60,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         })
     }
 
-    #[tracing::instrument(skip(self), fields(
+    #[tracing::instrument(skip(self, identity), fields(
         actor_id = %identity.actor_id(),
         actor_role = %identity.actor_role(),
     ))]
@@ -89,7 +89,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         Ok(user.into())
     }
 
-    #[tracing::instrument(skip(self), fields(
+    #[tracing::instrument(skip(self, identity), fields(
         actor_id = %identity.actor_id(),
         actor_role = %identity.actor_role(),
     ))]
@@ -119,7 +119,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         Ok(user.into())
     }
 
-    #[tracing::instrument(skip(self), fields(
+    #[tracing::instrument(skip(self, identity), fields(
         actor_id = %identity.actor_id(),
         actor_role = %identity.actor_role(),
     ))]
@@ -167,7 +167,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         Ok(updated_user.into())
     }
 
-    #[tracing::instrument(skip(self), fields(
+    #[tracing::instrument(skip(self, identity), fields(
         actor_id = %identity.actor_id(),
         actor_role = %identity.actor_role(),
     ))]
@@ -211,7 +211,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         Ok(updated_user.into())
     }
 
-    #[tracing::instrument(skip(self), fields(
+    #[tracing::instrument(skip(self, identity), fields(
         actor_id = %identity.actor_id(),
         actor_role = %identity.actor_role(),
     ))]
