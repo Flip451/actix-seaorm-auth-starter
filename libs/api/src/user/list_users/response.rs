@@ -3,6 +3,7 @@ use serde::Serialize;
 use usecase::user::dto::{ListUsersOutput, UserItem};
 #[cfg(feature = "api-docs")]
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 #[derive(Serialize)]
 #[cfg_attr(feature = "api-docs", derive(ToSchema))]
@@ -33,7 +34,7 @@ impl From<ListUsersOutput> for ListUsersResponse {
 #[derive(Serialize)]
 #[cfg_attr(feature = "api-docs", derive(ToSchema))]
 pub(crate) struct UserInfo {
-    pub id: String,
+    pub id: Uuid,
     pub username: String,
     pub role: String,
 }
@@ -41,7 +42,7 @@ pub(crate) struct UserInfo {
 impl From<UserItem> for UserInfo {
     fn from(user: UserItem) -> Self {
         UserInfo {
-            id: user.id.to_string(),
+            id: user.id,
             username: user.username,
             role: user.role.to_string(),
         }
