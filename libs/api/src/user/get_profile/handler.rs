@@ -3,9 +3,10 @@ use usecase::user::service::UserService;
 use uuid::Uuid;
 use validator::Validate as _;
 
-use crate::{error::ApiError, middleware::AuthenticatedUserContext};
-
 use super::{GetProfileRequest, GetProfileResponse};
+#[cfg(feature = "api-docs")]
+use crate::openapi::OpenApiTag;
+use crate::{error::ApiError, middleware::AuthenticatedUserContext};
 
 #[cfg_attr(
     feature = "api-docs",
@@ -23,7 +24,7 @@ use super::{GetProfileRequest, GetProfileResponse};
         security(
             ("bearer_auth" = []) // Swagger UIで鍵マークを表示
         ),
-        tag = "users",
+        tag = OpenApiTag::User.into(),
     )
 )]
 #[get("/show-profile/{user_id}")]

@@ -54,7 +54,7 @@ pub(crate) trait OpenApiExt {
     fn get_merged_doc(&self) -> utoipa::openapi::OpenApi;
 }
 
-#[derive(strum::Display)]
+#[derive(strum::IntoStaticStr)]
 #[strum(serialize_all = "snake_case")]
 pub(crate) enum OpenApiTag {
     #[strum(serialize = "admin/{0}")]

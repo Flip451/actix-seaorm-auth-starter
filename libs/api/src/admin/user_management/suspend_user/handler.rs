@@ -4,6 +4,10 @@ use uuid::Uuid;
 use validator::Validate;
 
 use super::{SuspendUserRequest, SuspendUserResponse};
+#[cfg(feature = "api-docs")]
+use crate::admin::routes::AdminApiTag;
+#[cfg(feature = "api-docs")]
+use crate::openapi::OpenApiTag;
 use crate::{error::ApiError, middleware::AdminContext};
 
 #[cfg_attr(
@@ -21,7 +25,7 @@ use crate::{error::ApiError, middleware::AdminContext};
         security(
             ("bearer_auth" = []) // Swagger UIで鍵マークを表示
         ),
-        tag = "admin/user_management",
+        tag = OpenApiTag::Admin(AdminApiTag::UserManagement).into(),
     )
 )]
 #[patch("/suspend/{user_id}")]

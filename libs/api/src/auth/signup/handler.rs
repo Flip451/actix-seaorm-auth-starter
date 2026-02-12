@@ -2,9 +2,10 @@ use actix_web::{Responder, post, web};
 use usecase::auth::service::AuthService;
 use validator::Validate as _;
 
-use crate::error::ApiError;
-
 use super::{SignupRequest, SignupResponse};
+use crate::error::ApiError;
+#[cfg(feature = "api-docs")]
+use crate::openapi::OpenApiTag;
 
 #[cfg_attr(
     feature = "api-docs",
@@ -16,7 +17,7 @@ use super::{SignupRequest, SignupResponse};
             (status = 400, description = "リクエストエラー"),
             (status = 500, description = "サーバーエラー"),
         ),
-        tag = "auth",
+        tag = OpenApiTag::Auth.into(),
     )
 )]
 #[post("/signup")]

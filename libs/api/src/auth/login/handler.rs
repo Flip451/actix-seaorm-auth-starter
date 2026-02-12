@@ -4,6 +4,8 @@ use validator::Validate as _;
 
 use super::{LoginRequest, LoginResponse};
 use crate::error::ApiError;
+#[cfg(feature = "api-docs")]
+use crate::openapi::OpenApiTag;
 
 #[cfg_attr(
     feature = "api-docs",
@@ -16,7 +18,7 @@ use crate::error::ApiError;
             (status = 401, description = "認証エラー"),
             (status = 500, description = "サーバーエラー"),
         ),
-        tag = "auth",
+        tag = OpenApiTag::Auth.into(),
     )
 )]
 #[post("/login")]

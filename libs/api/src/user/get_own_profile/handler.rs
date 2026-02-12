@@ -2,9 +2,10 @@ use actix_web::{Responder, get, web};
 use usecase::user::service::UserService;
 use validator::Validate as _;
 
-use crate::{error::ApiError, middleware::AuthenticatedUserContext};
-
 use super::{GetOwnProfileRequest, GetOwnProfileResponse};
+#[cfg(feature = "api-docs")]
+use crate::openapi::OpenApiTag;
+use crate::{error::ApiError, middleware::AuthenticatedUserContext};
 
 #[cfg_attr(
     feature = "api-docs",
@@ -22,7 +23,7 @@ use super::{GetOwnProfileRequest, GetOwnProfileResponse};
         security(
             ("bearer_auth" = []) // Swagger UIで鍵マークを表示
         ),
-        tag = "users",
+        tag = OpenApiTag::User.into(),
     )
 )]
 #[get("/me")]

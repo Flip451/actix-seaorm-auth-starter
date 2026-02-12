@@ -2,9 +2,10 @@ use actix_web::{Responder, get, web};
 use usecase::user::service::UserService;
 use validator::Validate as _;
 
-use crate::{error::ApiError, middleware::AdminContext};
-
 use super::{ListUsersRequest, ListUsersResponse};
+#[cfg(feature = "api-docs")]
+use crate::openapi::OpenApiTag;
+use crate::{error::ApiError, middleware::AuthenticatedUserContext};
 
 #[cfg_attr(
     feature = "api-docs",
@@ -21,13 +22,13 @@ use super::{ListUsersRequest, ListUsersResponse};
         security(
             ("bearer_auth" = []) // Swagger UIで鍵マークを表示
         ),
-        tag = "users",
+        tag = OpenApiTag::User.into(),
     )
 )]
 #[get("/list")]
 #[tracing::instrument(skip(service))]
 pub async fn list_users_handler(
-    admin: AdminContext,
+    user: AuthenticatedUserContext,
     query: web::Query<ListUsersRequest>,
     service: web::Data<dyn UserService>,
 ) -> Result<impl Responder, ApiError> {
@@ -35,7 +36,7 @@ pub async fn list_users_handler(
 
     let input = query.into_inner().into();
 
-    let output = service.list_users(admin.into(), input).await?;
+    let output = service.list_users(user.into(), input).await?;
 
     Ok(ListUsersResponse::from(output))
 }

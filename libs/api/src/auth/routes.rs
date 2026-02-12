@@ -36,7 +36,7 @@ pub mod openapi {
             )
         ),
         tags((
-            name = OpenApiTag::Auth.to_string(),
+            name = <OpenApiTag as Into<&'static str>>::into(OpenApiTag::Auth),
             description = "認証関連API"
         ))
     )]

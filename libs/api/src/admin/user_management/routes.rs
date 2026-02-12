@@ -27,7 +27,7 @@ pub mod openapi {
             )
         ),
         tags((
-                name = OpenApiTag::Admin(AdminApiTag::UserManagement).to_string(),
+                name = <OpenApiTag as Into<&'static str>>::into(OpenApiTag::Admin(AdminApiTag::UserManagement)),
                 description = "管理者用ユーザー管理API"
         ))
     )]

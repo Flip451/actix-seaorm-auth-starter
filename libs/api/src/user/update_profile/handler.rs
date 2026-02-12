@@ -3,6 +3,8 @@ use usecase::user::service::UserService;
 use validator::Validate as _;
 
 use super::{UpdateProfileRequest, UpdateProfileResponse};
+#[cfg(feature = "api-docs")]
+use crate::openapi::OpenApiTag;
 use crate::{error::ApiError, middleware::AuthenticatedUserContext};
 
 #[cfg_attr(
@@ -20,7 +22,7 @@ use crate::{error::ApiError, middleware::AuthenticatedUserContext};
         security(
             ("bearer_auth" = []) // Swagger UIで鍵マークを表示
         ),
-        tag = "users",
+        tag = OpenApiTag::User.into(),
     )
 )]
 #[patch("/update-profile/{user_id}")]
