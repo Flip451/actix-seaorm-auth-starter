@@ -7,7 +7,7 @@ use utoipa::ToSchema;
 #[derive(derive_more::Debug, Deserialize, Validate)]
 #[cfg_attr(feature = "api-docs", derive(ToSchema))]
 pub struct LoginRequest {
-    #[validate(email(message = "無効なメールアドレス形式です"))]
+    #[validate(email(message = "有効なメールアドレスを入力してください"))]
     #[cfg_attr(feature = "api-docs", schema(example = "user@example.com"))]
     pub email: String,
 

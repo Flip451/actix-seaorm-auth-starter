@@ -11,7 +11,7 @@ pub struct SignupRequest {
     #[cfg_attr(feature = "api-docs", schema(example = "exampleuser"))]
     pub username: String,
 
-    #[validate(email(message = "無効なメールアドレス形式です"))]
+    #[validate(email(message = "有効なメールアドレスを入力してください"))]
     #[cfg_attr(feature = "api-docs", schema(example = "user@example.com"))]
     pub email: String,
 

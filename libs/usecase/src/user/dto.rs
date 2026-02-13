@@ -27,7 +27,7 @@ impl From<User> for UserDetailedProfile {
 #[derive(derive_more::Debug)]
 pub struct GetOwnProfileInput;
 
-#[derive(derive_more::Debug)]
+#[derive(derive_more::Debug, Validate)]
 pub struct GetProfileInput {
     pub user_id: Uuid,
 }
@@ -88,17 +88,19 @@ impl UpdateUserProfileInput {
     }
 }
 
-#[derive(derive_more::Debug)]
+#[derive(derive_more::Debug, Validate)]
 pub struct UpdateUserEmailInput {
     pub target_id: Uuid,
     #[debug(skip)]
+    #[validate(email(message = "有効なメールアドレスを入力してください"))]
     pub new_email: String,
 }
 
-#[derive(derive_more::Debug)]
+#[derive(derive_more::Debug, Validate)]
 pub struct SuspendUserInput {
     pub target_id: Uuid,
     #[debug(skip)]
+    #[validate(length(min = 1, message = "理由を入力してください"))]
     pub reason: String,
 }
 

@@ -98,6 +98,8 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         identity: IdentityWrapper,
         input: GetProfileInput,
     ) -> Result<UserPublicProfile, UseCaseError> {
+        input.validate()?;
+
         let user = tx!(self.transaction_manager, |factory| {
             // プロフィールの取得
             let user_repo = factory.user_repository();
@@ -178,6 +180,8 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     ) -> Result<UpdateUserEmailOutput, UseCaseError> {
         let clock = self.clock.clone();
 
+        input.validate()?;
+
         let updated_user = tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
             let user_uniqueness_service = UserUniquenessService::new(user_repo.clone());
@@ -221,6 +225,9 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         input: SuspendUserInput,
     ) -> Result<SuspendUserOutput, UseCaseError> {
         let clock = self.clock.clone();
+
+        input.validate()?;
+
         let SuspendUserInput { target_id, reason } = input;
 
         let updated_user = tx!(self.transaction_manager, |factory| {
