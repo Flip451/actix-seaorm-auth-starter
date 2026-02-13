@@ -7,7 +7,6 @@ use validator::Validate;
 
 #[derive(derive_more::Debug, Deserialize, Validate)]
 #[cfg_attr(feature = "api-docs", derive(ToSchema))]
-#[validate(schema(function = "validate_at_least_one_field"))]
 pub struct UpdateProfileRequest {
     #[validate(length(min = 1, message = "ユーザー名は空にできません"))]
     #[cfg_attr(feature = "api-docs", schema(example = "exampleuser"))]
@@ -22,32 +21,11 @@ impl UpdateProfileRequest {
             username: self.username,
         }
     }
-
-    fn is_empty(&self) -> bool {
-        [
-            self.username.is_none(),
-            // 他のオプションフィールドもここに追加
-        ]
-        .iter()
-        .all(|x| *x)
-    }
-}
-
-fn validate_at_least_one_field(
-    input: &UpdateProfileRequest,
-) -> Result<(), validator::ValidationError> {
-    if input.is_empty() {
-        let mut error = validator::ValidationError::new("at_least_one_field_required");
-        error.message = Some("少なくとも1つの項目を変更してください".into());
-        return Err(error);
-    }
-    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::UpdateProfileRequest;
-    use usecase::usecase_error::ValidationErrorList;
     use validator::Validate;
 
     #[test]
@@ -73,21 +51,12 @@ mod tests {
     }
 
     #[test]
-    fn test_validate_none_username() {
+    fn test_validate_no_fields() {
+        // すべてのフィールドがNoneの場合でもバリデーションは成功する
+        // 実際のビジネスロジックでのチェックは別途行う想定
         let request = UpdateProfileRequest { username: None };
 
         let result = request.validate();
-        assert!(result.is_err());
-        let errors = result.unwrap_err();
-
-        let validation_error_list = ValidationErrorList::from(&errors);
-
-        let json_string = serde_json::to_string(&validation_error_list)
-            .expect("Failed to serialize validation errors");
-
-        assert_eq!(
-            json_string,
-            r#"[{"field":"schema","message":"少なくとも1つの項目を変更してください"}]"#
-        );
+        assert!(result.is_ok());
     }
 }

@@ -1,7 +1,4 @@
-use crate::{
-    auth::policy::{AuthorizationContext, AuthorizationError, Policy},
-    user::UserRole,
-};
+use crate::auth::policy::{AuthorizationContext, AuthorizationError, Policy};
 
 #[derive(Clone, Copy)]
 pub struct ListUsersPayload;

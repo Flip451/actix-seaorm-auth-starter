@@ -99,7 +99,6 @@ pub struct UpdateUserEmailInput {
 #[derive(derive_more::Debug, Validate)]
 pub struct SuspendUserInput {
     pub target_id: Uuid,
-    #[debug(skip)]
     #[validate(length(min = 1, message = "理由を入力してください"))]
     pub reason: String,
 }
