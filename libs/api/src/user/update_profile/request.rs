@@ -16,6 +16,13 @@ pub struct UpdateProfileRequest {
 }
 
 impl UpdateProfileRequest {
+    pub(super) fn into_input(self, target_id: Uuid) -> UpdateUserProfileInput {
+        UpdateUserProfileInput {
+            target_id,
+            username: self.username,
+        }
+    }
+
     fn is_empty(&self) -> bool {
         [
             self.username.is_none(),
@@ -35,15 +42,6 @@ fn validate_at_least_one_field(
         return Err(error);
     }
     Ok(())
-}
-
-impl UpdateProfileRequest {
-    pub(super) fn into_input(self, target_id: Uuid) -> UpdateUserProfileInput {
-        UpdateUserProfileInput {
-            target_id,
-            username: self.username,
-        }
-    }
 }
 
 #[cfg(test)]
