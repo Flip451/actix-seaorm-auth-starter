@@ -5,8 +5,6 @@ use usecase::user::dto::UserPublicProfile;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::impl_responder_for;
-
 #[derive(Serialize)]
 #[cfg_attr(feature = "api-docs", derive(ToSchema))]
 pub(crate) struct GetProfileResponse {
@@ -33,4 +31,4 @@ impl From<UserPublicProfile> for GetProfileResponse {
     }
 }
 
-impl_responder_for!(GetProfileResponse, StatusCode::OK);
+crate::impl_responder_for!(GetProfileResponse, StatusCode::OK);
