@@ -19,8 +19,6 @@ impl<'a> ViewPublicProfilePolicy<'a> {
 impl<'a> Policy<'a> for ViewPublicProfilePolicy<'a> {
     // 任意のログイン済みユーザーは任意のユーザーのプロフィールを閲覧できる
     fn check(&self, _ctx: &AuthorizationContext<'a>) -> Result<(), AuthorizationError> {
-        let _target = self.0.target;
-
         Ok(())
     }
 }
