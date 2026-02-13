@@ -36,15 +36,24 @@ impl From<ListUsersOutput> for ListUsersResponse {
 pub(crate) struct UserInfo {
     pub id: Uuid,
     pub username: String,
+    pub email: String,
     pub role: String,
 }
 
 impl From<UserItem> for UserInfo {
     fn from(user: UserItem) -> Self {
+        let UserItem {
+            id,
+            username,
+            email,
+            role,
+        } = user;
+
         UserInfo {
-            id: user.id,
-            username: user.username,
-            role: user.role.to_string(),
+            id,
+            username,
+            email,
+            role: role.to_string(),
         }
     }
 }

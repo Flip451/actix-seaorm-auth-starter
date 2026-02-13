@@ -1,4 +1,7 @@
-use crate::auth::policy::{AuthorizationContext, AuthorizationError, Policy};
+use crate::{
+    auth::policy::{AuthorizationContext, AuthorizationError, Policy},
+    user::UserRole,
+};
 
 #[derive(Clone, Copy)]
 pub struct ListUsersPayload;
@@ -12,8 +15,11 @@ impl ListUsersPolicy {
 }
 
 impl<'a> Policy<'a> for ListUsersPolicy {
-    // 任意のログイン済みユーザーがアクセス可能とする
-    fn check(&self, _ctx: &AuthorizationContext<'a>) -> Result<(), AuthorizationError> {
-        Ok(())
+    // 管理者のみがユーザー一覧を取得できる
+    fn check(&self, ctx: &AuthorizationContext<'a>) -> Result<(), AuthorizationError> {
+        match ctx.actor_role {
+            UserRole::Admin => Ok(()), // 管理者はユーザー一覧を取得可能
+            UserRole::User => Err(AuthorizationError::Forbidden), // その他のケースは拒否
+        }
     }
 }

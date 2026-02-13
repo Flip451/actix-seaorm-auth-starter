@@ -17,13 +17,18 @@ pub(crate) struct GetProfileResponse {
     pub user_id: Uuid,
     #[cfg_attr(feature = "api-docs", schema(example = "exampleuser"))]
     pub username: String,
+    #[cfg_attr(feature = "api-docs", schema(example = "user"))]
+    pub role: String,
 }
 
 impl From<UserPublicProfile> for GetProfileResponse {
     fn from(user: UserPublicProfile) -> Self {
+        let UserPublicProfile { id, username, role } = user;
+
         GetProfileResponse {
-            user_id: user.id,
-            username: user.username,
+            user_id: id,
+            username,
+            role: role.to_string(),
         }
     }
 }

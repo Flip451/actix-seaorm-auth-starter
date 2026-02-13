@@ -46,6 +46,8 @@ pub struct ListUsersOutput {
 pub struct UserItem {
     pub id: Uuid,
     pub username: String,
+    #[debug(skip)]
+    pub email: String,
     pub role: UserRoleData,
 }
 
@@ -54,6 +56,7 @@ impl From<User> for UserItem {
         UserItem {
             id: user.id().into(),
             username: user.username().to_string(),
+            email: user.email().as_str().to_string(),
             role: user.role().into(),
         }
     }

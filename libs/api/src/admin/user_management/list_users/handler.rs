@@ -4,14 +4,16 @@ use validator::Validate as _;
 
 use super::{ListUsersRequest, ListUsersResponse};
 #[cfg(feature = "api-docs")]
+use crate::admin::routes::AdminApiTag;
+#[cfg(feature = "api-docs")]
 use crate::openapi::OpenApiTag;
-use crate::{error::ApiError, middleware::AuthenticatedUserContext};
+use crate::{error::ApiError, middleware::AdminContext};
 
 #[cfg_attr(
     feature = "api-docs",
     utoipa::path(
         get,
-        path = "/users/list",
+        path = "/admin/users/list",
         responses(
             (status = 200, description = "ユーザー一覧取得成功", body = ListUsersResponse),
             (status = 400, description = "リクエストエラー"),
@@ -22,13 +24,13 @@ use crate::{error::ApiError, middleware::AuthenticatedUserContext};
         security(
             ("bearer_auth" = []) // Swagger UIで鍵マークを表示
         ),
-        tag = OpenApiTag::Users.as_ref(),
+        tag = OpenApiTag::Admin(AdminApiTag::UserManagement).as_ref(),
     )
 )]
 #[get("/list")]
 #[tracing::instrument(skip(service))]
 pub async fn list_users_handler(
-    user: AuthenticatedUserContext,
+    admin: AdminContext,
     query: web::Query<ListUsersRequest>,
     service: web::Data<dyn UserService>,
 ) -> Result<impl Responder, ApiError> {
@@ -36,7 +38,7 @@ pub async fn list_users_handler(
 
     let input = query.into_inner().into();
 
-    let output = service.list_users(user.into(), input).await?;
+    let output = service.list_users(admin.into(), input).await?;
 
     Ok(ListUsersResponse::from(output))
 }

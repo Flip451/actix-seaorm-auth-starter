@@ -1,3 +1,4 @@
+pub mod list_users;
 pub mod routes;
 pub mod suspend_user;
 

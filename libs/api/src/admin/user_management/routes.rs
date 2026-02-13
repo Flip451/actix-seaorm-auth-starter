@@ -1,9 +1,13 @@
 use actix_web::web;
 
-use super::suspend_user;
+use super::{list_users, suspend_user};
 
 pub fn user_management_config(cfg: &mut web::ServiceConfig) {
-    cfg.service(web::scope("/users").service(suspend_user::suspend_user_handler));
+    cfg.service(
+        web::scope("/users")
+            .service(list_users::list_users_handler)
+            .service(suspend_user::suspend_user_handler),
+    );
 }
 
 #[cfg(feature = "api-docs")]
@@ -18,12 +22,15 @@ pub mod openapi {
     #[derive(OpenApi)]
     #[openapi(
         paths(
-            suspend_user::suspend_user_handler
+            list_users::list_users_handler,
+            suspend_user::suspend_user_handler,
         ),
         components(
             schemas(
+                list_users::ListUsersRequest,
+                list_users::ListUsersResponse,
                 suspend_user::SuspendUserRequest,
-                suspend_user::SuspendUserResponse
+                suspend_user::SuspendUserResponse,
             )
         ),
         tags((
