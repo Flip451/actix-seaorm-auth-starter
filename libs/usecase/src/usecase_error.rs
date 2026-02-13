@@ -214,8 +214,6 @@ mod tests {
             error_map.insert(error.field.clone(), error.message.clone());
         }
 
-        println!("{:?}", error_map);
-
         assert_eq!(error_map.get("email").unwrap(), "invalid email");
         assert_eq!(
             error_map.get("nested.name").unwrap(),
@@ -226,5 +224,39 @@ mod tests {
             "must be at least 3 characters"
         );
         assert!(error_map.get("items[1].name").is_none());
+    }
+
+    #[test]
+    fn test_schema_level_error() {
+        #[derive(Validate)]
+        #[validate(schema(function = "validate_schema"))]
+        struct TestStruct {
+            field1: String,
+            field2: String,
+        }
+
+        fn validate_schema(input: &TestStruct) -> Result<(), validator::ValidationError> {
+            if input.field1 != input.field2 {
+                let mut error = validator::ValidationError::new("fields_must_match");
+                error.message = Some("field1 and field2 must match".into());
+                return Err(error);
+            }
+            Ok(())
+        }
+
+        let test_instance = TestStruct {
+            field1: "value1".to_string(),
+            field2: "value2".to_string(),
+        };
+
+        let result = test_instance.validate();
+        assert!(result.is_err());
+        let validation_errors = result.unwrap_err();
+        let error_list = ValidationErrorList::from(&validation_errors);
+        let errors = error_list.0;
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].field, "schema");
+        assert_eq!(errors[0].message, "field1 and field2 must match");
     }
 }
