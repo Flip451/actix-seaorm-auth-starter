@@ -154,6 +154,7 @@ impl From<User> for UpdateUserProfileOutput {
 #[derive(derive_more::Debug)]
 pub struct UpdateUserEmailOutput {
     pub user_id: Uuid,
+    #[debug(skip)]
     pub email: String,
 }
 
