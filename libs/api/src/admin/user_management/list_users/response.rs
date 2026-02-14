@@ -17,11 +17,13 @@ pub(crate) struct ListUsersResponse {
                     {
                         "user_id": "550e8400-e29b-41d4-a716-446655440000",
                         "username": "exampleuser",
+                        "email": "exampleuser@example.com",
                         "role": "user"
                     },
                     {
                         "user_id": "550e8400-e29b-41d4-a716-446655440001",
                         "username": "adminuser",
+                        "email": "adminuser@example.com",
                         "role": "admin"
                     }
                 ])
