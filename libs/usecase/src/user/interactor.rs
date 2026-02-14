@@ -271,7 +271,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             AuthorizationService::can(
                 &IdentityWrapper::from(&identity),
                 UserAction::FindUserById(FindUserByIdPayload {
-                    target_id: input.target_id.into(),
+                    target_id: target_id.into(),
                 }),
             )?;
 
