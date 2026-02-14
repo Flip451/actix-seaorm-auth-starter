@@ -78,10 +78,7 @@ impl<TM: TransactionManager> AuthService for AuthInteractor<TM> {
     }
 
     /// ログイン
-    #[tracing::instrument(
-        skip(self, input),
-        fields(email = %input.email)
-    )]
+    #[tracing::instrument(skip(self))]
     async fn login(&self, input: LoginInput) -> Result<LoginOutput, UseCaseError> {
         // ここでDTOからValueObjectへの変換を行う
         let email = UnverifiedEmail::new(&input.email)?;
