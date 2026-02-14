@@ -7,7 +7,7 @@ use crate::user::dto::{
 };
 use crate::user::service::UserService;
 use async_trait::async_trait;
-use domain::auth::policies::find_user_by_id_for_update::FindUserByIdForSuspendPayload;
+use domain::auth::policies::find_user_by_id_for_suspend::FindUserByIdForSuspendPayload;
 use domain::auth::policies::{
     change_email::ChangeEmailPayload, list_users::ListUsersPayload,
     suspend_user::SuspendUserPayload, update_profile::UpdateProfilePayload,
@@ -117,7 +117,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             // ポリシーチェック
             AuthorizationService::can(
                 &IdentityWrapper::from(&identity),
-                UserAction::ViewPublicProfile(ViewPublicProfilePayload { target_id }),
+                UserAction::ViewPublicProfile(ViewPublicProfilePayload),
             )?;
 
             let user = user_repo

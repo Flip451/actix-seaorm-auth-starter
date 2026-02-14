@@ -3,7 +3,9 @@ use crate::{
         activate_user::{ActivateUserPayload, ActivateUserPolicy},
         change_email::{ChangeEmailPayload, ChangeEmailPolicy},
         deactivate_user::{DeactivateUserPayload, DeactivateUserPolicy},
-        find_user_by_id_for_update::{FindUserByIdForSuspendPayload, FindUserByIdForSuspendPolicy},
+        find_user_by_id_for_suspend::{
+            FindUserByIdForSuspendPayload, FindUserByIdForSuspendPolicy,
+        },
         list_users::{ListUsersPayload, ListUsersPolicy},
         promote_to_admin::{PromoteToAdminPayload, PromoteToAdminPolicy},
         suspend_user::{SuspendUserPayload, SuspendUserPolicy},
