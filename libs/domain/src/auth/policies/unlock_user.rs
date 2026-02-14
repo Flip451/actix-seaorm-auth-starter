@@ -1,28 +1,28 @@
 use crate::{
     auth::policy::{AuthorizationContext, AuthorizationError, Policy},
-    user::{User, UserRole},
+    user::{UserId, UserRole},
 };
 
 #[derive(Clone, Copy)]
-pub struct UnlockUserPayload<'a> {
-    pub target: &'a User,
+pub struct UnlockUserPayload {
+    pub target_id: UserId,
 }
 
-pub struct UnlockUserPolicy<'a>(UnlockUserPayload<'a>);
+pub struct UnlockUserPolicy(UnlockUserPayload);
 
-impl<'a> UnlockUserPolicy<'a> {
-    pub fn new(payload: UnlockUserPayload<'a>) -> Self {
+impl UnlockUserPolicy {
+    pub fn new(payload: UnlockUserPayload) -> Self {
         Self(payload)
     }
 }
 
-impl<'a> Policy<'a> for UnlockUserPolicy<'a> {
+impl Policy for UnlockUserPolicy {
     // 管理者は自分以外のユーザーのロックを解除できる
-    fn check(&self, ctx: &AuthorizationContext<'a>) -> Result<(), AuthorizationError> {
-        let target = self.0.target;
+    fn check(&self, ctx: &AuthorizationContext) -> Result<(), AuthorizationError> {
+        let target_id = self.0.target_id;
 
         // 自分自身を利用再開にすることはできない
-        if ctx.actor_id == target.id() {
+        if ctx.actor_id == target_id {
             return Err(AuthorizationError::CannotUnlockSelf);
         }
 

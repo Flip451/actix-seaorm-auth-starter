@@ -1,32 +1,33 @@
 use crate::{
     auth::policy::{AuthorizationContext, AuthorizationError, Policy},
-    user::{User, UserRole},
+    user::{UserId, UserRole},
 };
 
 #[derive(Clone, Copy)]
-pub struct SuspendUserPayload<'a> {
-    pub target: &'a User,
+pub struct SuspendUserPayload {
+    pub target_id: UserId,
+    pub target_role: UserRole,
 }
 
-pub struct SuspendUserPolicy<'a>(SuspendUserPayload<'a>);
+pub struct SuspendUserPolicy(SuspendUserPayload);
 
-impl<'a> SuspendUserPolicy<'a> {
-    pub fn new(payload: SuspendUserPayload<'a>) -> Self {
+impl SuspendUserPolicy {
+    pub fn new(payload: SuspendUserPayload) -> Self {
         Self(payload)
     }
 }
 
-impl<'a> Policy<'a> for SuspendUserPolicy<'a> {
+impl Policy for SuspendUserPolicy {
     // 管理者は自分以外の非管理者ユーザーを停止できる
-    fn check(&self, ctx: &AuthorizationContext<'a>) -> Result<(), AuthorizationError> {
-        let target = self.0.target;
-
+    fn check(&self, ctx: &AuthorizationContext) -> Result<(), AuthorizationError> {
+        let target_id = self.0.target_id;
+        let target_role = self.0.target_role;
         // 自分自身を利用停止にすることはできない
-        if ctx.actor_id == target.id() {
+        if ctx.actor_id == target_id {
             return Err(AuthorizationError::CannotSuspendSelf);
         }
         // 管理者を管理者が停止することはできない
-        if target.role() == UserRole::Admin {
+        if target_role == UserRole::Admin {
             return Err(AuthorizationError::CannotSuspendAdmin);
         }
         // ここでさらに詳細な権限チェックを行うことができます

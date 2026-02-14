@@ -1,22 +1,26 @@
-use std::sync::Arc;
-
-use async_trait::async_trait;
-use domain::auth::policies::change_email::ChangeEmailPayload;
-use domain::auth::policies::list_users::ListUsersPayload;
-use domain::auth::policies::suspend_user::SuspendUserPayload;
-use domain::auth::policies::update_profile::UpdateProfilePayload;
-use domain::auth::policies::view_profile::ViewProfilePayload;
-use domain::shared::service::clock::Clock;
-
-use crate::shared::identity::Identity;
+use crate::shared::identity::{Identity, IdentityWrapper};
 use crate::usecase_error::UseCaseError;
+use crate::user::dto::{
+    GetOwnProfileInput, GetProfileInput, ListUsersInput, ListUsersOutput, SuspendUserInput,
+    SuspendUserOutput, UpdateUserEmailInput, UpdateUserEmailOutput, UpdateUserProfileInput,
+    UpdateUserProfileOutput, UserDetailedProfile, UserPublicProfile,
+};
 use crate::user::service::UserService;
-
-use super::dto::UserResponse;
+use async_trait::async_trait;
+use domain::auth::policies::find_user_by_id_for_suspend::FindUserByIdForSuspendPayload;
+use domain::auth::policies::{
+    change_email::ChangeEmailPayload, list_users::ListUsersPayload,
+    suspend_user::SuspendUserPayload, update_profile::UpdateProfilePayload,
+    view_detailed_profile::ViewDetailedProfilePayload,
+    view_public_profile::ViewPublicProfilePayload,
+};
 use domain::auth::policy::{AuthorizationService, UserAction};
+use domain::shared::service::clock::Clock;
 use domain::transaction::TransactionManager;
 use domain::tx;
-use domain::user::{UserId, UserUniquenessService};
+use domain::user::UserUniquenessService;
+use std::sync::Arc;
+use validator::Validate as _;
 
 pub struct UserInteractor<TM: TransactionManager> {
     transaction_manager: Arc<TM>,
@@ -34,22 +38,19 @@ impl<TM: TransactionManager> UserInteractor<TM> {
 
 #[async_trait]
 impl<TM: TransactionManager> UserService for UserInteractor<TM> {
-    #[tracing::instrument(
-        skip(self, identity),
-        fields(
-            actor_id = %identity.actor_id(),
-            actor_role = %identity.actor_role(),
-        )
-    )]
+    #[tracing::instrument(skip(self, identity), fields(
+        actor_id = %identity.actor_id(),
+        actor_role = %identity.actor_role(),
+    ))]
     async fn list_users(
         &self,
         identity: Box<dyn Identity>,
-    ) -> Result<Vec<UserResponse>, UseCaseError> {
+        _input: ListUsersInput,
+    ) -> Result<ListUsersOutput, UseCaseError> {
         let users = tx!(self.transaction_manager, |factory| {
             // ポリシーチェック
             AuthorizationService::can(
-                identity.actor_id(),
-                identity.actor_role(),
+                &IdentityWrapper::from(&identity),
                 UserAction::ListUsers(ListUsersPayload),
             )?;
 
@@ -58,90 +59,110 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         })
         .await?;
 
-        Ok(users
-            .into_iter()
-            .map(|u| UserResponse {
-                id: u.id(),
-                username: u.username().to_string(),
-                email: u.email().as_str().to_string(),
-                role: u.role(),
-            })
-            .collect::<Vec<UserResponse>>())
+        Ok(ListUsersOutput {
+            users: users.into_iter().map(|u| u.into()).collect(),
+        })
     }
 
-    #[tracing::instrument(
-        skip(self, identity),
-        fields(
-            actor_id = %identity.actor_id(),
-            actor_role = %identity.actor_role(),
-            user_id = %user_id,
-        )
-    )]
-    async fn get_user_by_id(
+    #[tracing::instrument(skip(self, identity), fields(
+        actor_id = %identity.actor_id(),
+        actor_role = %identity.actor_role(),
+    ))]
+    async fn get_own_profile(
         &self,
         identity: Box<dyn Identity>,
-        user_id: UserId,
-    ) -> Result<UserResponse, UseCaseError> {
+        _input: GetOwnProfileInput,
+    ) -> Result<UserDetailedProfile, UseCaseError> {
+        let target_id = identity.actor_id().into();
+
         let user = tx!(self.transaction_manager, |factory| {
+            let identity: IdentityWrapper<&Box<dyn Identity>> = IdentityWrapper::from(&identity);
+
             // プロフィールの取得
             let user_repo = factory.user_repository();
-            let user = user_repo
-                .find_by_id(user_id)
-                .await?
-                .ok_or(UseCaseError::NotFound)?;
 
             // ポリシーチェック
             AuthorizationService::can(
-                identity.actor_id(),
-                identity.actor_role(),
-                UserAction::ViewProfile(ViewProfilePayload { target: &user }),
+                &identity,
+                UserAction::ViewDetailedProfile(ViewDetailedProfilePayload { target_id }),
             )?;
+
+            let user = user_repo
+                .find_by_id(target_id)
+                .await?
+                .ok_or(UseCaseError::NotFound)?;
 
             Ok::<_, UseCaseError>(user)
         })
         .await?;
 
-        Ok(UserResponse {
-            id: user.id(),
-            username: user.username().to_string(),
-            email: user.email().as_str().to_string(),
-            role: user.role(),
-        })
+        Ok(user.into())
     }
 
-    #[tracing::instrument(
-        skip(self, identity, input),
-        fields(
-            actor_id = %identity.actor_id(),
-            actor_role = %identity.actor_role(),
-            target_id = %target_id,
-        )
-    )]
-    async fn update_user(
+    #[tracing::instrument(skip(self, identity), fields(
+        actor_id = %identity.actor_id(),
+        actor_role = %identity.actor_role(),
+    ))]
+    async fn get_public_profile(
         &self,
         identity: Box<dyn Identity>,
-        target_id: UserId,
-        input: super::dto::UpdateUserInput,
-    ) -> Result<UserResponse, UseCaseError> {
+        input: GetProfileInput,
+    ) -> Result<UserPublicProfile, UseCaseError> {
+        let target_id = input.user_id.into();
+
+        let user = tx!(self.transaction_manager, |factory| {
+            // プロフィールの取得
+            let user_repo = factory.user_repository();
+
+            // ポリシーチェック
+            AuthorizationService::can(
+                &IdentityWrapper::from(&identity),
+                UserAction::ViewPublicProfile(ViewPublicProfilePayload),
+            )?;
+
+            let user = user_repo
+                .find_by_id(target_id)
+                .await?
+                .ok_or(UseCaseError::NotFound)?;
+
+            Ok::<_, UseCaseError>(user)
+        })
+        .await?;
+
+        Ok(user.into())
+    }
+
+    #[tracing::instrument(skip(self, identity), fields(
+        actor_id = %identity.actor_id(),
+        actor_role = %identity.actor_role(),
+    ))]
+    async fn update_user_profile(
+        &self,
+        identity: Box<dyn Identity>,
+        input: UpdateUserProfileInput,
+    ) -> Result<UpdateUserProfileOutput, UseCaseError> {
         let clock = self.clock.clone();
+
+        input.validate()?;
 
         let updated_user = tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
             let user_uniqueness_service = UserUniquenessService::new(user_repo.clone());
 
+            // ポリシーチェック
+            AuthorizationService::can(
+                &IdentityWrapper::from(&identity),
+                UserAction::UpdateProfile(UpdateProfilePayload {
+                    target_id: input.target_id.into(),
+                }),
+            )?;
+
             let mut user = user_repo
-                .find_by_id(target_id)
+                .find_by_id(input.target_id.into())
                 .await?
                 .ok_or(UseCaseError::NotFound)?;
 
             if let Some(username) = input.username {
-                // ポリシーチェック
-                AuthorizationService::can(
-                    identity.actor_id(),
-                    identity.actor_role(),
-                    UserAction::UpdateProfile(UpdateProfilePayload { target: &user }),
-                )?;
-
                 // ユーザー名の重複チェック
                 let username = user_uniqueness_service
                     .ensure_unique_username(&username)
@@ -149,20 +170,6 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
 
                 // ドメインロジックの実行
                 user.change_username(username, clock.as_ref())?;
-            }
-            if let Some(email) = input.email {
-                // ポリシーチェック
-                AuthorizationService::can(
-                    identity.actor_id(),
-                    identity.actor_role(),
-                    UserAction::ChangeEmail(ChangeEmailPayload { target: &user }),
-                )?;
-
-                // メールアドレスの重複チェック
-                let email = user_uniqueness_service.ensure_unique_email(&email).await?;
-
-                // ドメインロジックの実行
-                user.change_email(email, clock.as_ref())?;
             }
 
             // 変更の保存
@@ -172,44 +179,92 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         })
         .await?;
 
-        Ok(UserResponse {
-            id: updated_user.id(),
-            username: updated_user.username().to_string(),
-            email: updated_user.email().as_str().to_string(),
-            role: updated_user.role(),
-        })
+        Ok(updated_user.into())
     }
 
-    #[tracing::instrument(
-        skip(self, identity),
-        fields(
-            actor_id = %identity.actor_id(),
-            actor_role = %identity.actor_role(),
-            target_id = %target_id,
-        )
-    )]
-    async fn suspend_user(
+    #[tracing::instrument(skip(self, identity), fields(
+        actor_id = %identity.actor_id(),
+        actor_role = %identity.actor_role(),
+    ))]
+    async fn update_user_email(
         &self,
         identity: Box<dyn Identity>,
-        target_id: UserId,
-        reason: String,
-    ) -> Result<(), UseCaseError> {
+        input: UpdateUserEmailInput,
+    ) -> Result<UpdateUserEmailOutput, UseCaseError> {
         let clock = self.clock.clone();
+        let target_id = input.target_id.into();
 
-        tx!(self.transaction_manager, |factory| {
+        input.validate()?;
+
+        let updated_user = tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
+            let user_uniqueness_service = UserUniquenessService::new(user_repo.clone());
 
-            let mut target_user = user_repo
+            // ポリシーチェック
+            AuthorizationService::can(
+                &IdentityWrapper::from(&identity),
+                UserAction::ChangeEmail(ChangeEmailPayload { target_id }),
+            )?;
+
+            let mut user = user_repo
                 .find_by_id(target_id)
                 .await?
                 .ok_or(UseCaseError::NotFound)?;
 
+            // メールアドレスの重複チェック
+            let email = user_uniqueness_service
+                .ensure_unique_email(&input.new_email)
+                .await?;
+
+            // ドメインロジックの実行
+            user.change_email(email, clock.as_ref())?;
+
+            // 変更の保存
+            let updated_user = user_repo.save(user).await?;
+
+            Ok::<_, UseCaseError>(updated_user)
+        })
+        .await?;
+
+        Ok(updated_user.into())
+    }
+
+    #[tracing::instrument(skip(self, identity), fields(
+        actor_id = %identity.actor_id(),
+        actor_role = %identity.actor_role(),
+    ))]
+    async fn suspend_user(
+        &self,
+        identity: Box<dyn Identity>,
+        input: SuspendUserInput,
+    ) -> Result<SuspendUserOutput, UseCaseError> {
+        let clock = self.clock.clone();
+
+        input.validate()?;
+
+        let SuspendUserInput { target_id, reason } = input;
+
+        let updated_user = tx!(self.transaction_manager, |factory| {
+            let user_repo = factory.user_repository();
+
             // ポリシーチェック
             AuthorizationService::can(
-                identity.actor_id(),
-                identity.actor_role(),
+                &IdentityWrapper::from(&identity),
+                UserAction::FindUserByIdForSuspend(FindUserByIdForSuspendPayload {
+                    target_id: target_id.into(),
+                }),
+            )?;
+
+            let mut target_user = user_repo
+                .find_by_id(target_id.into())
+                .await?
+                .ok_or(UseCaseError::NotFound)?;
+
+            AuthorizationService::can(
+                &IdentityWrapper::from(&identity),
                 UserAction::SuspendUser(SuspendUserPayload {
-                    target: &target_user,
+                    target_id: target_user.id(),
+                    target_role: target_user.role(),
                 }),
             )?;
 
@@ -217,10 +272,12 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             target_user.suspend(reason, clock.as_ref())?;
 
             // 変更を保存
-            user_repo.save(target_user).await?;
+            let updated_user = user_repo.save(target_user).await?;
 
-            Ok::<_, UseCaseError>(())
+            Ok::<_, UseCaseError>(updated_user)
         })
-        .await
+        .await?;
+
+        Ok(updated_user.into())
     }
 }

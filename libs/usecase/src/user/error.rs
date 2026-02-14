@@ -53,10 +53,13 @@ impl From<EmailFormatError> for UseCaseError {
             EmailFormatError::InvalidFormat {
                 invalid_email,
                 error: _,
-            } => UseCaseError::InvalidInput(vec![ValidationError::new(
-                "email",
-                format!("メールアドレスの形式として不正です: {invalid_email}"),
-            )]),
+            } => UseCaseError::InvalidInput(
+                vec![ValidationError::new(
+                    "email",
+                    format!("メールアドレスの形式として不正です: {invalid_email}"),
+                )]
+                .into(),
+            ),
         }
     }
 }
@@ -64,12 +67,13 @@ impl From<EmailFormatError> for UseCaseError {
 impl From<PasswordPolicyViolation> for UseCaseError {
     fn from(violation: PasswordPolicyViolation) -> Self {
         match violation {
-            PasswordPolicyViolation::TooShort => {
-                UseCaseError::InvalidInput(vec![ValidationError::new(
+            PasswordPolicyViolation::TooShort => UseCaseError::InvalidInput(
+                vec![ValidationError::new(
                     "password",
                     "パスワードが短すぎます".to_string(),
-                )])
-            }
+                )]
+                .into(),
+            ),
         }
     }
 }

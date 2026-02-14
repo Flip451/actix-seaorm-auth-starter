@@ -1,9 +1,11 @@
 pub mod activate_user;
 pub mod change_email;
 pub mod deactivate_user;
+pub mod find_user_by_id_for_suspend;
 pub mod list_users;
 pub mod promote_to_admin;
 pub mod suspend_user;
 pub mod unlock_user;
 pub mod update_profile;
-pub mod view_profile;
+pub mod view_detailed_profile;
+pub mod view_public_profile;

@@ -127,6 +127,10 @@ impl User {
     pub fn updated_at(&self) -> DateTime<Utc> {
         self.updated_at
     }
+
+    pub fn is_suspended(&self) -> bool {
+        matches!(self.state.kind_raw(), UserStateKind::SuspendedByAdmin)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

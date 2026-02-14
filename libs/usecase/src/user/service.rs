@@ -1,32 +1,50 @@
 use async_trait::async_trait;
-use domain::user::UserId;
 
-use crate::{shared::identity::Identity, usecase_error::UseCaseError, user::dto::UserResponse};
+use crate::{
+    shared::identity::Identity,
+    usecase_error::UseCaseError,
+    user::dto::{
+        GetOwnProfileInput, GetProfileInput, ListUsersInput, ListUsersOutput, SuspendUserInput,
+        SuspendUserOutput, UpdateUserEmailInput, UpdateUserEmailOutput, UpdateUserProfileInput,
+        UpdateUserProfileOutput, UserDetailedProfile, UserPublicProfile,
+    },
+};
 
 #[async_trait]
 pub trait UserService: Send + Sync {
     async fn list_users(
         &self,
         identity: Box<dyn Identity>,
-    ) -> Result<Vec<UserResponse>, UseCaseError>;
+        input: ListUsersInput,
+    ) -> Result<ListUsersOutput, UseCaseError>;
 
-    async fn get_user_by_id(
+    async fn get_own_profile(
         &self,
         identity: Box<dyn Identity>,
-        user_id: UserId,
-    ) -> Result<UserResponse, UseCaseError>;
+        input: GetOwnProfileInput,
+    ) -> Result<UserDetailedProfile, UseCaseError>;
 
-    async fn update_user(
+    async fn get_public_profile(
         &self,
         identity: Box<dyn Identity>,
-        target_id: UserId,
-        input: super::dto::UpdateUserInput,
-    ) -> Result<UserResponse, UseCaseError>;
+        input: GetProfileInput,
+    ) -> Result<UserPublicProfile, UseCaseError>;
+
+    async fn update_user_profile(
+        &self,
+        identity: Box<dyn Identity>,
+        input: UpdateUserProfileInput,
+    ) -> Result<UpdateUserProfileOutput, UseCaseError>;
+
+    async fn update_user_email(
+        &self,
+        identity: Box<dyn Identity>,
+        input: UpdateUserEmailInput,
+    ) -> Result<UpdateUserEmailOutput, UseCaseError>;
 
     async fn suspend_user(
         &self,
         identity: Box<dyn Identity>,
-        target_id: UserId,
-        reason: String,
-    ) -> Result<(), UseCaseError>;
+        input: SuspendUserInput,
+    ) -> Result<SuspendUserOutput, UseCaseError>;
 }
