@@ -10,7 +10,10 @@ use crate::{error::ApiError, middleware::AuthenticatedUserContext};
     feature = "api-docs",
     utoipa::path(
         patch,
-        path = "/users/update-profile/{user_id}",
+        params(
+            ("user_id" = uuid::Uuid, Path, description = "更新対象のユーザーID"),
+        ),
+        request_body = UpdateProfileRequest,
         responses(
             (status = 200, description = "ユーザー情報更新成功", body = UpdateProfileResponse),
             (status = 400, description = "リクエストエラー"),
@@ -24,7 +27,7 @@ use crate::{error::ApiError, middleware::AuthenticatedUserContext};
         tag = OpenApiTag::Users.as_ref(),
     )
 )]
-#[patch("/update-profile/{user_id}")]
+#[patch("/users/update-profile/{user_id}")]
 #[tracing::instrument(skip(service))]
 pub async fn update_profile_handler(
     user: AuthenticatedUserContext,

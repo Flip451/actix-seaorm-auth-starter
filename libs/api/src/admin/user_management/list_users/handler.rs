@@ -12,7 +12,9 @@ use crate::{error::ApiError, middleware::AdminContext};
     feature = "api-docs",
     utoipa::path(
         get,
-        path = "/admin/users/list",
+        params(
+            ListUsersRequest
+        ),
         responses(
             (status = 200, description = "ユーザー一覧取得成功", body = ListUsersResponse),
             (status = 400, description = "リクエストエラー"),
@@ -26,7 +28,7 @@ use crate::{error::ApiError, middleware::AdminContext};
         tag = OpenApiTag::Admin(AdminApiTag::UserManagement).as_ref(),
     )
 )]
-#[get("/list")]
+#[get("/admin/users/list")]
 #[tracing::instrument(skip(service))]
 pub async fn list_users_handler(
     admin: AdminContext,

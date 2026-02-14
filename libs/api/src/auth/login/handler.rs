@@ -10,7 +10,7 @@ use crate::openapi::OpenApiTag;
     feature = "api-docs",
     utoipa::path(
         post,
-        path = "/auth/login",
+        request_body = LoginRequest,
         responses(
             (status = 200, description = "ログイン成功", body = LoginResponse),
             (status = 400, description = "リクエストエラー"),
@@ -20,7 +20,7 @@ use crate::openapi::OpenApiTag;
         tag = OpenApiTag::Auth.as_ref(),
     )
 )]
-#[post("/login")]
+#[post("/auth/login")]
 #[tracing::instrument(skip(service))]
 pub async fn login_handler(
     service: web::Data<dyn AuthService>,

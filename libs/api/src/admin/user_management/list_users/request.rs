@@ -1,10 +1,10 @@
 use serde::Deserialize;
 use usecase::user::dto::ListUsersInput;
 #[cfg(feature = "api-docs")]
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 #[derive(derive_more::Debug, Deserialize)]
-#[cfg_attr(feature = "api-docs", derive(ToSchema))]
+#[cfg_attr(feature = "api-docs", derive(IntoParams, ToSchema))]
 pub struct ListUsersRequest {
     // Define query parameters here, e.g.:
     // pub page: Option<u32>,

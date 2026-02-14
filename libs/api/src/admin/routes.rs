@@ -3,10 +3,7 @@ use actix_web::web;
 use crate::admin::user_management;
 
 pub fn admin_config(cfg: &mut web::ServiceConfig) {
-    cfg.service(web::scope("/admin")
-        .configure(user_management::user_management_config))
-        // Add more admin configurations here as needed
-        ;
+    cfg.configure(user_management::user_management_config);
 }
 
 #[cfg(feature = "api-docs")]

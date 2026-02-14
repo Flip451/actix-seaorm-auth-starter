@@ -9,7 +9,7 @@ use usecase::auth::service::AuthService;
     feature = "api-docs",
     utoipa::path(
         post,
-        path = "/auth/signup",
+        request_body = SignupRequest,
         responses(
             (status = 201, description = "ユーザー登録成功", body = SignupResponse),
             (status = 400, description = "リクエストエラー"),
@@ -18,7 +18,7 @@ use usecase::auth::service::AuthService;
         tag = OpenApiTag::Auth.as_ref(),
     )
 )]
-#[post("/signup")]
+#[post("/auth/signup")]
 #[tracing::instrument(skip(service))]
 pub async fn signup_handler(
     service: web::Data<dyn AuthService>,

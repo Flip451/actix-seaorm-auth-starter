@@ -3,11 +3,8 @@ use actix_web::web;
 use super::{list_users, suspend_user};
 
 pub fn user_management_config(cfg: &mut web::ServiceConfig) {
-    cfg.service(
-        web::scope("/users")
-            .service(list_users::list_users_handler)
-            .service(suspend_user::suspend_user_handler),
-    );
+    cfg.service(list_users::list_users_handler)
+        .service(suspend_user::suspend_user_handler);
 }
 
 #[cfg(feature = "api-docs")]

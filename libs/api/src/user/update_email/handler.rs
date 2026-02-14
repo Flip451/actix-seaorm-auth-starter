@@ -10,7 +10,10 @@ use crate::{error::ApiError, middleware::AuthenticatedUserContext};
     feature = "api-docs",
     utoipa::path(
         patch,
-        path = "/users/update-email/{user_id}",
+        params(
+            ("user_id" = Uuid, Path, description = "更新対象のユーザーID")
+        ),
+        request_body = UpdateEmailRequest,
         responses(
             (status = 200, description = "ユーザー情報更新成功", body = UpdateEmailResponse),
             (status = 400, description = "リクエストエラー"),
@@ -24,7 +27,7 @@ use crate::{error::ApiError, middleware::AuthenticatedUserContext};
         tag = OpenApiTag::Users.as_ref(),
     )
 )]
-#[patch("/update-email/{user_id}")]
+#[patch("/users/update-email/{user_id}")]
 #[tracing::instrument(skip(service))]
 pub async fn update_email_handler(
     user: AuthenticatedUserContext,

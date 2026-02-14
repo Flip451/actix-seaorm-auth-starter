@@ -13,7 +13,10 @@ use crate::{error::ApiError, middleware::AdminContext};
     feature = "api-docs",
     utoipa::path(
         patch,
-        path = "/admin/users/suspend/{user_id}",
+        params(
+            ("user_id" = Uuid, Path, description = "停止対象のユーザーID")
+        ),
+        request_body = SuspendUserRequest,
         responses(
             (status = 200, description = "ユーザー停止成功", body = SuspendUserResponse),
             (status = 400, description = "リクエストエラー"),
@@ -27,7 +30,7 @@ use crate::{error::ApiError, middleware::AdminContext};
         tag = OpenApiTag::Admin(AdminApiTag::UserManagement).as_ref(),
     )
 )]
-#[patch("/suspend/{user_id}")]
+#[patch("/admin/users/suspend/{user_id}")]
 #[tracing::instrument(skip(service))]
 pub async fn suspend_user_handler(
     admin: AdminContext,

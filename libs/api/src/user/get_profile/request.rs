@@ -3,10 +3,10 @@ use usecase::user::dto::GetProfileInput;
 use uuid::Uuid;
 
 #[cfg(feature = "api-docs")]
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 #[derive(derive_more::Debug, Deserialize)]
-#[cfg_attr(feature = "api-docs", derive(ToSchema))]
+#[cfg_attr(feature = "api-docs", derive(IntoParams, ToSchema))]
 pub struct GetProfileRequest {
     // Add query parameters here if needed
 }

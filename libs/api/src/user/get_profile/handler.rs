@@ -11,7 +11,10 @@ use crate::{error::ApiError, middleware::AuthenticatedUserContext};
     feature = "api-docs",
     utoipa::path(
         get,
-        path = "/users/show-profile/{user_id}",
+        params(
+            ("user_id" = Uuid, Path, description = "取得対象のユーザーID"),
+            GetProfileRequest
+        ),
         responses(
             (status = 200, description = "ユーザー情報取得成功", body = GetProfileResponse),
             (status = 400, description = "リクエストエラー"),
@@ -26,7 +29,7 @@ use crate::{error::ApiError, middleware::AuthenticatedUserContext};
         tag = OpenApiTag::Users.as_ref(),
     )
 )]
-#[get("/show-profile/{user_id}")]
+#[get("/users/show-profile/{user_id}")]
 #[tracing::instrument(skip(service))]
 pub async fn get_profile_handler(
     user: AuthenticatedUserContext,

@@ -3,13 +3,10 @@ use actix_web::web;
 use crate::user::{get_own_profile, get_profile, update_email, update_profile};
 
 pub fn user_config(cfg: &mut web::ServiceConfig) {
-    cfg.service(
-        web::scope("/users")
-            .service(get_own_profile::get_own_profile_handler)
-            .service(get_profile::get_profile_handler)
-            .service(update_email::update_email_handler)
-            .service(update_profile::update_profile_handler),
-    );
+    cfg.service(get_own_profile::get_own_profile_handler)
+        .service(get_profile::get_profile_handler)
+        .service(update_email::update_email_handler)
+        .service(update_profile::update_profile_handler);
 }
 
 #[cfg(feature = "api-docs")]
