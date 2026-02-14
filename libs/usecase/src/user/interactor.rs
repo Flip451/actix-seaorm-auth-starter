@@ -1,4 +1,4 @@
-use crate::shared::identity::IdentityWrapper;
+use crate::shared::identity::{Identity, IdentityWrapper};
 use crate::usecase_error::UseCaseError;
 use crate::user::dto::{
     GetOwnProfileInput, GetProfileInput, ListUsersInput, ListUsersOutput, SuspendUserInput,
@@ -43,12 +43,15 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     ))]
     async fn list_users(
         &self,
-        identity: IdentityWrapper,
+        identity: Box<dyn Identity>,
         _input: ListUsersInput,
     ) -> Result<ListUsersOutput, UseCaseError> {
         let users = tx!(self.transaction_manager, |factory| {
             // ポリシーチェック
-            AuthorizationService::can(&identity, UserAction::ListUsers(ListUsersPayload))?;
+            AuthorizationService::can(
+                &IdentityWrapper::from(identity),
+                UserAction::ListUsers(ListUsersPayload),
+            )?;
 
             let user_repo = factory.user_repository();
             Ok::<_, UseCaseError>(user_repo.find_all().await?)
@@ -66,16 +69,19 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     ))]
     async fn get_own_profile(
         &self,
-        identity: IdentityWrapper,
+        identity: Box<dyn Identity>,
         _input: GetOwnProfileInput,
     ) -> Result<UserDetailedProfile, UseCaseError> {
         let user = tx!(self.transaction_manager, |factory| {
+            let identity: IdentityWrapper = identity.into();
+
             // プロフィールの取得
             let user_repo = factory.user_repository();
             let user = user_repo
                 .find_by_id(identity.actor_id())
                 .await?
                 .ok_or(UseCaseError::NotFound)?;
+
             // ポリシーチェック
             AuthorizationService::can(
                 &identity,
@@ -95,7 +101,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     ))]
     async fn get_public_profile(
         &self,
-        identity: IdentityWrapper,
+        identity: Box<dyn Identity>,
         input: GetProfileInput,
     ) -> Result<UserPublicProfile, UseCaseError> {
         input.validate()?;
@@ -110,7 +116,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
 
             // ポリシーチェック
             AuthorizationService::can(
-                &identity,
+                &IdentityWrapper::from(identity),
                 UserAction::ViewPublicProfile(ViewPublicProfilePayload { target: &user }),
             )?;
 
@@ -127,7 +133,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     ))]
     async fn update_user_profile(
         &self,
-        identity: IdentityWrapper,
+        identity: Box<dyn Identity>,
         input: UpdateUserProfileInput,
     ) -> Result<UpdateUserProfileOutput, UseCaseError> {
         let clock = self.clock.clone();
@@ -145,7 +151,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
 
             // ポリシーチェック
             AuthorizationService::can(
-                &identity,
+                &IdentityWrapper::from(identity),
                 UserAction::UpdateProfile(UpdateProfilePayload { target: &user }),
             )?;
 
@@ -175,7 +181,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     ))]
     async fn update_user_email(
         &self,
-        identity: IdentityWrapper,
+        identity: Box<dyn Identity>,
         input: UpdateUserEmailInput,
     ) -> Result<UpdateUserEmailOutput, UseCaseError> {
         let clock = self.clock.clone();
@@ -193,7 +199,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
 
             // ポリシーチェック
             AuthorizationService::can(
-                &identity,
+                &IdentityWrapper::from(identity),
                 UserAction::ChangeEmail(ChangeEmailPayload { target: &user }),
             )?;
 
@@ -221,7 +227,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
     ))]
     async fn suspend_user(
         &self,
-        identity: IdentityWrapper,
+        identity: Box<dyn Identity>,
         input: SuspendUserInput,
     ) -> Result<SuspendUserOutput, UseCaseError> {
         let clock = self.clock.clone();
@@ -240,7 +246,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
 
             // ポリシーチェック
             AuthorizationService::can(
-                &identity,
+                &IdentityWrapper::from(identity),
                 UserAction::SuspendUser(SuspendUserPayload {
                     target: &target_user,
                 }),

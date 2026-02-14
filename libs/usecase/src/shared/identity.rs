@@ -10,7 +10,7 @@ pub trait Identity: std::fmt::Debug + Send {
 }
 
 #[derive(derive_more::Debug)]
-pub struct IdentityWrapper {
+pub(crate) struct IdentityWrapper {
     inner: Box<dyn Identity>,
 }
 
@@ -24,11 +24,9 @@ impl Actor for IdentityWrapper {
     }
 }
 
-impl<T: Identity + 'static> From<T> for IdentityWrapper {
-    fn from(identity: T) -> Self {
-        Self {
-            inner: Box::new(identity),
-        }
+impl From<Box<dyn Identity>> for IdentityWrapper {
+    fn from(identity: Box<dyn Identity>) -> Self {
+        Self { inner: identity }
     }
 }
 

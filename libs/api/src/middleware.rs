@@ -20,6 +20,12 @@ impl Identity for AdminContext {
     }
 }
 
+impl From<AdminContext> for Box<dyn Identity> {
+    fn from(ctx: AdminContext) -> Self {
+        Box::new(ctx)
+    }
+}
+
 impl FromRequest for AdminContext {
     type Error = ApiError;
     type Future = Ready<Result<Self, Self::Error>>;
@@ -65,6 +71,12 @@ impl Identity for AuthenticatedUserContext {
 
     fn actor_role(&self) -> UserRoleData {
         self.user_role
+    }
+}
+
+impl From<AuthenticatedUserContext> for Box<dyn Identity> {
+    fn from(ctx: AuthenticatedUserContext) -> Self {
+        Box::new(ctx)
     }
 }
 

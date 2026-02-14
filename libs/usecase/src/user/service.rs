@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 
 use crate::{
-    shared::identity::IdentityWrapper,
+    shared::identity::Identity,
     usecase_error::UseCaseError,
     user::dto::{
         GetOwnProfileInput, GetProfileInput, ListUsersInput, ListUsersOutput, SuspendUserInput,
@@ -14,37 +14,37 @@ use crate::{
 pub trait UserService: Send + Sync {
     async fn list_users(
         &self,
-        identity: IdentityWrapper,
+        identity: Box<dyn Identity>,
         input: ListUsersInput,
     ) -> Result<ListUsersOutput, UseCaseError>;
 
     async fn get_own_profile(
         &self,
-        identity: IdentityWrapper,
+        identity: Box<dyn Identity>,
         input: GetOwnProfileInput,
     ) -> Result<UserDetailedProfile, UseCaseError>;
 
     async fn get_public_profile(
         &self,
-        identity: IdentityWrapper,
+        identity: Box<dyn Identity>,
         input: GetProfileInput,
     ) -> Result<UserPublicProfile, UseCaseError>;
 
     async fn update_user_profile(
         &self,
-        identity: IdentityWrapper,
+        identity: Box<dyn Identity>,
         input: UpdateUserProfileInput,
     ) -> Result<UpdateUserProfileOutput, UseCaseError>;
 
     async fn update_user_email(
         &self,
-        identity: IdentityWrapper,
+        identity: Box<dyn Identity>,
         input: UpdateUserEmailInput,
     ) -> Result<UpdateUserEmailOutput, UseCaseError>;
 
     async fn suspend_user(
         &self,
-        identity: IdentityWrapper,
+        identity: Box<dyn Identity>,
         input: SuspendUserInput,
     ) -> Result<SuspendUserOutput, UseCaseError>;
 }
