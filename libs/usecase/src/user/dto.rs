@@ -66,6 +66,7 @@ impl From<User> for UserItem {
 #[validate(schema(function = "validate_at_least_one_field"))]
 pub struct UpdateUserProfileInput {
     pub target_id: Uuid,
+    #[validate(length(min = 1, message = "ユーザー名は空にできません"))]
     pub username: Option<String>,
 }
 
