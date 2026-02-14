@@ -7,6 +7,7 @@ use crate::user::dto::{
 };
 use crate::user::service::UserService;
 use async_trait::async_trait;
+use domain::auth::policies::find_user_by_id::FindUserByIdPayload;
 use domain::auth::policies::{
     change_email::ChangeEmailPayload, list_users::ListUsersPayload,
     suspend_user::SuspendUserPayload, update_profile::UpdateProfilePayload,
@@ -49,7 +50,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         let users = tx!(self.transaction_manager, |factory| {
             // ポリシーチェック
             AuthorizationService::can(
-                &IdentityWrapper::from(identity),
+                &IdentityWrapper::from(&identity),
                 UserAction::ListUsers(ListUsersPayload),
             )?;
 
@@ -73,10 +74,18 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         _input: GetOwnProfileInput,
     ) -> Result<UserDetailedProfile, UseCaseError> {
         let user = tx!(self.transaction_manager, |factory| {
-            let identity: IdentityWrapper = identity.into();
+            let identity: IdentityWrapper<&Box<dyn Identity>> = IdentityWrapper::from(&identity);
 
             // プロフィールの取得
             let user_repo = factory.user_repository();
+
+            AuthorizationService::can(
+                &identity,
+                UserAction::FindUserById(FindUserByIdPayload {
+                    target_id: identity.actor_id(),
+                }),
+            )?;
+
             let user = user_repo
                 .find_by_id(identity.actor_id())
                 .await?
@@ -107,6 +116,14 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         let user = tx!(self.transaction_manager, |factory| {
             // プロフィールの取得
             let user_repo = factory.user_repository();
+
+            AuthorizationService::can(
+                &IdentityWrapper::from(&identity),
+                UserAction::FindUserById(FindUserByIdPayload {
+                    target_id: input.user_id.into(),
+                }),
+            )?;
+
             let user = user_repo
                 .find_by_id(input.user_id.into())
                 .await?
@@ -114,7 +131,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
 
             // ポリシーチェック
             AuthorizationService::can(
-                &IdentityWrapper::from(identity),
+                &IdentityWrapper::from(&identity),
                 UserAction::ViewPublicProfile(ViewPublicProfilePayload { target: &user }),
             )?;
 
@@ -142,6 +159,13 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             let user_repo = factory.user_repository();
             let user_uniqueness_service = UserUniquenessService::new(user_repo.clone());
 
+            AuthorizationService::can(
+                &IdentityWrapper::from(&identity),
+                UserAction::FindUserById(FindUserByIdPayload {
+                    target_id: input.target_id.into(),
+                }),
+            )?;
+
             let mut user = user_repo
                 .find_by_id(input.target_id.into())
                 .await?
@@ -149,7 +173,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
 
             // ポリシーチェック
             AuthorizationService::can(
-                &IdentityWrapper::from(identity),
+                &IdentityWrapper::from(&identity),
                 UserAction::UpdateProfile(UpdateProfilePayload { target: &user }),
             )?;
 
@@ -190,6 +214,13 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
             let user_repo = factory.user_repository();
             let user_uniqueness_service = UserUniquenessService::new(user_repo.clone());
 
+            AuthorizationService::can(
+                &IdentityWrapper::from(&identity),
+                UserAction::FindUserById(FindUserByIdPayload {
+                    target_id: input.target_id.into(),
+                }),
+            )?;
+
             let mut user = user_repo
                 .find_by_id(input.target_id.into())
                 .await?
@@ -197,7 +228,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
 
             // ポリシーチェック
             AuthorizationService::can(
-                &IdentityWrapper::from(identity),
+                &IdentityWrapper::from(&identity),
                 UserAction::ChangeEmail(ChangeEmailPayload { target: &user }),
             )?;
 
@@ -237,6 +268,13 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         let updated_user = tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
 
+            AuthorizationService::can(
+                &IdentityWrapper::from(&identity),
+                UserAction::FindUserById(FindUserByIdPayload {
+                    target_id: input.target_id.into(),
+                }),
+            )?;
+
             let mut target_user = user_repo
                 .find_by_id(target_id.into())
                 .await?
@@ -244,7 +282,7 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
 
             // ポリシーチェック
             AuthorizationService::can(
-                &IdentityWrapper::from(identity),
+                &IdentityWrapper::from(&identity),
                 UserAction::SuspendUser(SuspendUserPayload {
                     target: &target_user,
                 }),

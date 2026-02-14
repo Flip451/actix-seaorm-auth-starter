@@ -3,6 +3,7 @@ use crate::{
         activate_user::{ActivateUserPayload, ActivateUserPolicy},
         change_email::{ChangeEmailPayload, ChangeEmailPolicy},
         deactivate_user::{DeactivateUserPayload, DeactivateUserPolicy},
+        find_user_by_id::{FindUserByIdPayload, FindUserByIdPolicy},
         list_users::{ListUsersPayload, ListUsersPolicy},
         promote_to_admin::{PromoteToAdminPayload, PromoteToAdminPolicy},
         suspend_user::{SuspendUserPayload, SuspendUserPolicy},
@@ -25,6 +26,7 @@ pub enum UserAction<'a> {
     ListUsers(ListUsersPayload),                         // ユーザー一覧の取得
     ViewPublicProfile(ViewPublicProfilePayload<'a>),     // プロフィール閲覧
     ViewDetailedProfile(ViewDetailedProfilePayload<'a>), // 詳細プロフィール閲覧
+    FindUserById(FindUserByIdPayload),                   // ユーザーIDでのユーザー検索
     UpdateProfile(UpdateProfilePayload<'a>),             // プロフィール更新
     ChangeEmail(ChangeEmailPayload<'a>),                 // メールアドレス変更
 }
@@ -96,6 +98,7 @@ impl AuthorizationService {
             UserAction::ViewPublicProfile(payload) => {
                 Box::new(ViewPublicProfilePolicy::new(payload))
             }
+            UserAction::FindUserById(payload) => Box::new(FindUserByIdPolicy::new(payload)),
             UserAction::UpdateProfile(payload) => Box::new(UpdateProfilePolicy::new(payload)),
             UserAction::ChangeEmail(payload) => Box::new(ChangeEmailPolicy::new(payload)),
         };

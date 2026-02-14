@@ -4,17 +4,17 @@ use domain::{
 };
 use uuid::Uuid;
 
-pub trait Identity: std::fmt::Debug + Send {
+pub trait Identity: std::fmt::Debug + Send + Sync {
     fn actor_id(&self) -> Uuid;
     fn actor_role(&self) -> UserRoleData;
 }
 
 #[derive(derive_more::Debug)]
-pub(crate) struct IdentityWrapper {
-    inner: Box<dyn Identity>,
+pub(crate) struct IdentityWrapper<T: Identity> {
+    inner: T,
 }
 
-impl Actor for IdentityWrapper {
+impl<T: Identity> Actor for IdentityWrapper<T> {
     fn actor_id(&self) -> UserId {
         self.inner.actor_id().into()
     }
@@ -24,8 +24,18 @@ impl Actor for IdentityWrapper {
     }
 }
 
-impl From<Box<dyn Identity>> for IdentityWrapper {
-    fn from(identity: Box<dyn Identity>) -> Self {
+impl Identity for &Box<dyn Identity> {
+    fn actor_id(&self) -> Uuid {
+        self.as_ref().actor_id()
+    }
+
+    fn actor_role(&self) -> UserRoleData {
+        self.as_ref().actor_role()
+    }
+}
+
+impl<'a> From<&'a Box<dyn Identity>> for IdentityWrapper<&'a Box<dyn Identity>> {
+    fn from(identity: &'a Box<dyn Identity>) -> Self {
         Self { inner: identity }
     }
 }
