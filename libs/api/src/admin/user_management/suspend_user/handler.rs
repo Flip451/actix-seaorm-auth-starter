@@ -14,7 +14,7 @@ use crate::{error::ApiError, middleware::AdminContext};
     utoipa::path(
         patch,
         params(
-            ("user_id" = Uuid, Path, description = "停止対象のユーザーID")
+            ("user_id" = uuid::Uuid, Path, description = "停止対象のユーザーID")
         ),
         request_body = SuspendUserRequest,
         responses(

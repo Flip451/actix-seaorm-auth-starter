@@ -7,6 +7,7 @@ use utoipa::ToSchema;
 #[cfg_attr(feature = "api-docs", derive(ToSchema))]
 pub struct LoginRequest {
     #[cfg_attr(feature = "api-docs", schema(examples("user@example.com")))]
+    #[debug(skip)]
     pub email: String,
 
     #[cfg_attr(feature = "api-docs", schema(examples("password123")))]

@@ -10,6 +10,7 @@ pub struct SignupRequest {
     pub username: String,
 
     #[cfg_attr(feature = "api-docs", schema(examples("user@example.com")))]
+    #[debug(skip)]
     pub email: String,
 
     #[cfg_attr(feature = "api-docs", schema(examples("password123")))]

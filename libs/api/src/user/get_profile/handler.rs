@@ -12,7 +12,7 @@ use crate::{error::ApiError, middleware::AuthenticatedUserContext};
     utoipa::path(
         get,
         params(
-            ("user_id" = Uuid, Path, description = "取得対象のユーザーID"),
+            ("user_id" = uuid::Uuid, Path, description = "取得対象のユーザーID"),
             GetProfileRequest
         ),
         responses(

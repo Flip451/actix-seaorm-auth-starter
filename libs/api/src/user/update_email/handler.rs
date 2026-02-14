@@ -11,7 +11,7 @@ use crate::{error::ApiError, middleware::AuthenticatedUserContext};
     utoipa::path(
         patch,
         params(
-            ("user_id" = Uuid, Path, description = "更新対象のユーザーID")
+            ("user_id" = uuid::Uuid, Path, description = "更新対象のユーザーID")
         ),
         request_body = UpdateEmailRequest,
         responses(
