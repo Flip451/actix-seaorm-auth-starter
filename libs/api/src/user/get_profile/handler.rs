@@ -1,7 +1,6 @@
 use actix_web::{Responder, get, web};
 use usecase::user::service::UserService;
 use uuid::Uuid;
-use validator::Validate as _;
 
 use super::{GetProfileRequest, GetProfileResponse};
 #[cfg(feature = "api-docs")]
@@ -35,8 +34,6 @@ pub async fn get_profile_handler(
     query: web::Query<GetProfileRequest>,
     service: web::Data<dyn UserService>,
 ) -> Result<impl Responder, ApiError> {
-    query.validate()?;
-
     let input = query.into_inner().into_input(*user_id);
 
     let output = service.get_public_profile(user.into(), input).await?;

@@ -1,6 +1,5 @@
 use actix_web::{Responder, patch, web};
 use usecase::user::service::UserService;
-use validator::Validate as _;
 
 use super::{UpdateProfileRequest, UpdateProfileResponse};
 #[cfg(feature = "api-docs")]
@@ -33,8 +32,6 @@ pub async fn update_profile_handler(
     service: web::Data<dyn UserService>,
     body: web::Json<UpdateProfileRequest>,
 ) -> Result<impl Responder, ApiError> {
-    body.validate()?;
-
     let input = body.into_inner().into_input(*user_id);
 
     let output = service.update_user_profile(user.into(), input).await?;

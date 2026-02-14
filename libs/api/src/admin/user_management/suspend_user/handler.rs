@@ -1,7 +1,6 @@
 use actix_web::{Responder, patch, web};
 use usecase::user::service::UserService;
 use uuid::Uuid;
-use validator::Validate;
 
 use super::{SuspendUserRequest, SuspendUserResponse};
 #[cfg(feature = "api-docs")]
@@ -36,8 +35,6 @@ pub async fn suspend_user_handler(
     body: web::Json<SuspendUserRequest>,
     service: web::Data<dyn UserService>,
 ) -> Result<impl Responder, ApiError> {
-    body.validate()?;
-
     let input = body.into_inner().into_input(*user_id);
 
     let output = service.suspend_user(admin.into(), input).await?;

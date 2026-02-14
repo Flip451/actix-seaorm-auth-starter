@@ -318,7 +318,6 @@ dependencies = [
  "usecase",
  "utoipa",
  "uuid",
- "validator",
 ]
 
 [[package]]

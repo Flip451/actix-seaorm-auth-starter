@@ -2,9 +2,8 @@ use serde::Deserialize;
 use usecase::user::dto::GetOwnProfileInput;
 #[cfg(feature = "api-docs")]
 use utoipa::ToSchema;
-use validator::Validate;
 
-#[derive(derive_more::Debug, Deserialize, Validate)]
+#[derive(derive_more::Debug, Deserialize)]
 #[cfg_attr(feature = "api-docs", derive(ToSchema))]
 pub struct GetOwnProfileRequest {
     // Add query parameters here if needed

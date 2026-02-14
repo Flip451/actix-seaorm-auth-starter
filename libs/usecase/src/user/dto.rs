@@ -27,7 +27,7 @@ impl From<User> for UserDetailedProfile {
 #[derive(derive_more::Debug)]
 pub struct GetOwnProfileInput;
 
-#[derive(derive_more::Debug, Validate)]
+#[derive(derive_more::Debug)]
 pub struct GetProfileInput {
     pub user_id: Uuid,
 }

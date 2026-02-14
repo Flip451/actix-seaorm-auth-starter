@@ -1,14 +1,10 @@
 use actix_web::{HttpResponse, ResponseError, http::StatusCode};
 use thiserror::Error;
-use validator::ValidationErrors;
 
-use usecase::usecase_error::{UseCaseError, ValidationErrorList};
+use usecase::usecase_error::UseCaseError;
 
 #[derive(Debug, Error)]
 pub enum ApiError {
-    #[error("入力の形式が不正です: {0}")]
-    InvalidInput(#[from] ValidationErrors),
-
     #[error("認証が必要です")]
     Unauthorized,
 
@@ -22,7 +18,6 @@ pub enum ApiError {
 impl ResponseError for ApiError {
     fn status_code(&self) -> StatusCode {
         match self {
-            ApiError::InvalidInput(_) => StatusCode::BAD_REQUEST,
             ApiError::Unauthorized => StatusCode::UNAUTHORIZED,
             ApiError::Forbidden => StatusCode::FORBIDDEN,
             ApiError::UseCaseError(usecase_error) => match usecase_error {
@@ -38,17 +33,6 @@ impl ResponseError for ApiError {
 
     fn error_response(&self) -> HttpResponse {
         match self {
-            // API層で発生したバリデーションエラーの場合
-            ApiError::InvalidInput(validation_errors) => {
-                let errors = ValidationErrorList::from(validation_errors);
-
-                HttpResponse::BadRequest().json(serde_json::json!({
-                    "status": "error",
-                    "code": 400,
-                    "message": "入力内容に誤りがあります",
-                    "errors": errors,
-                }))
-            }
             ApiError::UseCaseError(UseCaseError::InvalidInput(errors)) => {
                 HttpResponse::BadRequest().json(serde_json::json!({
                     "status": "error",

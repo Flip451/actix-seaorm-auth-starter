@@ -1,6 +1,5 @@
 use actix_web::{Responder, patch, web};
 use usecase::user::service::UserService;
-use validator::Validate as _;
 
 use super::{UpdateEmailRequest, UpdateEmailResponse};
 #[cfg(feature = "api-docs")]
@@ -33,8 +32,6 @@ pub async fn update_email_handler(
     service: web::Data<dyn UserService>,
     body: web::Json<UpdateEmailRequest>,
 ) -> Result<impl Responder, ApiError> {
-    body.validate()?;
-
     let input = body.into_inner().into_input(*user_id);
 
     let output = service.update_user_email(user.into(), input).await?;

@@ -1,6 +1,5 @@
 use actix_web::{Responder, get, web};
 use usecase::user::service::UserService;
-use validator::Validate as _;
 
 use super::{GetOwnProfileRequest, GetOwnProfileResponse};
 #[cfg(feature = "api-docs")]
@@ -33,8 +32,6 @@ pub async fn get_own_profile_handler(
     query: web::Query<GetOwnProfileRequest>,
     service: web::Data<dyn UserService>,
 ) -> Result<impl Responder, ApiError> {
-    query.validate()?;
-
     let input = query.into_inner().into_input();
 
     let output = service.get_own_profile(user.into(), input).await?;

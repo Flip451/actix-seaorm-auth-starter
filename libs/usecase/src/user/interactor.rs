@@ -104,8 +104,6 @@ impl<TM: TransactionManager> UserService for UserInteractor<TM> {
         identity: Box<dyn Identity>,
         input: GetProfileInput,
     ) -> Result<UserPublicProfile, UseCaseError> {
-        input.validate()?;
-
         let user = tx!(self.transaction_manager, |factory| {
             // プロフィールの取得
             let user_repo = factory.user_repository();
