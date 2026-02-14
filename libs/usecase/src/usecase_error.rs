@@ -22,6 +22,7 @@ pub enum UseCaseError {
 #[derive(derive_more::Debug, Error, Serialize)]
 #[debug("{:?}", _0)]
 #[error("{0:?}")]
+#[serde(transparent)]
 pub struct ValidationErrorList(Vec<ValidationError>);
 
 impl From<Vec<ValidationError>> for ValidationErrorList {
