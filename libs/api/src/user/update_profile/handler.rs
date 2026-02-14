@@ -27,7 +27,7 @@ use crate::{error::ApiError, middleware::AuthenticatedUserContext};
         tag = OpenApiTag::Users.as_ref(),
     )
 )]
-#[patch("/users/update-profile/{user_id}")]
+#[patch("/users/{user_id}/profile")]
 #[tracing::instrument(skip(service))]
 pub async fn update_profile_handler(
     user: AuthenticatedUserContext,

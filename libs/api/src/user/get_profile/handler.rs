@@ -29,9 +29,9 @@ use crate::{error::ApiError, middleware::AuthenticatedUserContext};
         tag = OpenApiTag::Users.as_ref(),
     )
 )]
-#[get("/users/show-profile/{user_id}")]
+#[get("/users/{user_id}/profile")]
 #[tracing::instrument(skip(service))]
-pub async fn get_profile_handler(
+pub async fn get_public_profile_handler(
     user: AuthenticatedUserContext,
     user_id: web::Path<Uuid>,
     query: web::Query<GetProfileRequest>,

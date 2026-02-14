@@ -30,7 +30,7 @@ use crate::{error::ApiError, middleware::AdminContext};
         tag = OpenApiTag::Admin(AdminApiTag::UserManagement).as_ref(),
     )
 )]
-#[patch("/admin/users/suspend/{user_id}")]
+#[patch("/admin/users/{user_id}/suspend")]
 #[tracing::instrument(skip(service))]
 pub async fn suspend_user_handler(
     admin: AdminContext,

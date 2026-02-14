@@ -27,7 +27,7 @@ use crate::{error::ApiError, middleware::AuthenticatedUserContext};
         tag = OpenApiTag::Users.as_ref(),
     )
 )]
-#[patch("/users/update-email/{user_id}")]
+#[patch("/users/{user_id}/email")]
 #[tracing::instrument(skip(service))]
 pub async fn update_email_handler(
     user: AuthenticatedUserContext,
