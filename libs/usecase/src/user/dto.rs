@@ -69,6 +69,12 @@ pub struct UpdateUserProfileInput {
     pub username: Option<String>,
 }
 
+impl UpdateUserProfileInput {
+    fn is_empty(&self) -> bool {
+        self.username.is_none()
+    }
+}
+
 fn validate_at_least_one_field(
     input: &UpdateUserProfileInput,
 ) -> Result<(), validator::ValidationError> {
@@ -78,17 +84,6 @@ fn validate_at_least_one_field(
         return Err(error);
     }
     Ok(())
-}
-
-impl UpdateUserProfileInput {
-    fn is_empty(&self) -> bool {
-        [
-            self.username.is_none(),
-            // Add other optional fields here
-        ]
-        .iter()
-        .all(|x| *x)
-    }
 }
 
 #[derive(derive_more::Debug, Validate)]
