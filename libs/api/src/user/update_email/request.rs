@@ -10,7 +10,7 @@ use validator::Validate;
 pub struct UpdateEmailRequest {
     #[debug(skip)]
     #[validate(email(message = "有効なメールアドレスを入力してください"))]
-    #[cfg_attr(feature = "api-docs", schema(example = "user@example.com"))]
+    #[cfg_attr(feature = "api-docs", schema(examples("user@example.com")))]
     pub email: String,
 }
 

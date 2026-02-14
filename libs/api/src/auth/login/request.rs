@@ -8,11 +8,11 @@ use utoipa::ToSchema;
 #[cfg_attr(feature = "api-docs", derive(ToSchema))]
 pub struct LoginRequest {
     #[validate(email(message = "有効なメールアドレスを入力してください"))]
-    #[cfg_attr(feature = "api-docs", schema(example = "user@example.com"))]
+    #[cfg_attr(feature = "api-docs", schema(examples("user@example.com")))]
     pub email: String,
 
     #[validate(length(min = 8, message = "パスワードは8文字以上必要です"))]
-    #[cfg_attr(feature = "api-docs", schema(example = "password123"))]
+    #[cfg_attr(feature = "api-docs", schema(examples("password123")))]
     #[debug(skip)]
     pub password: String,
 }

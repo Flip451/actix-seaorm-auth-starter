@@ -10,10 +10,10 @@ use uuid::Uuid;
 pub(crate) struct UpdateEmailResponse {
     #[cfg_attr(
         feature = "api-docs",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+        schema(examples("550e8400-e29b-41d4-a716-446655440000"))
     )]
     pub id: Uuid,
-    #[cfg_attr(feature = "api-docs", schema(example = "user@example.com"))]
+    #[cfg_attr(feature = "api-docs", schema(examples("user@example.com")))]
     pub email: String,
 }
 

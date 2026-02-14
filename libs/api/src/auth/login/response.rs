@@ -9,7 +9,7 @@ use utoipa::ToSchema;
 pub(crate) struct LoginResponse {
     #[cfg_attr(
         feature = "api-docs",
-        schema(example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+        schema(examples("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."))
     )]
     token: String,
 }

@@ -9,7 +9,7 @@ use validator::Validate;
 #[cfg_attr(feature = "api-docs", derive(ToSchema))]
 pub struct UpdateProfileRequest {
     #[validate(length(min = 1, message = "ユーザー名は空にできません"))]
-    #[cfg_attr(feature = "api-docs", schema(example = "exampleuser"))]
+    #[cfg_attr(feature = "api-docs", schema(examples("exampleuser")))]
     pub username: Option<String>,
     // 他に更新可能なプロフィール情報があればここに追加
 }

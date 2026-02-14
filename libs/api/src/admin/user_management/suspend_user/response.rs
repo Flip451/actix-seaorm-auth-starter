@@ -10,10 +10,10 @@ use uuid::Uuid;
 pub(crate) struct SuspendUserResponse {
     #[cfg_attr(
         feature = "api-docs",
-        schema(example = "123e4567-e89b-12d3-a456-426614174000")
+        schema(examples("123e4567-e89b-12d3-a456-426614174000"))
     )]
     user_id: Uuid,
-    #[cfg_attr(feature = "api-docs", schema(example = true))]
+    #[cfg_attr(feature = "api-docs", schema(examples(true, false)))]
     suspended: bool,
 }
 

@@ -11,13 +11,21 @@ pub(crate) struct ListUsersResponse {
     #[cfg_attr(
         feature = "api-docs",
         schema(
-            example = json!([
-                {
-                    "id": "550e8400-e29b-41d4-a716-446655440000",
-                    "username": "exampleuser",
-                    "role": "user"
-                },
-            ])
+            examples(
+                json!([]),
+                json!([
+                    {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "username": "exampleuser",
+                        "role": "user"
+                    },
+                    {
+                        "id": "550e8400-e29b-41d4-a716-446655440001",
+                        "username": "adminuser",
+                        "role": "admin"
+                    }
+                ])
+            )
         )
     )]
     pub users: Vec<UserInfo>,

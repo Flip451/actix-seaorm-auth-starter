@@ -10,7 +10,7 @@ use utoipa::ToSchema;
 #[cfg_attr(feature = "api-docs", derive(ToSchema))]
 pub struct SuspendUserRequest {
     #[validate(length(min = 1, message = "理由を入力してください"))]
-    #[cfg_attr(feature = "api-docs", schema(example = "規約違反"))]
+    #[cfg_attr(feature = "api-docs", schema(examples("規約違反")))]
     pub reason: String,
 }
 
