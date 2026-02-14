@@ -1,25 +1,25 @@
 use crate::{
     auth::policy::{AuthorizationContext, AuthorizationError, Policy},
-    user::{User, UserRole},
+    user::{UserId, UserRole},
 };
 
 #[derive(Clone, Copy)]
-pub struct PromoteToAdminPayload<'a> {
-    pub target: &'a User,
+pub struct PromoteToAdminPayload {
+    pub target_id: UserId,
 }
 
-pub struct PromoteToAdminPolicy<'a>(PromoteToAdminPayload<'a>);
+pub struct PromoteToAdminPolicy(PromoteToAdminPayload);
 
-impl<'a> PromoteToAdminPolicy<'a> {
-    pub fn new(payload: PromoteToAdminPayload<'a>) -> Self {
+impl PromoteToAdminPolicy {
+    pub fn new(payload: PromoteToAdminPayload) -> Self {
         Self(payload)
     }
 }
 
-impl<'a> Policy<'a> for PromoteToAdminPolicy<'a> {
+impl Policy for PromoteToAdminPolicy {
     // 管理者は任意のユーザーを管理者に昇格できる
-    fn check(&self, ctx: &AuthorizationContext<'a>) -> Result<(), AuthorizationError> {
-        let _target = self.0.target;
+    fn check(&self, ctx: &AuthorizationContext) -> Result<(), AuthorizationError> {
+        let _target_id = self.0.target_id;
 
         match ctx.actor_role {
             UserRole::Admin => Ok(()),               // 管理者は昇格可能

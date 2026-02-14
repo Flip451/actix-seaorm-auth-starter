@@ -3,7 +3,7 @@ use crate::{
         activate_user::{ActivateUserPayload, ActivateUserPolicy},
         change_email::{ChangeEmailPayload, ChangeEmailPolicy},
         deactivate_user::{DeactivateUserPayload, DeactivateUserPolicy},
-        find_user_by_id::{FindUserByIdPayload, FindUserByIdPolicy},
+        find_user_by_id_for_update::{FindUserByIdForSuspendPayload, FindUserByIdForSuspendPolicy},
         list_users::{ListUsersPayload, ListUsersPolicy},
         promote_to_admin::{PromoteToAdminPayload, PromoteToAdminPolicy},
         suspend_user::{SuspendUserPayload, SuspendUserPolicy},
@@ -17,24 +17,24 @@ use crate::{
 
 // 操作（アクション）を定義 [4]
 #[derive(Clone, Copy)]
-pub enum UserAction<'a> {
-    SuspendUser(SuspendUserPayload<'a>),                 // 利用停止
-    UnlockUser(UnlockUserPayload<'a>),                   // ロック解除
-    DeactivateUser(DeactivateUserPayload<'a>),           // 退会
-    ActivateUser(ActivateUserPayload<'a>),               // 利用再開
-    PromoteToAdmin(PromoteToAdminPayload<'a>),           // 管理者への昇格
-    ListUsers(ListUsersPayload),                         // ユーザー一覧の取得
-    ViewPublicProfile(ViewPublicProfilePayload<'a>),     // プロフィール閲覧
-    ViewDetailedProfile(ViewDetailedProfilePayload<'a>), // 詳細プロフィール閲覧
-    FindUserById(FindUserByIdPayload),                   // ユーザーIDでのユーザー検索
-    UpdateProfile(UpdateProfilePayload<'a>),             // プロフィール更新
-    ChangeEmail(ChangeEmailPayload<'a>),                 // メールアドレス変更
+pub enum UserAction {
+    SuspendUser(SuspendUserPayload),                       // 利用停止
+    UnlockUser(UnlockUserPayload),                         // ロック解除
+    DeactivateUser(DeactivateUserPayload),                 // 退会
+    ActivateUser(ActivateUserPayload),                     // 利用再開
+    PromoteToAdmin(PromoteToAdminPayload),                 // 管理者への昇格
+    ListUsers(ListUsersPayload),                           // ユーザー一覧の取得
+    ViewPublicProfile(ViewPublicProfilePayload),           // プロフィール閲覧
+    ViewDetailedProfile(ViewDetailedProfilePayload),       // 詳細プロフィール閲覧
+    FindUserByIdForSuspend(FindUserByIdForSuspendPayload), // ユーザーIDによるユーザー検索
+    UpdateProfile(UpdateProfilePayload),                   // プロフィール更新
+    ChangeEmail(ChangeEmailPayload),                       // メールアドレス変更
 }
 
-pub struct AuthorizationContext<'a> {
+pub struct AuthorizationContext {
     pub actor_id: UserId,
     pub actor_role: UserRole,
-    pub action: UserAction<'a>,
+    pub action: UserAction,
 }
 
 // 認可エラーの定義
@@ -62,8 +62,8 @@ impl AuthorizationError {
     }
 }
 
-pub trait Policy<'a> {
-    fn check(&self, ctx: &AuthorizationContext<'a>) -> Result<(), AuthorizationError>;
+pub trait Policy {
+    fn check(&self, ctx: &AuthorizationContext) -> Result<(), AuthorizationError>;
 }
 
 pub trait Actor {
@@ -98,7 +98,9 @@ impl AuthorizationService {
             UserAction::ViewPublicProfile(payload) => {
                 Box::new(ViewPublicProfilePolicy::new(payload))
             }
-            UserAction::FindUserById(payload) => Box::new(FindUserByIdPolicy::new(payload)),
+            UserAction::FindUserByIdForSuspend(find_user_by_id_for_update_payload) => Box::new(
+                FindUserByIdForSuspendPolicy::new(find_user_by_id_for_update_payload),
+            ),
             UserAction::UpdateProfile(payload) => Box::new(UpdateProfilePolicy::new(payload)),
             UserAction::ChangeEmail(payload) => Box::new(ChangeEmailPolicy::new(payload)),
         };

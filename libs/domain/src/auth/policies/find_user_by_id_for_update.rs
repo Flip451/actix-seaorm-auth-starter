@@ -4,22 +4,22 @@ use crate::{
 };
 
 #[derive(Clone, Copy)]
-pub struct FindUserByIdPayload {
+pub struct FindUserByIdForSuspendPayload {
     pub target_id: UserId,
 }
 
-pub struct FindUserByIdPolicy(FindUserByIdPayload);
+pub struct FindUserByIdForSuspendPolicy(FindUserByIdForSuspendPayload);
 
-impl FindUserByIdPolicy {
-    pub fn new(payload: FindUserByIdPayload) -> Self {
+impl FindUserByIdForSuspendPolicy {
+    pub fn new(payload: FindUserByIdForSuspendPayload) -> Self {
         Self(payload)
     }
 }
 
-impl<'a> Policy<'a> for FindUserByIdPolicy {
+impl Policy for FindUserByIdForSuspendPolicy {
     // 管理者は任意のユーザーをIDで検索できる
     // 一般ユーザーは自分自身のみ検索可能
-    fn check(&self, ctx: &AuthorizationContext<'a>) -> Result<(), AuthorizationError> {
+    fn check(&self, ctx: &AuthorizationContext) -> Result<(), AuthorizationError> {
         let target_id = self.0.target_id;
 
         match ctx.actor_role {

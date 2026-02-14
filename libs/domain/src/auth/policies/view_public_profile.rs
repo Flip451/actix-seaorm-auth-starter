@@ -1,25 +1,25 @@
 use crate::{
     auth::policy::{AuthorizationContext, AuthorizationError, Policy},
-    user::User,
+    user::UserId,
 };
 
 #[derive(Clone, Copy)]
-pub struct ViewPublicProfilePayload<'a> {
-    pub target: &'a User,
+pub struct ViewPublicProfilePayload {
+    pub target_id: UserId,
 }
 
-pub struct ViewPublicProfilePolicy<'a>(ViewPublicProfilePayload<'a>);
+pub struct ViewPublicProfilePolicy(ViewPublicProfilePayload);
 
-impl<'a> ViewPublicProfilePolicy<'a> {
-    pub fn new(payload: ViewPublicProfilePayload<'a>) -> Self {
+impl ViewPublicProfilePolicy {
+    pub fn new(payload: ViewPublicProfilePayload) -> Self {
         Self(payload)
     }
 }
 
-impl<'a> Policy<'a> for ViewPublicProfilePolicy<'a> {
+impl Policy for ViewPublicProfilePolicy {
     // 任意のログイン済みユーザーは任意のユーザーのプロフィールを閲覧できる
-    fn check(&self, _ctx: &AuthorizationContext<'a>) -> Result<(), AuthorizationError> {
-        let _target = self.0.target;
+    fn check(&self, _ctx: &AuthorizationContext) -> Result<(), AuthorizationError> {
+        let _target_ids = self.0.target_id;
 
         Ok(())
     }
