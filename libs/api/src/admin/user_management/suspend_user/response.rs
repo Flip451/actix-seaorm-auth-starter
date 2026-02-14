@@ -19,10 +19,9 @@ pub(crate) struct SuspendUserResponse {
 
 impl From<SuspendUserOutput> for SuspendUserResponse {
     fn from(output: SuspendUserOutput) -> Self {
-        SuspendUserResponse {
-            user_id: output.user_id,
-            suspended: output.suspended,
-        }
+        let SuspendUserOutput { user_id, suspended } = output;
+
+        SuspendUserResponse { user_id, suspended }
     }
 }
 

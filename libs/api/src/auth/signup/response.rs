@@ -17,9 +17,9 @@ pub(crate) struct SignupResponse {
 
 impl From<SignupOutput> for SignupResponse {
     fn from(output: SignupOutput) -> Self {
-        SignupResponse {
-            user_id: output.user_id.into(),
-        }
+        let SignupOutput { user_id } = output;
+
+        SignupResponse { user_id }
     }
 }
 

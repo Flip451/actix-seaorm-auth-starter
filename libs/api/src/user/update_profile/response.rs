@@ -19,10 +19,9 @@ pub(crate) struct UpdateProfileResponse {
 
 impl From<UpdateUserProfileOutput> for UpdateProfileResponse {
     fn from(user: UpdateUserProfileOutput) -> Self {
-        UpdateProfileResponse {
-            id: user.id,
-            username: user.username,
-        }
+        let UpdateUserProfileOutput { id, username } = user;
+
+        UpdateProfileResponse { id, username }
     }
 }
 

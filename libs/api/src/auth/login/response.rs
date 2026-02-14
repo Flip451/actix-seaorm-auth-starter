@@ -16,9 +16,9 @@ pub(crate) struct LoginResponse {
 
 impl From<LoginOutput> for LoginResponse {
     fn from(output: LoginOutput) -> Self {
-        LoginResponse {
-            token: output.token,
-        }
+        let LoginOutput { token } = output;
+
+        LoginResponse { token }
     }
 }
 
