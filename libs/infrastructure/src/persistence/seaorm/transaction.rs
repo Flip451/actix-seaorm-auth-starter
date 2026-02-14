@@ -84,8 +84,8 @@ impl SeaOrmTransactionManager {
 impl TransactionManager for SeaOrmTransactionManager {
     async fn execute<T, E, F>(&self, f: F) -> Result<T, E>
     where
-        T: Send + 'static,
-        E: IntoTxError + Debug + Send + Sync + 'static,
+        T: Send,
+        E: IntoTxError + Debug + Send + Sync,
         F: for<'a> FnOnce(&'a dyn RepositoryFactory) -> BoxFuture<'a, Result<T, E>> + Send,
     {
         // 1. 手動でトランザクションを開始 (戻り値は Result<DatabaseTransaction, DbErr>)
