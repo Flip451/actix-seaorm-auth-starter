@@ -15,12 +15,12 @@ pub(crate) struct ListUsersResponse {
                 json!([]),
                 json!([
                     {
-                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "user_id": "550e8400-e29b-41d4-a716-446655440000",
                         "username": "exampleuser",
                         "role": "user"
                     },
                     {
-                        "id": "550e8400-e29b-41d4-a716-446655440001",
+                        "user_id": "550e8400-e29b-41d4-a716-446655440001",
                         "username": "adminuser",
                         "role": "admin"
                     }
@@ -42,7 +42,7 @@ impl From<ListUsersOutput> for ListUsersResponse {
 #[derive(Serialize)]
 #[cfg_attr(feature = "api-docs", derive(ToSchema))]
 pub(crate) struct UserInfo {
-    pub id: Uuid,
+    pub user_id: Uuid,
     pub username: String,
     pub email: String,
     pub role: String,
@@ -51,14 +51,14 @@ pub(crate) struct UserInfo {
 impl From<UserItem> for UserInfo {
     fn from(user: UserItem) -> Self {
         let UserItem {
-            id,
+            user_id,
             username,
             email,
             role,
         } = user;
 
         UserInfo {
-            id,
+            user_id,
             username,
             email,
             role: role.to_string(),

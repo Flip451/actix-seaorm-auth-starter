@@ -21,10 +21,14 @@ pub(crate) struct GetProfileResponse {
 
 impl From<UserPublicProfile> for GetProfileResponse {
     fn from(user: UserPublicProfile) -> Self {
-        let UserPublicProfile { id, username, role } = user;
+        let UserPublicProfile {
+            user_id,
+            username,
+            role,
+        } = user;
 
         GetProfileResponse {
-            user_id: id,
+            user_id,
             username,
             role: role.to_string(),
         }

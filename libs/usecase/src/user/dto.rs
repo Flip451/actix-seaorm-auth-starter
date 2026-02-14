@@ -6,7 +6,7 @@ use crate::shared::identity::UserRoleData;
 
 #[derive(derive_more::Debug)]
 pub struct UserDetailedProfile {
-    pub id: Uuid,
+    pub user_id: Uuid,
     pub username: String,
     #[debug(skip)]
     pub email: String,
@@ -16,7 +16,7 @@ pub struct UserDetailedProfile {
 impl From<User> for UserDetailedProfile {
     fn from(user: User) -> Self {
         UserDetailedProfile {
-            id: user.id().into(),
+            user_id: user.id().into(),
             username: user.username().to_string(),
             email: user.email().as_str().to_string(),
             role: user.role().into(),
@@ -44,7 +44,7 @@ pub struct ListUsersOutput {
 
 #[derive(derive_more::Debug)]
 pub struct UserItem {
-    pub id: Uuid,
+    pub user_id: Uuid,
     pub username: String,
     #[debug(skip)]
     pub email: String,
@@ -54,7 +54,7 @@ pub struct UserItem {
 impl From<User> for UserItem {
     fn from(user: User) -> Self {
         UserItem {
-            id: user.id().into(),
+            user_id: user.id().into(),
             username: user.username().to_string(),
             email: user.email().as_str().to_string(),
             role: user.role().into(),
@@ -119,7 +119,7 @@ impl From<User> for SuspendUserOutput {
 
 #[derive(derive_more::Debug)]
 pub struct UserPublicProfile {
-    pub id: Uuid,
+    pub user_id: Uuid,
     pub username: String,
     pub role: UserRoleData,
 }
@@ -127,7 +127,7 @@ pub struct UserPublicProfile {
 impl From<User> for UserPublicProfile {
     fn from(user: User) -> Self {
         UserPublicProfile {
-            id: user.id().into(),
+            user_id: user.id().into(),
             username: user.username().to_string(),
             role: user.role().into(),
         }
@@ -136,14 +136,14 @@ impl From<User> for UserPublicProfile {
 
 #[derive(derive_more::Debug)]
 pub struct UpdateUserProfileOutput {
-    pub id: Uuid,
+    pub user_id: Uuid,
     pub username: String,
 }
 
 impl From<User> for UpdateUserProfileOutput {
     fn from(user: User) -> Self {
         UpdateUserProfileOutput {
-            id: user.id().into(),
+            user_id: user.id().into(),
             username: user.username().to_string(),
         }
     }

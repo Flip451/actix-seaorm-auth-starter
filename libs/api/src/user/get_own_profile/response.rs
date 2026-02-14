@@ -24,14 +24,14 @@ pub(crate) struct GetOwnProfileResponse {
 impl From<UserDetailedProfile> for GetOwnProfileResponse {
     fn from(user: UserDetailedProfile) -> Self {
         let UserDetailedProfile {
-            id,
+            user_id,
             username,
             email,
             role,
         } = user;
 
         GetOwnProfileResponse {
-            user_id: id,
+            user_id,
             username,
             email,
             role: role.to_string(),

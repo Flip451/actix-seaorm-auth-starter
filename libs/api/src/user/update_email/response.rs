@@ -12,7 +12,7 @@ pub(crate) struct UpdateEmailResponse {
         feature = "api-docs",
         schema(examples("550e8400-e29b-41d4-a716-446655440000"))
     )]
-    pub id: Uuid,
+    pub user_id: Uuid,
     #[cfg_attr(feature = "api-docs", schema(examples("user@example.com")))]
     pub email: String,
 }
@@ -21,7 +21,7 @@ impl From<UpdateUserEmailOutput> for UpdateEmailResponse {
     fn from(user: UpdateUserEmailOutput) -> Self {
         let UpdateUserEmailOutput { user_id, email } = user;
 
-        UpdateEmailResponse { id: user_id, email }
+        UpdateEmailResponse { user_id, email }
     }
 }
 
