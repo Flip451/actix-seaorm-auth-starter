@@ -17,14 +17,24 @@ pub(crate) struct GetOwnProfileResponse {
     pub username: String,
     #[cfg_attr(feature = "api-docs", schema(examples("user@example.com")))]
     pub email: String,
+    #[cfg_attr(feature = "api-docs", schema(examples("admin", "user")))]
+    pub role: String,
 }
 
 impl From<UserDetailedProfile> for GetOwnProfileResponse {
     fn from(user: UserDetailedProfile) -> Self {
+        let UserDetailedProfile {
+            id,
+            username,
+            email,
+            role,
+        } = user;
+
         GetOwnProfileResponse {
-            user_id: user.id,
-            username: user.username,
-            email: user.email,
+            user_id: id,
+            username,
+            email,
+            role: role.to_string(),
         }
     }
 }
