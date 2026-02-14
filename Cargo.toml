@@ -62,6 +62,7 @@ trybuild = "1.0.114"
 rand = "0.9.2"
 mockall = "0.14.0"
 utoipa = { version = "5.4.0", features = ["actix_extras", "uuid"] }
+regex = "1.12.3"
 
 [dependencies]
 infrastructure = { workspace = true }

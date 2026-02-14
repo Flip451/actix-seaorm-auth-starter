@@ -1,4 +1,5 @@
 use domain::user::User;
+use regex::Regex;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -66,8 +67,21 @@ impl From<User> for UserItem {
 #[validate(schema(function = "validate_at_least_one_field"))]
 pub struct UpdateUserProfileInput {
     pub target_id: Uuid,
-    #[validate(length(min = 1, message = "ユーザー名は空にできません"))]
+    #[validate(custom(
+        function = "validate_username",
+        message = "ユーザー名は3～20文字の英数字とアンダースコアで構成される必要があります"
+    ))]
     pub username: Option<String>,
+}
+
+// TODO: #78, #112 で domain 層で定義したものを利用するようにする
+fn validate_username(username: &str) -> Result<(), validator::ValidationError> {
+    let re = Regex::new(r"^[a-zA-Z0-9_]{3,20}$").expect("Failed to compile regex");
+    if re.is_match(username) {
+        Ok(())
+    } else {
+        Err(validator::ValidationError::new("invalid_username"))
+    }
 }
 
 impl UpdateUserProfileInput {
