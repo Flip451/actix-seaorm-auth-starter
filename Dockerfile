@@ -12,30 +12,41 @@ RUN apt-get update && apt-get install -y \
     cmake \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. レシピ作成 (planner)
+# 2. ツールビルド専用ステージ（キャッシュ効率化の要）
+# ソースコードをコピーする前にツールをインストールすることで、コード修正の影響を受けない
+FROM chef AS tools-builder
+ARG SCCACHE_VERSION=0.14.0
+ARG CARGO_WATCH_VERSION=8.5.3
+ARG SEA_ORM_VERSION=1.1.19
+
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    cargo install --locked --version ${SCCACHE_VERSION} sccache --root /usr/local && \
+    cargo install --locked --version ${CARGO_WATCH_VERSION} cargo-watch && \
+    cargo install --locked --version ${SEA_ORM_VERSION} sea-orm-cli
+
+# 3. レシピ作成 (planner)
 FROM chef AS planner
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
-# 3. 依存関係 & バイナリビルド (builder)
+# 4. 依存関係ビルド (builder)
 FROM chef AS builder
 ARG APP_NAME=myapp
-# sccache を導入してコンパイル結果を再利用
-ARG SCCACHE_VERSION=0.14.0
-RUN cargo install --locked --version ${SCCACHE_VERSION} sccache --root /usr/local
-
-# sccache 関連の環境変数を設定
-ENV RUSTC_WRAPPER=/usr/local/bin/sccache SCCACHE_DIR=/opt/sccache SCCACHE_IDLE_TIMEOUT=0
+# 事前ビルドした sccache をコピー
+COPY --from=tools-builder /usr/local/bin/sccache /usr/local/bin/sccache
+ENV RUSTC_WRAPPER=/usr/local/bin/sccache \
+    SCCACHE_DIR=/opt/sccache \
+    SCCACHE_IDLE_TIMEOUT=0
 
 COPY --from=planner /app/recipe.json recipe.json
 
-# 依存関係のビルド（SCCACHE_DIR をマウント）
+# 三種のキャッシュマウント（registry, target, sccache）で高速化
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/app/target,sharing=locked \
     --mount=type=cache,target=/opt/sccache,sharing=locked \
     cargo chef cook --release --recipe-path recipe.json
 
-# アプリ本体のビルド（ここでも SCCACHE_DIR をマウント）
+# アプリ本体のビルド
 COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/app/target,sharing=locked \
@@ -43,24 +54,17 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     cargo build --release --bin ${APP_NAME} && \
     cp ./target/release/${APP_NAME} /bin/server
 
-# 4. アプリ開発用ステージ (app サービスが使用)
+# 5. アプリ開発用ステージ (dev) - docker compose の app サービスで使用
 FROM builder AS dev
-ARG CARGO_WATCH_VERSION=8.5.3
-# アプリのホットリロードに必要なツールのみをインストール
-RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
-    --mount=type=cache,target=/opt/sccache,sharing=locked \
-    cargo install --locked --version ${CARGO_WATCH_VERSION} cargo-watch
+COPY --from=tools-builder /usr/local/cargo/bin/cargo-watch /usr/local/bin/
 
-# 5. ツール専用ステージ (sea-orm-cli サービスが使用)
+# 6. 運用ツール用ステージ (tools) - sea-orm-cli サービスで使用
 FROM builder AS tools
-# 開発に必要なツールをキャッシュを効かせてインストール
-ARG SEA_ORM_VERSION=1.1.19
-RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
-    cargo install --locked --version ${SEA_ORM_VERSION} sea-orm-cli
+COPY --from=tools-builder /usr/local/cargo/bin/sea-orm-cli /usr/local/bin/
 RUN rustup component add --toolchain ${RUST_VERSION} rustfmt clippy
 ENTRYPOINT ["sea-orm-cli"]
 
-# 6. 本番実行用 (runtime)
+# 7. 本番実行用 (runtime)
 FROM gcr.io/distroless/cc-debian12:nonroot AS runtime
 WORKDIR /app
 COPY --from=builder /bin/server /app/server
