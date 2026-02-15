@@ -3,7 +3,7 @@ DOCKER_COMPOSE = docker compose
 # BuildKit を強制的に有効化するための環境変数
 export DOCKER_BUILDKIT=1
 export COMPOSE_DOCKER_CLI_BUILD=1
-BUILD_ARGS = --build-arg BUILDKIT_INLINE_CACHE=1
+BUILD_ARGS = --provenance=false
 
 APP_SERVICE = app
 DB_SERVICE = db
