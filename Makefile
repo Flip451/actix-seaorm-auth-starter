@@ -10,7 +10,7 @@ DB_SERVICE = db
 CLI_SERVICE = sea-orm-cli
 ENTITY_OUTPUT = libs/infrastructure/src/persistence/seaorm/entities
 
-.PHONY: help build build-no-cache up down restart logs ps shell db-shell build-tools migrate-generate migrate-up migrate-down migrate-status generate-entity run watch fmt lint test check check-all-features ci clean
+.PHONY: help build build-no-cache up down restart logs ps shell db-shell build-tools migrate-generate migrate-up migrate-down migrate-status generate-entity add run watch fmt lint test check check-all-features ci clean
 
 help: ## ヘルプを表示
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
