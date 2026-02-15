@@ -2,13 +2,13 @@
 ARG RUST_VERSION=1.92.0
 
 # 1. 共通ベース (chef)
+# cmake は sccache や一部の Rust 依存関係（-sys クレート）のネイティブビルドに必要
 FROM lukemathwalker/cargo-chef:latest-rust-${RUST_VERSION} AS chef
 WORKDIR /app
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     mold \
     clang \
-    # cmake は sccache や一部の Rust 依存関係（-sys クレート）のネイティブビルドに必要
     cmake \
     && rm -rf /var/lib/apt/lists/*
 
