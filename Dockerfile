@@ -43,14 +43,14 @@ COPY --from=planner /app/recipe.json recipe.json
 # 三種のキャッシュマウント（registry, target, sccache）で高速化
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/app/target,sharing=locked \
-    --mount=type=cache,target=/opt/sccache,sharing=locked \
+    --mount=type=cache,target=/opt/sccache,sharing=shared \
     cargo chef cook --release --recipe-path recipe.json
 
 # アプリ本体のビルド
 COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/app/target,sharing=locked \
-    --mount=type=cache,target=/opt/sccache,sharing=locked \
+    --mount=type=cache,target=/opt/sccache,sharing=shared \
     cargo build --release --bin ${APP_NAME} && \
     cp ./target/release/${APP_NAME} /bin/server
 
