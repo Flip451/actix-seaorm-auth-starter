@@ -19,9 +19,12 @@ services:
       - app-network
 
   app:
+    # NOTE: The Dockerfile for this project uses Docker BuildKit features (e.g. --mount=type=cache).
+    # When running `docker compose build` directly, ensure BuildKit is enabled, for example:
+    #   DOCKER_BUILDKIT=1 docker compose build
     build:
       context: .
-      target: builder
+      target: dev
     volumes:
       - .:/app
       - cargo_cache:/usr/local/cargo/registry

@@ -1,18 +1,26 @@
 # 変数定義
 DOCKER_COMPOSE = docker compose
+# BuildKit を強制的に有効化するための環境変数
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
+BUILD_ARGS = --provenance=false
+
 APP_SERVICE = app
 DB_SERVICE = db
 CLI_SERVICE = sea-orm-cli
 ENTITY_OUTPUT = libs/infrastructure/src/persistence/seaorm/entities
 
-.PHONY: help build up down restart logs ps shell db-shell build-tools migrate-generate migrate-up migrate-down migrate-status generate-entity run watch fmt lint test check check-all-features ci clean
+.PHONY: help build build-no-cache up down restart logs ps shell db-shell build-tools migrate-generate migrate-up migrate-down migrate-status generate-entity add run watch fmt lint test check check-all-features ci clean
 
 help: ## ヘルプを表示
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # Docker 操作
-build: ## Dockerイメージのビルド
-	$(DOCKER_COMPOSE) build
+build: ## BuildKit を使用してキャッシュマウントを有効にしながらビルド
+	$(DOCKER_COMPOSE) build $(BUILD_ARGS)
+
+build-no-cache: ## イメージのレイヤーキャッシュを無視してビルド (BuildKit の cache mount は保持されます)
+	$(DOCKER_COMPOSE) build $(BUILD_ARGS) --no-cache
 
 up: ## コンテナの起動
 	$(DOCKER_COMPOSE) up -d
@@ -36,8 +44,8 @@ db-shell: ## DBコンテナのpsqlに入る
 	$(DOCKER_COMPOSE) exec db psql -U user -d myapp
 
 # SeaORM 操作
-build-tools: ## SeaORM の CLI ツール用ビルドステージのビルド
-	$(DOCKER_COMPOSE) --profile tools build $(CLI_SERVICE)
+build-tools: ## CLI ツールをビルド
+	$(DOCKER_COMPOSE) --profile tools build $(BUILD_ARGS) $(CLI_SERVICE)
 
 migrate-generate: ## 新規マイグレーションファイルを作成
 	@if [ -z "$(name)" ]; then \
