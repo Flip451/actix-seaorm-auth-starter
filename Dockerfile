@@ -12,8 +12,8 @@ RUN apt-get update && apt-get install -y \
     cmake \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. ツールビルド専用ステージ（キャッシュ効率化の要）
-# ソースコードをコピーする前にツールをインストールすることで、コード修正の影響を受けない
+# 2. ツールビルド専用ステージ
+# コード修正の影響を受けないよう、ソースコピー前に実行
 FROM chef AS tools-builder
 # ツール群は Rust ${RUST_VERSION} での動作を確認したバージョンに固定している。
 # Rust のメジャー／マイナーバージョンを更新する場合は、以下のバージョンとの互換性を確認し、
@@ -32,24 +32,24 @@ FROM chef AS planner
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
-# 4. 依存関係ビルド (builder)
-FROM chef AS builder
-ARG APP_NAME=myapp
-# 事前ビルドした sccache をコピー
+# 4. 依存関係ビルドの基盤 (builder-base)
+# ここで依存ライブラリのコンパイルを完了させ、各ステージで使い回す
+FROM chef AS builder-base
 COPY --from=tools-builder /usr/local/bin/sccache /usr/local/bin/sccache
 ENV RUSTC_WRAPPER=/usr/local/bin/sccache \
     SCCACHE_DIR=/opt/sccache \
     SCCACHE_IDLE_TIMEOUT=600
 
 COPY --from=planner /app/recipe.json recipe.json
-
-# 三種のキャッシュマウント（registry, target, sccache）で高速化
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/app/target,sharing=locked \
     --mount=type=cache,target=/opt/sccache,sharing=shared \
     cargo chef cook --release --recipe-path recipe.json
 
-# アプリ本体のビルド
+# 5. アプリケーションビルド専用ステージ (builder)
+# 本番用バイナリの作成のみに責任を持つ
+FROM builder-base AS builder
+ARG APP_NAME=myapp
 COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/app/target,sharing=locked \
@@ -57,17 +57,18 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     cargo build --release --bin ${APP_NAME} && \
     cp ./target/release/${APP_NAME} /bin/server
 
-# 5. アプリ開発用ステージ (dev) - docker compose の app サービスで使用
-FROM builder AS dev
+# 6. アプリ開発用ステージ (dev)
+# builder-base を継承するため、重い依存関係のビルドは CACHED される
+FROM builder-base AS dev
 COPY --from=tools-builder /usr/local/cargo/bin/cargo-watch /usr/local/bin/
 
-# 6. 運用ツール用ステージ (tools) - sea-orm-cli サービスで使用
-FROM builder AS tools
+# 7. 運用ツール用ステージ (tools)
+FROM chef AS tools
 COPY --from=tools-builder /usr/local/cargo/bin/sea-orm-cli /usr/local/bin/
 RUN rustup component add --toolchain ${RUST_VERSION} rustfmt clippy
 ENTRYPOINT ["sea-orm-cli"]
 
-# 7. 本番実行用 (runtime)
+# 8. 本番実行用 (runtime)
 FROM gcr.io/distroless/cc-debian12:nonroot AS runtime
 WORKDIR /app
 COPY --from=builder /bin/server /app/server
