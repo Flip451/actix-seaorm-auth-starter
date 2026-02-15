@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     mold \
     clang \
+    # cmake は sccache や一部の Rust 依存関係（-sys クレート）のネイティブビルドに必要
     cmake \
     && rm -rf /var/lib/apt/lists/*
 
@@ -32,16 +33,16 @@ ENV SCCACHE_IDLE_TIMEOUT=0
 COPY --from=planner /app/recipe.json recipe.json
 
 # 依存関係のビルド（SCCACHE_DIR をマウント）
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/app/target \
-    --mount=type=cache,target=/opt/sccache \
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/app/target,sharing=locked \
+    --mount=type=cache,target=/opt/sccache,sharing=locked \
     cargo chef cook --release --recipe-path recipe.json
 
 # アプリ本体のビルド（ここでも SCCACHE_DIR をマウント）
 COPY . .
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/app/target \
-    --mount=type=cache,target=/opt/sccache \
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/app/target,sharing=locked \
+    --mount=type=cache,target=/opt/sccache,sharing=locked \
     cargo build --release --bin ${APP_NAME} && \
     cp ./target/release/${APP_NAME} /bin/server
 
@@ -51,7 +52,7 @@ FROM builder AS tools
 ARG SEA_ORM_VERSION=1.1.19
 ARG CARGO_WATCH_VERSION=8.5.3
 
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     cargo install --locked --version ${SEA_ORM_VERSION} sea-orm-cli && \
     cargo install --locked --version ${CARGO_WATCH_VERSION} cargo-watch
 
