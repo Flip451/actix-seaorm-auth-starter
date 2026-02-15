@@ -26,7 +26,7 @@
 
 ### C. ヘキサゴナルアーキテクチャ
 
-* **Domain Layer:** 依存関係を持たない。ビジネスモデルとワークフロー（Trait定義含む）のみを配置。
+* **Domain Layer:** 他のアプリケーション層への依存関係を持たない。ビジネスモデルとワークフロー（Trait定義含む）のみを配置。
 * **Application Layer (UseCases):** ドメインワークフローを呼び出し、オーケストレーションを行う。
 * **Infrastructure Layer (Adapters):** 外部依存（DB, HTTP, FileSystem）の実装。
 * **Ports (Traits):** Domain または Application 層で定義し、Infrastructure 層で実装する。
