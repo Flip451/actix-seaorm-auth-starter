@@ -2,7 +2,7 @@
 
 ## 1. プロジェクト概要
 
-* **言語:** Rust (Edition 2024+)
+* **言語:** Rust (Edition 2024)
 * **アーキテクチャ:** ヘキサゴナルアーキテクチャ（Ports and Adapters）
 * **設計思想:** 関数型ドメイン駆動設計 (Functional DDD)
 * **参照モデル:** Domain Modeling Made Functional (DMMF) の手法を Rust の型システムで実装する。
