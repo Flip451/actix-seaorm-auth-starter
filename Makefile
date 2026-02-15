@@ -1,8 +1,8 @@
 # 変数定義
 DOCKER_COMPOSE = docker compose
 # BuildKit を強制的に有効化するための環境変数
-export DOCKER_BUILDKIT = 1
-export COMPOSE_DOCKER_CLI_BUILD = 1
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
 BUILD_ARGS = --build-arg BUILDKIT_INLINE_CACHE=1
 
 APP_SERVICE = app
