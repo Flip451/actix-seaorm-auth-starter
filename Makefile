@@ -9,7 +9,6 @@ APP_SERVICE = app
 DB_SERVICE = db
 CLI_SERVICE = sea-orm-cli
 ENTITY_OUTPUT = libs/infrastructure/src/persistence/seaorm/entities
-AICHAT_ENV = -e AICHAT_CONFIG_DIR=/app/.aichat
 
 .PHONY: help build build-no-cache up down restart logs ps shell db-shell build-tools migrate-generate migrate-up migrate-down migrate-status generate-entity add run watch fmt lint test check check-all-features ci clean ai-chat ai-review
 
@@ -117,9 +116,9 @@ clean: ## ボリュームの削除, target ディレクトリの削除
 	sudo rm -rf target/
 
 ai-chat: ## Gemini とインタラクティブに対話
-	$(DOCKER_COMPOSE) --profile tools run --rm -it $(AICHAT_ENV) --entrypoint aichat $(CLI_SERVICE) -r dmmf-architect
+	$(DOCKER_COMPOSE) --profile tools run --rm -it --entrypoint aichat $(CLI_SERVICE) -r dmmf-architect
 
 ai-review: ## GEMINI.md 規約に基づいたレビュー
-	@cat repomix-output.xml | $(DOCKER_COMPOSE) --profile tools run --rm $(AICHAT_ENV) --entrypoint aichat $(CLI_SERVICE) \
+	@cat repomix-output.xml | $(DOCKER_COMPOSE) --profile tools run --rm --entrypoint aichat $(CLI_SERVICE) \
 		-r dmmf-architect \
 		"添付のソースコードを GEMINI.md の実装原則に照らしてレビューしてください。"

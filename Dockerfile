@@ -63,14 +63,15 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
 # builder-base を継承するため、重い依存関係のビルドは CACHED される
 FROM builder-base AS dev
 COPY --from=tools-builder /usr/local/cargo/bin/cargo-watch /usr/local/bin/
-COPY --from=tools-builder /usr/local/cargo/bin/aichat /usr/local/bin/
-ENV AICHAT_PLATFORM=google
-ENV AICHAT_CONFIG_DIR=/app/.aichat
 
 # 7. 運用ツール用ステージ (tools)
 FROM chef AS tools
 COPY --from=tools-builder /usr/local/cargo/bin/sea-orm-cli /usr/local/bin/
 COPY --from=tools-builder /usr/local/cargo/bin/aichat /usr/local/bin/
+
+ENV AICHAT_PLATFORM=google
+ENV AICHAT_CONFIG_DIR=/app/.aichat
+
 RUN rustup component add --toolchain ${RUST_VERSION} rustfmt clippy
 ENTRYPOINT ["sea-orm-cli"]
 
