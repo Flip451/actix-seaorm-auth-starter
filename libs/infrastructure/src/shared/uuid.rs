@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
-use sea_orm::prelude::Uuid;
-use uuid::{NoContext, Timestamp};
+use uuid::{NoContext, Timestamp, Uuid};
 
 pub fn generate_uuid_v7(now: DateTime<Utc>) -> Uuid {
     // UUID v7 timestamps are 48-bit unsigned integers representing milliseconds since Unix epoch.
