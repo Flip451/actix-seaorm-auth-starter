@@ -20,7 +20,8 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM chef AS builder
 ARG APP_NAME=myapp
 # sccache を導入してコンパイル結果を再利用
-RUN cargo install sccache --root /usr/local
+ARG SCCACHE_VERSION=0.14.0
+RUN cargo install --locked --version ${SCCACHE_VERSION} sccache --root /usr/local
 ENV RUSTC_WRAPPER=/usr/local/bin/sccache
 
 COPY --from=planner /app/recipe.json recipe.json
@@ -40,8 +41,13 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 # 4. 開発ツール専用ステージ
 FROM builder AS tools
 # 開発に必要なツールをキャッシュを効かせてインストール
+ARG SEA_ORM_VERSION=1.1.19
+ARG CARGO_WATCH_VERSION=8.5.3
+
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    cargo install cargo-watch sea-orm-cli
+    cargo install --locked --version ${SEA_ORM_VERSION} sea-orm-cli && \
+    cargo install --locked --version ${CARGO_WATCH_VERSION} cargo-watch
+
 RUN rustup component add rustfmt clippy
 ENTRYPOINT ["sea-orm-cli"]
 
