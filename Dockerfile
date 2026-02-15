@@ -15,6 +15,9 @@ RUN apt-get update && apt-get install -y \
 # 2. ツールビルド専用ステージ（キャッシュ効率化の要）
 # ソースコードをコピーする前にツールをインストールすることで、コード修正の影響を受けない
 FROM chef AS tools-builder
+# ツール群は Rust ${RUST_VERSION} での動作を確認したバージョンに固定している。
+# Rust のメジャー／マイナーバージョンを更新する場合は、以下のバージョンとの互換性を確認し、
+# 必要に応じて一緒に更新すること（再ビルドおよびテストが必要）。
 ARG SCCACHE_VERSION=0.14.0
 ARG CARGO_WATCH_VERSION=8.5.3
 ARG SEA_ORM_VERSION=1.1.19
