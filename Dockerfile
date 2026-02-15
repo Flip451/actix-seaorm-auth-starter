@@ -17,7 +17,7 @@ FROM chef AS planner
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
-# 3. 依存関係 & ツールビルド (builder)
+# 3. 依存関係 & バイナリビルド (builder)
 FROM chef AS builder
 ARG APP_NAME=myapp
 # sccache を導入してコンパイル結果を再利用
@@ -25,10 +25,7 @@ ARG SCCACHE_VERSION=0.14.0
 RUN cargo install --locked --version ${SCCACHE_VERSION} sccache --root /usr/local
 
 # sccache 関連の環境変数を設定
-ENV RUSTC_WRAPPER=/usr/local/bin/sccache
-ENV SCCACHE_DIR=/opt/sccache
-# ビルド中は sccache サーバーを動かし続けるため、アイドルタイムアウトを無効化する設定
-ENV SCCACHE_IDLE_TIMEOUT=0
+ENV RUSTC_WRAPPER=/usr/local/bin/sccache SCCACHE_DIR=/opt/sccache SCCACHE_IDLE_TIMEOUT=0
 
 COPY --from=planner /app/recipe.json recipe.json
 
@@ -46,20 +43,23 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     cargo build --release --bin ${APP_NAME} && \
     cp ./target/release/${APP_NAME} /bin/server
 
-# 4. 開発ツール専用ステージ
+# 4. アプリ開発用ステージ (app サービスが使用)
+FROM builder AS dev
+ARG CARGO_WATCH_VERSION=8.5.3
+# アプリのホットリロードに必要なツールのみをインストール
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    cargo install --locked --version ${CARGO_WATCH_VERSION} cargo-watch
+
+# 5. ツール専用ステージ (sea-orm-cli サービスが使用)
 FROM builder AS tools
 # 開発に必要なツールをキャッシュを効かせてインストール
 ARG SEA_ORM_VERSION=1.1.19
-ARG CARGO_WATCH_VERSION=8.5.3
-
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
-    cargo install --locked --version ${SEA_ORM_VERSION} sea-orm-cli && \
-    cargo install --locked --version ${CARGO_WATCH_VERSION} cargo-watch
-
+    cargo install --locked --version ${SEA_ORM_VERSION} sea-orm-cli
 RUN rustup component add --toolchain ${RUST_VERSION} rustfmt clippy
 ENTRYPOINT ["sea-orm-cli"]
 
-# 5. 本番実行用 (runtime)
+# 6. 本番実行用 (runtime)
 FROM gcr.io/distroless/cc-debian12:nonroot AS runtime
 WORKDIR /app
 COPY --from=builder /bin/server /app/server

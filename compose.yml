@@ -21,7 +21,7 @@ services:
   app:
     build:
       context: .
-      target: builder
+      target: dev
     volumes:
       - .:/app
       - cargo_cache:/usr/local/cargo/registry
