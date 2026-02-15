@@ -21,11 +21,13 @@ FROM chef AS tools-builder
 ARG SCCACHE_VERSION=0.14.0
 ARG CARGO_WATCH_VERSION=8.5.3
 ARG SEA_ORM_VERSION=1.1.19
+ARG AICHAT_VERSION=0.30.0
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     cargo install --locked --version ${SCCACHE_VERSION} sccache --root /usr/local && \
     cargo install --locked --version ${CARGO_WATCH_VERSION} cargo-watch && \
-    cargo install --locked --version ${SEA_ORM_VERSION} sea-orm-cli
+    cargo install --locked --version ${SEA_ORM_VERSION} sea-orm-cli && \
+    cargo install --locked --version ${AICHAT_VERSION} aichat
 
 # 3. レシピ作成 (planner)
 FROM chef AS planner
@@ -61,10 +63,14 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
 # builder-base を継承するため、重い依存関係のビルドは CACHED される
 FROM builder-base AS dev
 COPY --from=tools-builder /usr/local/cargo/bin/cargo-watch /usr/local/bin/
+COPY --from=tools-builder /usr/local/cargo/bin/aichat /usr/local/bin/
+ENV AICHAT_PLATFORM=google
+ENV AICHAT_CONFIG_DIR=/app/.aichat
 
 # 7. 運用ツール用ステージ (tools)
 FROM chef AS tools
 COPY --from=tools-builder /usr/local/cargo/bin/sea-orm-cli /usr/local/bin/
+COPY --from=tools-builder /usr/local/cargo/bin/aichat /usr/local/bin/
 RUN rustup component add --toolchain ${RUST_VERSION} rustfmt clippy
 ENTRYPOINT ["sea-orm-cli"]
 
