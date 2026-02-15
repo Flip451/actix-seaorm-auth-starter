@@ -22,19 +22,26 @@ ARG APP_NAME=myapp
 # sccache を導入してコンパイル結果を再利用
 ARG SCCACHE_VERSION=0.14.0
 RUN cargo install --locked --version ${SCCACHE_VERSION} sccache --root /usr/local
+
+# sccache 関連の環境変数を設定
 ENV RUSTC_WRAPPER=/usr/local/bin/sccache
+ENV SCCACHE_DIR=/opt/sccache
+# コンテナ終了時に sccache サーバーを確実にシャットダウンさせる設定
+ENV SCCACHE_IDLE_TIMEOUT=0
 
 COPY --from=planner /app/recipe.json recipe.json
 
-# BuildKit のキャッシュマウントをフル活用
+# 依存関係のビルド（SCCACHE_DIR をマウント）
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/app/target \
+    --mount=type=cache,target=/opt/sccache \
     cargo chef cook --release --recipe-path recipe.json
 
-# アプリのビルド
+# アプリ本体のビルド（ここでも SCCACHE_DIR をマウント）
 COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/app/target \
+    --mount=type=cache,target=/opt/sccache \
     cargo build --release --bin ${APP_NAME} && \
     cp ./target/release/${APP_NAME} /bin/server
 
