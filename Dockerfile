@@ -36,7 +36,7 @@ ARG APP_NAME=myapp
 COPY --from=tools-builder /usr/local/bin/sccache /usr/local/bin/sccache
 ENV RUSTC_WRAPPER=/usr/local/bin/sccache \
     SCCACHE_DIR=/opt/sccache \
-    SCCACHE_IDLE_TIMEOUT=0
+    SCCACHE_IDLE_TIMEOUT=600
 
 COPY --from=planner /app/recipe.json recipe.json
 
