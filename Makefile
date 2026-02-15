@@ -19,7 +19,7 @@ help: ## ヘルプを表示
 build: ## BuildKit を使用してキャッシュマウントを有効にしながらビルド
 	$(DOCKER_COMPOSE) build $(BUILD_ARGS)
 
-build-no-cache: ## キャッシュを無視してクリーンビルド
+build-no-cache: ## イメージのレイヤーキャッシュを無視してビルド (BuildKit の cache mount は保持されます)
 	$(DOCKER_COMPOSE) build --no-cache
 
 up: ## コンテナの起動
