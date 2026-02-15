@@ -48,6 +48,7 @@ FROM builder AS dev
 ARG CARGO_WATCH_VERSION=8.5.3
 # アプリのホットリロードに必要なツールのみをインストール
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/opt/sccache,sharing=locked \
     cargo install --locked --version ${CARGO_WATCH_VERSION} cargo-watch
 
 # 5. ツール専用ステージ (sea-orm-cli サービスが使用)
