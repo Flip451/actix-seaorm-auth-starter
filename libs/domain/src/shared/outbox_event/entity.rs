@@ -401,7 +401,7 @@ mod tests {
 
     #[fixture]
     fn outbox_event_id() -> OutboxEventId {
-        Uuid::new_v4().into()
+        Uuid::now_v7().into()
     }
 
     #[fixture]

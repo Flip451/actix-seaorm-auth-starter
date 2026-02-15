@@ -1,10 +1,23 @@
-use domain::user::{IdGenerator, UserId};
-use sea_orm::prelude::Uuid;
+use std::sync::Arc;
 
-pub struct UuidUserIdGenerator;
+use crate::shared::uuid::generate_uuid_v7;
+use domain::{
+    shared::service::clock::Clock,
+    user::{IdGenerator, UserId},
+};
+
+pub struct UuidUserIdGenerator {
+    clock: Arc<dyn Clock>,
+}
+
+impl UuidUserIdGenerator {
+    pub fn new(clock: Arc<dyn Clock>) -> Self {
+        Self { clock }
+    }
+}
 
 impl IdGenerator for UuidUserIdGenerator {
     fn generate(&self) -> UserId {
-        Uuid::new_v4().into()
+        generate_uuid_v7(self.clock.now()).into()
     }
 }

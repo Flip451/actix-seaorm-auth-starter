@@ -45,7 +45,8 @@ pub struct RepoRegistry<TM: TransactionManager> {
 impl RepoRegistry<SeaOrmTransactionManager> {
     /// SeaORM 用の具体的な実装で構築
     pub fn new_seaorm(db: sea_orm::DatabaseConnection) -> Self {
-        let outbox_event_id_generator = Arc::new(UuidOutboxIdGenerator);
+        let clock = Arc::new(SystemClock);
+        let outbox_event_id_generator = Arc::new(UuidOutboxIdGenerator::new(clock));
         let transaction_manager = Arc::new(SeaOrmTransactionManager::new(
             db.clone(),
             outbox_event_id_generator,
@@ -79,7 +80,7 @@ impl AppRegistry {
 
         let token_service = Arc::new(TokenInteractor::new(jwt_secret, clock.clone()));
 
-        let user_id_generator = Arc::new(UuidUserIdGenerator);
+        let user_id_generator = Arc::new(UuidUserIdGenerator::new(clock.clone()));
 
         let user_factory = Arc::new(UserFactory::new(user_id_generator.clone(), clock.clone()));
 
