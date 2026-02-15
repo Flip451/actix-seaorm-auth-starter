@@ -63,6 +63,5 @@ ENTRYPOINT ["sea-orm-cli"]
 FROM gcr.io/distroless/cc-debian12:nonroot AS runtime
 WORKDIR /app
 COPY --from=builder /bin/server /app/server
-USER nonroot:nonroot
 EXPOSE 8080
 ENTRYPOINT ["/app/server"]
