@@ -7,14 +7,14 @@ const MAX_UUID_V7_MILLIS: i64 = 0x0000_FFFF_FFFF_FFFF;
 
 pub fn calculate_v7_timestamp_parts(now: DateTime<Utc>) -> (u64, u32) {
     let now_millis = now.timestamp_millis();
-    debug_assert!(
+    assert!(
         (0..=MAX_UUID_V7_MILLIS).contains(&now_millis),
         "calculate_v7_timestamp_parts: `now` ({}) is outside the representable UUID v7 range [0, {}]",
         now_millis,
         MAX_UUID_V7_MILLIS
     );
 
-    let millis = now_millis.clamp(0, MAX_UUID_V7_MILLIS);
+    let millis = now_millis;
     let seconds = (millis / 1000) as u64;
     let nanos = ((millis % 1000) as u32) * 1_000_000;
 
