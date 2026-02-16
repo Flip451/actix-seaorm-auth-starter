@@ -16,6 +16,10 @@ pub trait NextAttemptCalculator: Send + Sync {
     ) -> NextAttemptStatus;
 }
 
-pub trait OutboxEventIdGenerator: Send + Sync {
+pub trait OutboxEventIdGenerator {
     fn generate(&self) -> OutboxEventId;
+}
+
+pub trait IdGeneratorFactory: Send + Sync {
+    fn create_outbox_event_id_generator(&self) -> Box<dyn OutboxEventIdGenerator>;
 }

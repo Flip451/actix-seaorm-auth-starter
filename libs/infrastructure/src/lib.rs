@@ -9,13 +9,13 @@ pub mod user;
 use std::sync::Arc;
 
 use crate::auth::argon2::password_service::Argon2PasswordHasher;
-use crate::outbox_event::outbox_event_id_generator::UuidOutboxIdGenerator;
+use crate::outbox_event::outbox_event_id_generator::UuidOutboxIdGeneratorFactory;
 use crate::persistence::seaorm::transaction::SeaOrmTransactionManager;
 use crate::relay::next_attempt_calculator::backoff_next_attempt_calculator::{
     BackoffCalculatorConfig, BackoffNextAttemptCalculator,
 };
 use crate::shared::clock::SystemClock;
-use crate::user::uuid_generator::UuidUserIdGenerator;
+use crate::user::uuid_generator::UuidUserIdGeneratorFactory;
 use domain::transaction::TransactionManager;
 use domain::user::UserFactory;
 use usecase::auth::interactor::AuthInteractor;
@@ -46,10 +46,10 @@ impl RepoRegistry<SeaOrmTransactionManager> {
     /// SeaORM 用の具体的な実装で構築
     pub fn new_seaorm(db: sea_orm::DatabaseConnection) -> Self {
         let clock = Arc::new(SystemClock);
-        let outbox_event_id_generator = Arc::new(UuidOutboxIdGenerator::new(clock));
+        let outbox_event_id_generator_factory = Arc::new(UuidOutboxIdGeneratorFactory::new(clock));
         let transaction_manager = Arc::new(SeaOrmTransactionManager::new(
             db.clone(),
-            outbox_event_id_generator,
+            outbox_event_id_generator_factory,
         ));
         Self {
             transaction_manager,
@@ -80,15 +80,16 @@ impl AppRegistry {
 
         let token_service = Arc::new(TokenInteractor::new(jwt_secret, clock.clone()));
 
-        let user_id_generator = Arc::new(UuidUserIdGenerator::new(clock.clone()));
+        let user_id_generator_factory = Arc::new(UuidUserIdGeneratorFactory::new(clock.clone()));
 
-        let user_factory = Arc::new(UserFactory::new(user_id_generator.clone(), clock.clone()));
+        let user_factory = Arc::new(UserFactory::new(clock.clone()));
 
         let auth_service = Arc::new(AuthInteractor::new(
             repos.transaction_manager.clone(),
             password_hasher,
             token_service.clone(),
             user_factory.clone(),
+            user_id_generator_factory.clone(),
         ));
 
         let user_service = Arc::new(UserInteractor::new(

@@ -11,8 +11,8 @@ use domain::{
     transaction::TransactionManager,
     tx,
     user::{
-        EmailTrait, HashedPassword, PasswordHasher, RawPassword, UnverifiedEmail, User,
-        UserFactory, UserUniquenessService,
+        EmailTrait, HashedPassword, IdGeneratorFactory, PasswordHasher, RawPassword,
+        UnverifiedEmail, User, UserFactory, UserUniquenessService,
     },
 };
 use std::sync::Arc;
@@ -22,6 +22,7 @@ pub struct AuthInteractor<TM> {
     password_hasher: Arc<dyn PasswordHasher>,
     token_service: Arc<dyn TokenService>,
     user_factory: Arc<UserFactory>,
+    user_id_generator_factory: Arc<dyn IdGeneratorFactory>,
     dummy_hash: HashedPassword,
 }
 
@@ -31,6 +32,7 @@ impl<TM> AuthInteractor<TM> {
         password_hasher: Arc<dyn PasswordHasher>,
         token_service: Arc<dyn TokenService>,
         user_factory: Arc<UserFactory>,
+        user_id_generator_factory: Arc<dyn IdGeneratorFactory>,
     ) -> Self {
         let dummy_password = RawPassword::new("dummy_password_for_timing_attack").unwrap();
         let dummy_hash = password_hasher.hash(&dummy_password).unwrap();
@@ -40,6 +42,7 @@ impl<TM> AuthInteractor<TM> {
             password_hasher,
             token_service,
             user_factory,
+            user_id_generator_factory,
             dummy_hash,
         }
     }
@@ -59,6 +62,7 @@ impl<TM: TransactionManager> AuthService for AuthInteractor<TM> {
         let hashed_password = self.password_hasher.hash(&password)?;
 
         let user_factory = self.user_factory.clone();
+        let user_id_generator_factory = self.user_id_generator_factory.clone();
 
         tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
@@ -66,7 +70,13 @@ impl<TM: TransactionManager> AuthService for AuthInteractor<TM> {
 
             // 1. ドメインモデル作成と保存
             let user = user_factory
-                .create_new_user(user_uniqueness_service, &username, &email, hashed_password)
+                .create_new_user(
+                    user_uniqueness_service,
+                    user_id_generator_factory.as_ref(),
+                    &username,
+                    &email,
+                    hashed_password,
+                )
                 .await?;
 
             // 2. 永続化
