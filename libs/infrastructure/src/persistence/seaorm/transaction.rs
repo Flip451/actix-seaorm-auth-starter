@@ -16,15 +16,20 @@ use futures_util::future::BoxFuture;
 use sea_orm::{DatabaseConnection, DatabaseTransaction, TransactionTrait};
 
 pub struct EntityTracker {
-    events: Mutex<Vec<OutboxEvent>>,
-    outbox_event_id_generator: Arc<dyn OutboxEventIdGenerator>,
+    // 変更されたエンティティを動的に保持する
+    tracked_entities: Mutex<Vec<Box<dyn EntityWithEvents>>>,
+}
+
+impl Default for EntityTracker {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl EntityTracker {
-    pub fn new(outbox_event_id_generator: Arc<dyn OutboxEventIdGenerator>) -> Self {
+    pub fn new() -> Self {
         Self {
-            events: Mutex::new(Vec::new()),
-            outbox_event_id_generator,
+            tracked_entities: Mutex::new(Vec::new()),
         }
     }
 
@@ -45,10 +50,12 @@ impl EntityTracker {
         Ok(())
     }
 
-    pub fn drain_all_events(&self) -> Vec<OutboxEvent> {
-        let mut events = self.events.lock().unwrap();
-
-        events.drain(..).collect()
+    pub fn pull_all_events(&self, id_generator: &dyn OutboxEventIdGenerator) -> Vec<OutboxEvent> {
+        let mut entities = self.tracked_entities.lock().unwrap();
+        entities
+            .iter_mut()
+            .flat_map(|e| e.pull_events(id_generator))
+            .collect()
     }
 }
 
@@ -102,7 +109,7 @@ impl TransactionManager for SeaOrmTransactionManager {
         // 2. ファクトリを作成（ここではまだ各リポジトリはnewされない）
         let factory = SeaOrmRepositoryFactory {
             txn: &txn,
-            tracker: Arc::new(EntityTracker::new(self.outbox_event_id_generator.clone())),
+            tracker: Arc::new(EntityTracker::new()),
         };
 
         // 3. ユースケースにファクトリを渡す
@@ -112,10 +119,12 @@ impl TransactionManager for SeaOrmTransactionManager {
         // 4. 結果に応じたコミット/ロールバック制御
         match result {
             Ok(value) => {
-                // 5. トラッカーから全エンティティのイベントを回収
-                let all_events = factory.tracker.drain_all_events();
+                // 5. トラッカーから全エンティティのイベントを回収 [4]
+                let all_events = factory
+                    .tracker
+                    .pull_all_events(self.outbox_event_id_generator.as_ref());
 
-                // 6. イベントがある場合、同一トランザクション内で Outbox 保存
+                // 6. イベントがある場合、同一トランザクション内で Outbox 保存 [4, 5]
                 if !all_events.is_empty() {
                     let outbox_repo = factory.outbox_repository();
                     outbox_repo
