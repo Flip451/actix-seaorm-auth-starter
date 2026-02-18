@@ -14,8 +14,8 @@ pub fn calculate_v7_timestamp_parts(now: DateTime<Utc>) -> (u64, u32) {
         MAX_UUID_V7_MILLIS
     );
 
-    let millis = now_millis;
-    let seconds = (millis / 1000) as u64;
+    let millis = now_millis as u64;
+    let seconds = millis / 1000;
     let nanos = ((millis % 1000) as u32) * 1_000_000;
 
     (seconds, nanos)
