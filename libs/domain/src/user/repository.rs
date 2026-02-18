@@ -1,6 +1,9 @@
-use crate::user::{
-    UserDomainError, UserId, UserReconstructionError, UserUniqueConstraintViolation,
-    value_objects::email::EmailFormatError,
+use crate::{
+    shared::outbox_event::OutboxEventIdGenerationError,
+    user::{
+        UserDomainError, UserId, UserIdGenerationError, UserReconstructionError,
+        UserUniqueConstraintViolation, value_objects::email::EmailFormatError,
+    },
 };
 use async_trait::async_trait;
 use thiserror::Error;
@@ -36,6 +39,18 @@ impl From<UserUniqueConstraintViolation> for UserRepositoryError {
 
 impl From<EmailFormatError> for UserRepositoryError {
     fn from(value: EmailFormatError) -> Self {
+        UserRepositoryError::from(UserDomainError::from(value))
+    }
+}
+
+impl From<UserIdGenerationError> for UserRepositoryError {
+    fn from(value: UserIdGenerationError) -> Self {
+        UserRepositoryError::from(UserDomainError::from(value))
+    }
+}
+
+impl From<OutboxEventIdGenerationError> for UserRepositoryError {
+    fn from(value: OutboxEventIdGenerationError) -> Self {
         UserRepositoryError::from(UserDomainError::from(value))
     }
 }

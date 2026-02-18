@@ -2,7 +2,10 @@ use std::sync::{Arc, Mutex};
 
 use crate::shared::uuid::{calculate_v7_timestamp_parts, generate_uuid_v7_with_parts};
 use domain::shared::{
-    outbox_event::{OutboxEventId, OutboxEventIdGenerator, OutboxEventIdGeneratorFactory},
+    outbox_event::{
+        OutboxEventId, OutboxEventIdGenerationError, OutboxEventIdGenerator,
+        OutboxEventIdGeneratorFactory,
+    },
     service::clock::Clock,
 };
 use uuid::ContextV7;
@@ -22,9 +25,10 @@ impl UuidOutboxIdGenerator {
 }
 
 impl OutboxEventIdGenerator for UuidOutboxIdGenerator {
-    fn generate(&self) -> OutboxEventId {
-        let (seconds, nanos) = calculate_v7_timestamp_parts(self.clock.now());
-        generate_uuid_v7_with_parts(&self.context, seconds, nanos).into()
+    fn generate(&self) -> Result<OutboxEventId, OutboxEventIdGenerationError> {
+        let (seconds, nanos) = calculate_v7_timestamp_parts(self.clock.now())
+            .map_err(|e| OutboxEventIdGenerationError::GenerationFailed(e.into()))?;
+        Ok(generate_uuid_v7_with_parts(&self.context, seconds, nanos).into())
     }
 }
 

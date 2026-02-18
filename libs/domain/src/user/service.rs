@@ -29,8 +29,14 @@ pub trait EmailVerifier {
     fn verify(&self, email: &UnverifiedEmail) -> Result<VerifiedEmail, EmailVerificationError>;
 }
 
+#[derive(Debug, Error)]
+pub enum UserIdGenerationError {
+    #[error("ユーザーIDの生成に失敗しました: {0}")]
+    GenerationFailed(#[source] anyhow::Error),
+}
+
 pub trait UserIdGenerator: Send + Sync {
-    fn generate(&self) -> UserId;
+    fn generate(&self) -> Result<UserId, UserIdGenerationError>;
 }
 
 pub trait UserIdGeneratorFactory: Send + Sync {

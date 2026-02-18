@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use crate::shared::uuid::{calculate_v7_timestamp_parts, generate_uuid_v7_with_parts};
 use domain::{
     shared::service::clock::Clock,
-    user::{UserId, UserIdGenerator, UserIdGeneratorFactory},
+    user::{UserId, UserIdGenerationError, UserIdGenerator, UserIdGeneratorFactory},
 };
 use uuid::ContextV7;
 
@@ -22,9 +22,10 @@ impl UuidUserIdGenerator {
 }
 
 impl UserIdGenerator for UuidUserIdGenerator {
-    fn generate(&self) -> UserId {
-        let (seconds, nanos) = calculate_v7_timestamp_parts(self.clock.now());
-        generate_uuid_v7_with_parts(&self.context, seconds, nanos).into()
+    fn generate(&self) -> Result<UserId, UserIdGenerationError> {
+        let (seconds, nanos) = calculate_v7_timestamp_parts(self.clock.now())
+            .map_err(|e| UserIdGenerationError::GenerationFailed(e.into()))?;
+        Ok(generate_uuid_v7_with_parts(&self.context, seconds, nanos).into())
     }
 }
 

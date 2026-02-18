@@ -1,7 +1,10 @@
-use domain::user::{
-    EmailFormatError, EmailVerificationError, ModificationWithInvalidStateError,
-    PasswordPolicyViolation, UserDomainError, UserReconstructionError, UserRepositoryError,
-    UserStateTransitionError, UserUniqueConstraintViolation,
+use domain::{
+    shared::outbox_event::OutboxEventIdGenerationError,
+    user::{
+        EmailFormatError, EmailVerificationError, ModificationWithInvalidStateError,
+        PasswordPolicyViolation, UserDomainError, UserIdGenerationError, UserReconstructionError,
+        UserRepositoryError, UserStateTransitionError, UserUniqueConstraintViolation,
+    },
 };
 
 use crate::usecase_error::{UseCaseError, ValidationError};
@@ -36,6 +39,12 @@ impl From<UserDomainError> for UseCaseError {
             ) => modification_with_invalid_state_error.into(),
             UserDomainError::StateTransitionError(user_state_transition_error) => {
                 user_state_transition_error.into()
+            }
+            UserDomainError::IdGenerationError(user_id_generation_error) => {
+                user_id_generation_error.into()
+            }
+            UserDomainError::OutboxEventIdGenerationError(outbox_event_id_generation_error) => {
+                outbox_event_id_generation_error.into()
             }
         }
     }
@@ -128,5 +137,21 @@ impl From<UserStateTransitionError> for UseCaseError {
         };
 
         UseCaseError::Conflict { message }
+    }
+}
+
+impl From<UserIdGenerationError> for UseCaseError {
+    fn from(id_generation_error: UserIdGenerationError) -> Self {
+        match id_generation_error {
+            UserIdGenerationError::GenerationFailed(e) => UseCaseError::Internal(e),
+        }
+    }
+}
+
+impl From<OutboxEventIdGenerationError> for UseCaseError {
+    fn from(error: OutboxEventIdGenerationError) -> Self {
+        match error {
+            OutboxEventIdGenerationError::GenerationFailed(e) => UseCaseError::Internal(e),
+        }
     }
 }

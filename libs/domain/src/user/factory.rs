@@ -21,7 +21,7 @@ impl UserFactory {
         password: HashedPassword,
     ) -> Result<User, UserRepositoryError> {
         let now = self.clock.now();
-        let user_id = user_id_generator.generate();
+        let user_id = user_id_generator.generate()?;
 
         Ok(User::new(user_id, user_info, password, now)?)
     }

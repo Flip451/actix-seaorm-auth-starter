@@ -357,8 +357,8 @@ impl TryFrom<OutboxEventStatusRaw> for OutboxEventStatus {
 mod tests {
     use super::*;
     use crate::shared::domain_event::DomainEvent;
-    use crate::shared::outbox_event::OutboxEventIdGenerator;
     use crate::shared::outbox_event::service::NextAttemptStatus;
+    use crate::shared::outbox_event::{OutboxEventIdGenerationError, OutboxEventIdGenerator};
     use crate::user::{EmailTrait as _, UnverifiedEmail, UserCreatedEvent, UserEvent};
     use chrono::{TimeZone, Utc};
     use mockall::{mock, predicate::*};
@@ -388,7 +388,7 @@ mod tests {
     mock! {
         pub IdGen {}
         impl OutboxEventIdGenerator for IdGen {
-            fn generate(&self) -> OutboxEventId;
+            fn generate(&self) -> Result<OutboxEventId, OutboxEventIdGenerationError>;
         }
     }
 
