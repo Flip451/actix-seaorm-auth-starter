@@ -7,7 +7,8 @@ use super::repository::user_repository::SeaOrmUserRepository;
 use async_trait::async_trait;
 use domain::repository::RepositoryFactory;
 use domain::shared::outbox_event::{
-    EntityWithEvents, OutboxEvent, OutboxEventIdGenerator, OutboxRepository,
+    EntityWithEvents, OutboxEvent, OutboxEventIdGenerationError, OutboxEventIdGenerator,
+    OutboxEventIdGeneratorFactory, OutboxRepository,
 };
 use domain::transaction::{IntoTxError, TransactionManager};
 use domain::user::UserRepository;
@@ -27,16 +28,21 @@ impl EntityTracker {
         }
     }
 
-    pub fn track(&self, mut entity: Box<dyn EntityWithEvents>) {
-        let new_events = entity.drain_events(self.outbox_event_id_generator.as_ref());
+    pub fn track(
+        &self,
+        mut entity: Box<dyn EntityWithEvents>,
+    ) -> Result<(), OutboxEventIdGenerationError> {
+        let id_generator = self.outbox_event_id_generator.clone();
+        let new_events = entity.drain_events(id_generator.as_ref())?;
 
         if new_events.is_empty() {
-            return;
+            return Ok(());
         }
 
         let mut events = self.events.lock().unwrap();
 
         events.extend(new_events);
+        Ok(())
     }
 
     pub fn drain_all_events(&self) -> Vec<OutboxEvent> {
@@ -71,8 +77,10 @@ pub struct SeaOrmTransactionManager {
 impl SeaOrmTransactionManager {
     pub fn new(
         db: DatabaseConnection,
-        outbox_event_id_generator: Arc<dyn OutboxEventIdGenerator>,
+        outbox_event_id_generator_factory: Arc<dyn OutboxEventIdGeneratorFactory>,
     ) -> Self {
+        let outbox_event_id_generator =
+            outbox_event_id_generator_factory.create_outbox_event_id_generator();
         Self {
             db,
             outbox_event_id_generator,

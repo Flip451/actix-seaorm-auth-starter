@@ -1,13 +1,24 @@
 use thiserror::Error;
 
-use crate::user::{
-    UserState, UserStateKind,
-    value_objects::{email::EmailFormatError, password::PasswordPolicyViolation},
+use crate::{
+    shared::outbox_event::OutboxEventIdGenerationError,
+    user::{
+        UserIdGenerationError, UserState, UserStateKind,
+        value_objects::{email::EmailFormatError, password::PasswordPolicyViolation},
+    },
 };
 
 use super::EmailVerificationError;
 
-#[derive(Debug, Error, PartialEq)]
+/// Domain-level errors related to `User`.
+///
+/// Note: `UserDomainError` does **not** implement `PartialEq` on purpose.
+/// Some variants (e.g. those wrapping `UserIdGenerationError` or
+/// `OutboxEventIdGenerationError`) contain `anyhow::Error`, which does not
+/// implement `PartialEq`. As a result, equality comparison on
+/// `UserDomainError` values is not supported. If older code relied on
+/// comparing `UserDomainError` instances, that usage must be updated.
+#[derive(Debug, Error)]
 pub enum UserDomainError {
     #[error(transparent)]
     InvalidEmail(#[from] EmailFormatError),
@@ -26,6 +37,12 @@ pub enum UserDomainError {
 
     #[error(transparent)]
     StateTransitionError(#[from] UserStateTransitionError),
+
+    #[error(transparent)]
+    IdGenerationError(#[from] UserIdGenerationError),
+
+    #[error(transparent)]
+    OutboxEventIdGenerationError(#[from] OutboxEventIdGenerationError),
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]

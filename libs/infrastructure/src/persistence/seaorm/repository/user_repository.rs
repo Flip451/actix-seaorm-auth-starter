@@ -178,7 +178,7 @@ where
             .await
             .map_err(|e| self.map_save_error(e, username, email.as_str()))?;
 
-        self.tracker.track(Box::new(user));
+        self.tracker.track(Box::new(user))?;
 
         self.map_to_domain(saved_model)
     }

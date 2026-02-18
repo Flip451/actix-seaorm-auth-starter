@@ -4,7 +4,9 @@ use strum::EnumString;
 
 use crate::{
     shared::{
-        outbox_event::{EntityWithEvents, OutboxEvent, OutboxEventIdGenerator},
+        outbox_event::{
+            EntityWithEvents, OutboxEvent, OutboxEventIdGenerationError, OutboxEventIdGenerator,
+        },
         service::clock::Clock,
     },
     user::{
@@ -414,15 +416,18 @@ impl User {
 }
 
 impl EntityWithEvents for User {
-    fn drain_events(&mut self, id_generator: &dyn OutboxEventIdGenerator) -> Vec<OutboxEvent> {
+    fn drain_events(
+        &mut self,
+        id_generator: &dyn OutboxEventIdGenerator,
+    ) -> Result<Vec<OutboxEvent>, OutboxEventIdGenerationError> {
         std::mem::take(&mut self.events)
             .into_iter()
             .map(|e| {
-                let id = id_generator.generate();
+                let id = id_generator.generate()?;
                 let created_at = e.created_at();
-                OutboxEvent::new(id, e.into(), created_at)
+                Ok(OutboxEvent::new(id, e.into(), created_at))
             })
-            .collect()
+            .collect::<Result<Vec<_>, _>>()
     }
 }
 

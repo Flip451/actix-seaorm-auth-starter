@@ -1961,6 +1961,7 @@ dependencies = [
  "tracing",
  "tracing-opentelemetry",
  "usecase",
+ "uuid",
 ]
 
 [[package]]

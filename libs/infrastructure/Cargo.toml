@@ -15,6 +15,7 @@ tracing = { workspace = true }
 opentelemetry = { workspace = true }
 tracing-opentelemetry = { workspace = true }
 anyhow = { workspace = true }
+uuid = { workspace = true }
 chrono = { workspace = true }
 sea-orm = { workspace = true }
 rand = { workspace = true }

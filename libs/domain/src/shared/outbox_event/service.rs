@@ -1,4 +1,7 @@
+use std::sync::Arc;
+
 use chrono::{DateTime, Utc};
+use thiserror::Error;
 
 use crate::shared::outbox_event::OutboxEventId;
 
@@ -16,6 +19,16 @@ pub trait NextAttemptCalculator: Send + Sync {
     ) -> NextAttemptStatus;
 }
 
+#[derive(Debug, Error)]
+pub enum OutboxEventIdGenerationError {
+    #[error("アウトボックスイベントIDの生成に失敗しました: {0}")]
+    GenerationFailed(#[source] anyhow::Error),
+}
+
 pub trait OutboxEventIdGenerator: Send + Sync {
-    fn generate(&self) -> OutboxEventId;
+    fn generate(&self) -> Result<OutboxEventId, OutboxEventIdGenerationError>;
+}
+
+pub trait OutboxEventIdGeneratorFactory: Send + Sync {
+    fn create_outbox_event_id_generator(&self) -> Arc<dyn OutboxEventIdGenerator>;
 }
