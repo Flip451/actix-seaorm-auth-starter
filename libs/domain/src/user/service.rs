@@ -29,12 +29,12 @@ pub trait EmailVerifier {
     fn verify(&self, email: &UnverifiedEmail) -> Result<VerifiedEmail, EmailVerificationError>;
 }
 
-pub trait IdGenerator {
+pub trait UserIdGenerator: Send + Sync {
     fn generate(&self) -> UserId;
 }
 
-pub trait IdGeneratorFactory: Send + Sync {
-    fn create_user_id_generator(&self) -> Box<dyn IdGenerator>;
+pub trait UserIdGeneratorFactory: Send + Sync {
+    fn create_user_id_generator(&self) -> Arc<dyn UserIdGenerator>;
 }
 
 pub struct UserUniquenessService<'a> {

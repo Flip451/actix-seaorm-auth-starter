@@ -11,8 +11,8 @@ use domain::{
     transaction::TransactionManager,
     tx,
     user::{
-        EmailTrait, HashedPassword, IdGeneratorFactory, PasswordHasher, RawPassword,
-        UnverifiedEmail, User, UserFactory, UserUniquenessService,
+        EmailTrait, HashedPassword, PasswordHasher, RawPassword, UnverifiedEmail, User,
+        UserFactory, UserIdGeneratorFactory, UserUniquenessService,
     },
 };
 use std::sync::Arc;
@@ -22,7 +22,7 @@ pub struct AuthInteractor<TM> {
     password_hasher: Arc<dyn PasswordHasher>,
     token_service: Arc<dyn TokenService>,
     user_factory: Arc<UserFactory>,
-    user_id_generator_factory: Arc<dyn IdGeneratorFactory>,
+    user_id_generator_factory: Arc<dyn UserIdGeneratorFactory>,
     dummy_hash: HashedPassword,
 }
 
@@ -32,7 +32,7 @@ impl<TM> AuthInteractor<TM> {
         password_hasher: Arc<dyn PasswordHasher>,
         token_service: Arc<dyn TokenService>,
         user_factory: Arc<UserFactory>,
-        user_id_generator_factory: Arc<dyn IdGeneratorFactory>,
+        user_id_generator_factory: Arc<dyn UserIdGeneratorFactory>,
     ) -> Self {
         let dummy_password = RawPassword::new("dummy_password_for_timing_attack").unwrap();
         let dummy_hash = password_hasher.hash(&dummy_password).unwrap();
@@ -66,18 +66,17 @@ impl<TM: TransactionManager> AuthService for AuthInteractor<TM> {
 
         tx!(self.transaction_manager, |factory| {
             let user_repo = factory.user_repository();
+
             let user_uniqueness_service = UserUniquenessService::new(user_repo.clone());
+            let user_info = user_uniqueness_service
+                .ensure_unique(&username, &email)
+                .await?;
+
+            let user_id_generator = user_id_generator_factory.create_user_id_generator();
 
             // 1. ドメインモデル作成と保存
-            let user = user_factory
-                .create_new_user(
-                    user_uniqueness_service,
-                    user_id_generator_factory.as_ref(),
-                    &username,
-                    &email,
-                    hashed_password,
-                )
-                .await?;
+            let user =
+                user_factory.create_new_user(user_id_generator, user_info, hashed_password)?;
 
             // 2. 永続化
             let user = user_repo.save(user).await?;

@@ -15,8 +15,8 @@ pub use events::*;
 pub use factory::UserFactory;
 pub use repository::{UserRepository, UserRepositoryError};
 pub use service::{
-    EmailVerificationError, EmailVerifier, IdGenerator, IdGeneratorFactory, PasswordHasher,
-    PasswordHashingError, UserUniquenessService,
+    EmailVerificationError, EmailVerifier, PasswordHasher, PasswordHashingError, UserIdGenerator,
+    UserIdGeneratorFactory, UserUniquenessService,
 };
 pub use value_objects::{
     email::{Email, EmailFormatError, EmailTrait, UnverifiedEmail, VerifiedEmail},

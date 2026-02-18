@@ -1,27 +1,27 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use crate::shared::uuid::{calculate_v7_timestamp_parts, generate_uuid_v7_with_parts};
 use domain::{
     shared::service::clock::Clock,
-    user::{IdGenerator, IdGeneratorFactory, UserId},
+    user::{UserId, UserIdGenerator, UserIdGeneratorFactory},
 };
 use uuid::ContextV7;
 
 pub struct UuidUserIdGenerator {
     clock: Arc<dyn Clock>,
-    context: ContextV7,
+    context: Mutex<ContextV7>,
 }
 
 impl UuidUserIdGenerator {
     pub fn new(clock: Arc<dyn Clock>) -> Self {
         Self {
             clock,
-            context: ContextV7::new(),
+            context: Mutex::new(ContextV7::new()),
         }
     }
 }
 
-impl IdGenerator for UuidUserIdGenerator {
+impl UserIdGenerator for UuidUserIdGenerator {
     fn generate(&self) -> UserId {
         let (seconds, nanos) = calculate_v7_timestamp_parts(self.clock.now());
         generate_uuid_v7_with_parts(&self.context, seconds, nanos).into()
@@ -38,8 +38,8 @@ impl UuidUserIdGeneratorFactory {
     }
 }
 
-impl IdGeneratorFactory for UuidUserIdGeneratorFactory {
-    fn create_user_id_generator(&self) -> Box<dyn IdGenerator> {
-        Box::new(UuidUserIdGenerator::new(self.clock.clone()))
+impl UserIdGeneratorFactory for UuidUserIdGeneratorFactory {
+    fn create_user_id_generator(&self) -> Arc<dyn UserIdGenerator> {
+        Arc::new(UuidUserIdGenerator::new(self.clock.clone()))
     }
 }

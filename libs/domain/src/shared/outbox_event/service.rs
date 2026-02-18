@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use chrono::{DateTime, Utc};
 
 use crate::shared::outbox_event::OutboxEventId;
@@ -16,10 +18,10 @@ pub trait NextAttemptCalculator: Send + Sync {
     ) -> NextAttemptStatus;
 }
 
-pub trait OutboxEventIdGenerator {
+pub trait OutboxEventIdGenerator: Send + Sync {
     fn generate(&self) -> OutboxEventId;
 }
 
-pub trait IdGeneratorFactory: Send + Sync {
-    fn create_outbox_event_id_generator(&self) -> Box<dyn OutboxEventIdGenerator>;
+pub trait OutboxEventIdGeneratorFactory: Send + Sync {
+    fn create_outbox_event_id_generator(&self) -> Arc<dyn OutboxEventIdGenerator>;
 }

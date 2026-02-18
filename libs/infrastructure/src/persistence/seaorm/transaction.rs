@@ -7,7 +7,8 @@ use super::repository::user_repository::SeaOrmUserRepository;
 use async_trait::async_trait;
 use domain::repository::RepositoryFactory;
 use domain::shared::outbox_event::{
-    EntityWithEvents, IdGeneratorFactory, OutboxEvent, OutboxRepository,
+    EntityWithEvents, OutboxEvent, OutboxEventIdGenerator, OutboxEventIdGeneratorFactory,
+    OutboxRepository,
 };
 use domain::transaction::{IntoTxError, TransactionManager};
 use domain::user::UserRepository;
@@ -16,21 +17,19 @@ use sea_orm::{DatabaseConnection, DatabaseTransaction, TransactionTrait};
 
 pub struct EntityTracker {
     events: Mutex<Vec<OutboxEvent>>,
-    outbox_event_id_generator_factory: Arc<dyn IdGeneratorFactory>,
+    outbox_event_id_generator: Arc<dyn OutboxEventIdGenerator>,
 }
 
 impl EntityTracker {
-    pub fn new(outbox_event_id_generator_factory: Arc<dyn IdGeneratorFactory>) -> Self {
+    pub fn new(outbox_event_id_generator: Arc<dyn OutboxEventIdGenerator>) -> Self {
         Self {
             events: Mutex::new(Vec::new()),
-            outbox_event_id_generator_factory,
+            outbox_event_id_generator,
         }
     }
 
     pub fn track(&self, mut entity: Box<dyn EntityWithEvents>) {
-        let id_generator = self
-            .outbox_event_id_generator_factory
-            .create_outbox_event_id_generator();
+        let id_generator = self.outbox_event_id_generator.clone();
         let new_events = entity.drain_events(id_generator.as_ref());
 
         if new_events.is_empty() {
@@ -68,17 +67,19 @@ impl<'a> RepositoryFactory<'a> for SeaOrmRepositoryFactory<'a> {
 
 pub struct SeaOrmTransactionManager {
     db: DatabaseConnection,
-    outbox_event_id_generator_factory: Arc<dyn IdGeneratorFactory>,
+    outbox_event_id_generator: Arc<dyn OutboxEventIdGenerator>,
 }
 
 impl SeaOrmTransactionManager {
     pub fn new(
         db: DatabaseConnection,
-        outbox_event_id_generator_factory: Arc<dyn IdGeneratorFactory>,
+        outbox_event_id_generator_factory: Arc<dyn OutboxEventIdGeneratorFactory>,
     ) -> Self {
+        let outbox_event_id_generator =
+            outbox_event_id_generator_factory.create_outbox_event_id_generator();
         Self {
             db,
-            outbox_event_id_generator_factory,
+            outbox_event_id_generator,
         }
     }
 }
@@ -97,9 +98,7 @@ impl TransactionManager for SeaOrmTransactionManager {
         // 2. ファクトリを作成（ここではまだ各リポジトリはnewされない）
         let factory = SeaOrmRepositoryFactory {
             txn: &txn,
-            tracker: Arc::new(EntityTracker::new(
-                self.outbox_event_id_generator_factory.clone(),
-            )),
+            tracker: Arc::new(EntityTracker::new(self.outbox_event_id_generator.clone())),
         };
 
         // 3. ユースケースにファクトリを渡す

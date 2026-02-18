@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     shared::service::clock::Clock,
-    user::{HashedPassword, IdGeneratorFactory, User, UserRepositoryError, UserUniquenessService},
+    user::{HashedPassword, User, UserIdGenerator, UserRepositoryError, service::UniqueUserInfo},
 };
 
 pub struct UserFactory {
@@ -14,20 +14,15 @@ impl UserFactory {
         Self { clock }
     }
 
-    pub async fn create_new_user<'a>(
+    pub fn create_new_user(
         &self,
-        uniqueness_service: UserUniquenessService<'a>,
-        user_id_generator_factory: &dyn IdGeneratorFactory,
-        username: &str,
-        email: &str,
+        user_id_generator: Arc<dyn UserIdGenerator>,
+        user_info: UniqueUserInfo,
         password: HashedPassword,
     ) -> Result<User, UserRepositoryError> {
-        let user_info = uniqueness_service.ensure_unique(username, email).await?;
-        let user_id_generator = user_id_generator_factory.create_user_id_generator();
-
-        let id = user_id_generator.generate();
         let now = self.clock.now();
+        let user_id = user_id_generator.generate();
 
-        Ok(User::new(id, user_info, password, now)?)
+        Ok(User::new(user_id, user_info, password, now)?)
     }
 }
